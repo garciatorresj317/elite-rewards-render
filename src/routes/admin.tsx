@@ -205,34 +205,36 @@ function Admin() {
                   >
                     <defs>
                       <linearGradient id="growthFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#7567e8" stopOpacity={0.32} />
-                        <stop offset="95%" stopColor="#7567e8" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#ffd84d" stopOpacity={0.5} />
+                        <stop offset="95%" stopColor="#9b6200" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e7e8ef" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3c3118" />
                     <XAxis
                       dataKey="label"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: "#85879a", fontSize: 12 }}
+                      tick={{ fill: "#d4c89e", fontSize: 12 }}
                     />
                     <YAxis
                       domain={[3000, 5000]}
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: "#85879a", fontSize: 12 }}
+                      tick={{ fill: "#d4c89e", fontSize: 12 }}
                     />
                     <Tooltip
                       contentStyle={{
                         borderRadius: 12,
-                        border: "1px solid #e7e8ef",
-                        boxShadow: "0 12px 30px rgba(25,25,60,.12)",
+                        color: "#fff7d5",
+                        background: "#090806",
+                        border: "1px solid #d99b17",
+                        boxShadow: "0 12px 30px rgba(255,187,28,.16)",
                       }}
                     />
                     <Area
                       type="monotone"
                       dataKey="members"
-                      stroke="#7567e8"
+                      stroke="#ffd84d"
                       strokeWidth={3}
                       fill="url(#growthFill)"
                     />

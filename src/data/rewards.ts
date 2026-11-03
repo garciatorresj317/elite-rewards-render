@@ -22,21 +22,21 @@ export const rewards: Reward[] = [
     name: "$5 off",
     points: 500,
     description: "Take $5 off your next purchase.",
-    accent: "mint",
+    accent: "champagne",
   },
   {
     id: "r2",
     name: "Free favorite",
     points: 850,
     description: "Choose one eligible item on us.",
-    accent: "violet",
+    accent: "gold",
   },
   {
     id: "r3",
     name: "$15 reward",
     points: 1200,
     description: "A bigger thank-you for loyal members.",
-    accent: "coral",
+    accent: "amber",
   },
 ];
 
@@ -98,8 +98,8 @@ export const growthData = [
 ];
 
 export const activityData = [
-  { name: "Free items", value: 52, fill: "#7bf1c8" },
-  { name: "Points discounts", value: 28, fill: "#8b7cf6" },
-  { name: "Special rewards", value: 12, fill: "#ff8e72" },
-  { name: "Other", value: 8, fill: "#d7def9" },
+  { name: "Free items", value: 52, fill: "#ffe27a" },
+  { name: "Points discounts", value: 28, fill: "#f6b900" },
+  { name: "Special rewards", value: 12, fill: "#c88700" },
+  { name: "Other", value: 8, fill: "#76500a" },
 ];
