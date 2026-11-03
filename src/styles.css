@@ -356,6 +356,10 @@ button { color: inherit; }
 .dashboard-welcome { display: flex; align-items: center; justify-content: space-between; gap: 22px; margin-bottom: 18px; }
 .dashboard-welcome h2 { margin: 0; font: 700 25px var(--serif); color: var(--gold-pale); }
 .dashboard-welcome p { margin: 5px 0 0; color: var(--muted); }
+.demo-badge {
+  display: inline-flex; margin-bottom: 8px; padding: 5px 9px; border: 1px solid var(--gold-line); border-radius: 99px;
+  color: var(--gold-bright); background: rgba(246,185,0,.08); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+}
 .admin-primary {
   min-height: 45px; padding: 0 17px; border: 1px solid var(--gold-bright); border-radius: 10px; background: var(--gold-gradient); color: #090600;
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; cursor: pointer; box-shadow: 0 0 20px rgba(246,185,0,.14);

@@ -1,12 +1,13 @@
 {
-  "name": "elite-rewaerds",
+  "name": "elite-rewards",
   "private": true,
   "sideEffects": false,
   "type": "module",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "preview": "vite preview",
+    "preview": "npx wrangler dev",
+    "deploy": "npm run build && npx wrangler deploy",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write ."

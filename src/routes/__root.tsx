@@ -27,10 +27,10 @@ function NotFoundComponent() {
 }
 function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
   const router = useRouter();
-  const reportableError = error instanceof Error ? error : new Error(String(error));
   useEffect(() => {
+    const reportableError = error instanceof Error ? error : new Error(String(error));
     reportLovableError(reportableError, { boundary: "tanstack_root_error_component" });
-  }, [reportableError]);
+  }, [error]);
   return (
     <div className="error-screen">
       <div>
@@ -54,9 +54,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Elite rewaerds" },
+      { title: "Elite Rewards" },
       { name: "description", content: "A modern rewards program for growing businesses." },
-      { name: "author", content: "Elite rewaerds" },
+      { name: "author", content: "Elite Rewards" },
       { name: "theme-color", content: "#050505" },
       { property: "og:type", content: "website" },
     ],

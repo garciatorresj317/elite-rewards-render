@@ -3,14 +3,15 @@ import { ArrowLeft, Check, ChevronRight, Gift, History, QrCode, Sparkles } from 
 import { useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
 import { rewards } from "@/data/rewards";
+import { readWallet, saveWallet } from "@/lib/demo-storage";
 
 export const Route = createFileRoute("/wallet")({
   head: () => ({
     meta: [
-      { title: "My wallet | Elite rewaerds" },
+      { title: "My wallet | Elite Rewards" },
       {
         name: "description",
-        content: "View points, rewards, and activity in the Elite rewaerds member wallet.",
+        content: "View points, rewards, and activity in the Elite Rewards member wallet.",
       },
     ],
   }),
@@ -22,26 +23,27 @@ function Wallet() {
   const [claimed, setClaimed] = useState<string[]>([]);
   const [notice, setNotice] = useState("");
   useEffect(() => {
-    const saved = localStorage.getItem("elite-wallet");
-    if (saved) {
-      const state = JSON.parse(saved);
-      setPoints(state.points ?? 1240);
-      setClaimed(state.claimed ?? []);
-    }
+    const state = readWallet();
+    setPoints(state.points);
+    setClaimed(state.claimed);
   }, []);
   const redeem = (id: string, cost: number, name: string) => {
     if (points < cost || claimed.includes(id)) return;
     const next = { points: points - cost, claimed: [...claimed, id] };
     setPoints(next.points);
     setClaimed(next.claimed);
-    localStorage.setItem("elite-wallet", JSON.stringify(next));
-    setNotice(`${name} is ready to use.`);
+    const saved = saveWallet(next);
+    setNotice(
+      saved
+        ? `${name} is ready to use.`
+        : `${name} was redeemed for this session, but this browser blocked saving it.`,
+    );
     setTimeout(() => setNotice(""), 3500);
   };
   return (
     <div className="wallet-page">
       {notice && (
-        <div className="toast">
+        <div className="toast" role="status" aria-live="polite">
           <Check size={18} />
           {notice}
         </div>

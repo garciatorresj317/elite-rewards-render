@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
 
-const title = "Elite rewaerds | Loyalty that feels personal";
+const title = "Elite Rewards | Loyalty that feels personal";
 const description =
   "A modern rewards program that helps local businesses turn everyday customers into loyal regulars.";
 
@@ -75,8 +75,8 @@ function Home() {
               Turn a first visit into a <em>favorite habit.</em>
             </h1>
             <p>
-              Elite rewaerds gives growing businesses a simple way to recognize their best
-              customers, reward real loyalty, and bring people back.
+              Elite Rewards gives growing businesses a simple way to recognize their best customers,
+              reward real loyalty, and bring people back.
             </p>
             <div className="hero-actions">
               <Link to="/admin" className="button button-primary">
@@ -98,7 +98,7 @@ function Home() {
               </span>
             </div>
           </div>
-          <div className="hero-visual" aria-label="Elite rewaerds member wallet preview">
+          <div className="hero-visual" aria-label="Elite Rewards member wallet preview">
             <div className="orbit orbit-one" />
             <div className="orbit orbit-two" />
             <div className="wallet-preview">
@@ -174,7 +174,7 @@ function Home() {
             <h2>Reward loyalty without adding more work.</h2>
           </div>
           <p>
-            From sign-up to redemption, every part of Elite rewaerds is designed to feel effortless
+            From sign-up to redemption, every part of Elite Rewards is designed to feel effortless
             for your team and your customers.
           </p>
         </section>
@@ -199,12 +199,12 @@ function Home() {
             </span>
             <h2>Make every customer feel like a regular.</h2>
             <p>
-              Explore the complete business dashboard and member experience with live, interactive
-              demo data.
+              Preview the business dashboard and member experience with interactive demonstration
+              data while production services are being connected.
             </p>
           </div>
           <Link to="/admin" className="button button-light">
-            Launch Elite rewaerds <ArrowRight size={18} />
+            Launch Elite Rewards <ArrowRight size={18} />
           </Link>
         </section>
       </main>
@@ -212,7 +212,7 @@ function Home() {
       <footer className="site-footer container-wide">
         <BrandMark compact />
         <p>Thoughtful loyalty tools for growing businesses.</p>
-        <span>© 2026 Elite rewaerds</span>
+        <span>© 2026 Elite Rewards</span>
       </footer>
     </div>
   );

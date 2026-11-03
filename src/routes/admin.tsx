@@ -40,11 +40,12 @@ import {
 } from "recharts";
 import { BrandMark } from "@/components/BrandMark";
 import { activityData, growthData, seedTransactions, type Transaction } from "@/data/rewards";
+import { addDemoPoints, readTransactions, saveTransactions } from "@/lib/demo-storage";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
-      { title: "Business dashboard | Elite rewaerds" },
+      { title: "Business dashboard | Elite Rewards" },
       { name: "description", content: "Manage members, rewards, activity, and performance." },
     ],
   }),
@@ -65,9 +66,12 @@ function Admin() {
     [modal, setModal] = useState(false),
     [toast, setToast] = useState(""),
     [transactions, setTransactions] = useState<Transaction[]>(seedTransactions);
+  const showToast = (message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast(""), 3500);
+  };
   useEffect(() => {
-    const saved = localStorage.getItem("elite-admin-transactions");
-    if (saved) setTransactions(JSON.parse(saved));
+    setTransactions(readTransactions(seedTransactions));
   }, []);
   const award = () => {
     const next: Transaction = {
@@ -81,23 +85,26 @@ function Admin() {
     };
     const all = [next, ...transactions];
     setTransactions(all);
-    localStorage.setItem("elite-admin-transactions", JSON.stringify(all));
+    const transactionSaved = saveTransactions(all);
+    const walletSaved = addDemoPoints(next.points);
     setModal(false);
-    setToast("160 points awarded to Maya Thompson.");
-    setTimeout(() => setToast(""), 3500);
+    showToast(
+      transactionSaved && walletSaved
+        ? "160 points awarded to Maya Thompson and synced to her demo wallet."
+        : "160 points awarded for this session, but this browser blocked persistent storage.",
+    );
   };
   const changeSection = (label: string) => {
     setActive(label);
     setMobile(false);
     if (label !== "Dashboard") {
-      setToast(`${label} is included in the product roadmap demo.`);
-      setTimeout(() => setToast(""), 3000);
+      showToast(`${label} is not implemented yet. It remains on the completion backlog.`);
     }
   };
   return (
     <div className="admin-shell">
       {toast && (
-        <div className="toast">
+        <div className="toast" role="status" aria-live="polite">
           <Check size={18} />
           {toast}
         </div>
@@ -132,7 +139,7 @@ function Admin() {
           ))}
         </nav>
         <div className="sidebar-footer">
-          <button>
+          <button onClick={() => showToast("Help and training are not connected yet.")}>
             <HelpCircle /> Help center
           </button>
           <Link to="/">
@@ -157,7 +164,7 @@ function Admin() {
             <button
               className="icon-button"
               aria-label="Notifications"
-              onClick={() => setToast("You have 3 new member updates.")}
+              onClick={() => showToast("You have 3 demonstration member updates.")}
             >
               <Bell />
               <span />
@@ -175,8 +182,9 @@ function Admin() {
         <main className="dashboard-content">
           <section className="dashboard-welcome">
             <div>
+              <span className="demo-badge">Interactive demonstration</span>
               <h2>Here’s how loyalty is growing.</h2>
-              <p>A clear view of members, rewards, and revenue at North & Pine.</p>
+              <p>Sample members, rewards, and revenue for North & Pine.</p>
             </div>
             <button className="admin-primary" onClick={() => setModal(true)}>
               <Plus /> Award points
@@ -341,17 +349,19 @@ function Admin() {
                 </div>
               </article>
               <article className="panel health-panel">
-                <PanelTitle icon={ShieldCheck} title="Program health" />
+                <PanelTitle icon={ShieldCheck} title="Build status" />
                 <div>
                   <span className="health-icon">
                     <Check />
                   </span>
                   <p>
-                    <strong>Everything looks good</strong>
-                    <small>Rewards engine, member sync, and security are active.</small>
+                    <strong>Front-end demonstration ready</strong>
+                    <small>
+                      Authentication, database, integrations, and monitoring are not connected.
+                    </small>
                   </p>
                 </div>
-                <span className="uptime">99.9% uptime</span>
+                <span className="uptime">Production services pending</span>
               </article>
             </div>
           </section>
@@ -359,15 +369,25 @@ function Admin() {
       </div>
       {modal && (
         <div className="modal-backdrop" onMouseDown={() => setModal(false)}>
-          <div className="award-modal" onMouseDown={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setModal(false)}>
+          <div
+            className="award-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="award-modal-title"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <button
+              className="modal-close"
+              onClick={() => setModal(false)}
+              aria-label="Close dialog"
+            >
               <X />
             </button>
             <span className="modal-icon">
               <Award />
             </span>
             <span className="section-kicker">Quick award</span>
-            <h2>Reward a member</h2>
+            <h2 id="award-modal-title">Reward a member</h2>
             <p>
               Add points after an eligible purchase. This demo saves the transaction in your
               browser.
