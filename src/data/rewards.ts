@@ -6,6 +6,8 @@ export type Transaction = {
   points: number;
   type: "earned" | "redeemed";
   time: string;
+  rewardId?: string;
+  rewardName?: string;
 };
 
 export type Reward = {

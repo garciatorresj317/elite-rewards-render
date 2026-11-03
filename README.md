@@ -20,11 +20,14 @@ npm run dev
 ## Verification
 
 ```bash
+npm test
 npm run lint
 npm run typecheck
 npm run build
 npm run preview
 ```
+
+Run the complete local gate with `npm run check`.
 
 ## Deployment
 

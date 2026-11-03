@@ -25,7 +25,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -40,7 +40,7 @@ import {
 } from "recharts";
 import { BrandMark } from "@/components/BrandMark";
 import { activityData, growthData, seedTransactions, type Transaction } from "@/data/rewards";
-import { addDemoPoints, readTransactions, saveTransactions } from "@/lib/demo-storage";
+import { applyDemoAward, readTransactions, resetDemoState } from "@/lib/demo-storage";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -65,7 +65,9 @@ function Admin() {
     [mobile, setMobile] = useState(false),
     [modal, setModal] = useState(false),
     [toast, setToast] = useState(""),
+    [search, setSearch] = useState(""),
     [transactions, setTransactions] = useState<Transaction[]>(seedTransactions);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const showToast = (message: string) => {
     setToast(message);
     window.setTimeout(() => setToast(""), 3500);
@@ -73,6 +75,20 @@ function Admin() {
   useEffect(() => {
     setTransactions(readTransactions(seedTransactions));
   }, []);
+  useEffect(() => {
+    if (!modal) return;
+    const previousFocus =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setModal(false);
+    };
+    document.addEventListener("keydown", handleKey);
+    closeButtonRef.current?.focus();
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      previousFocus?.focus();
+    };
+  }, [modal]);
   const award = () => {
     const next: Transaction = {
       id: crypto.randomUUID(),
@@ -83,17 +99,34 @@ function Admin() {
       type: "earned",
       time: "Just now",
     };
-    const all = [next, ...transactions];
-    setTransactions(all);
-    const transactionSaved = saveTransactions(all);
-    const walletSaved = addDemoPoints(next.points);
+    const result = applyDemoAward(next);
+    if (!result.ok) {
+      showToast("The demonstration rejected an invalid point award.");
+      return;
+    }
+    setTransactions(result.transactions);
     setModal(false);
     showToast(
-      transactionSaved && walletSaved
+      result.saved
         ? "160 points awarded to Maya Thompson and synced to her demo wallet."
         : "160 points awarded for this session, but this browser blocked persistent storage.",
     );
   };
+  const reset = () => {
+    const saved = resetDemoState();
+    setTransactions(readTransactions(seedTransactions));
+    showToast(
+      saved ? "Demonstration data reset." : "This browser blocked the demonstration reset.",
+    );
+  };
+  const normalizedSearch = search.trim().toLowerCase();
+  const visibleTransactions = normalizedSearch
+    ? transactions.filter((transaction) =>
+        [transaction.member, transaction.rewardName, transaction.type]
+          .filter(Boolean)
+          .some((value) => value?.toLowerCase().includes(normalizedSearch)),
+      )
+    : transactions;
   const changeSection = (label: string) => {
     setActive(label);
     setMobile(false);
@@ -159,7 +192,12 @@ function Admin() {
           <div className="admin-header-actions">
             <label className="search-box">
               <Search />
-              <input aria-label="Search" placeholder="Search members..." />
+              <input
+                aria-label="Search transactions"
+                placeholder="Search activity..."
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
             </label>
             <button
               className="icon-button"
@@ -301,16 +339,16 @@ function Admin() {
                     </tr>
                   </thead>
                   <tbody>
-                    {transactions.slice(0, 5).map((t) => (
+                    {visibleTransactions.slice(0, 8).map((t) => (
                       <tr key={t.id}>
                         <td>
                           <span className="member-avatar">{t.initials}</span>
                           <span>
                             <strong>{t.member}</strong>
-                            <small>{t.time}</small>
+                            <small>{t.rewardName ?? t.time}</small>
                           </span>
                         </td>
-                        <td>${t.amount.toFixed(2)}</td>
+                        <td>{t.amount > 0 ? `$${t.amount.toFixed(2)}` : "Reward"}</td>
                         <td className={t.type === "earned" ? "positive" : "redeemed"}>
                           {t.type === "earned" ? "+" : "−"}
                           {t.points}
@@ -322,6 +360,13 @@ function Admin() {
                         </td>
                       </tr>
                     ))}
+                    {visibleTransactions.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="empty-table">
+                          No demonstration activity matches “{search}”.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -345,6 +390,10 @@ function Admin() {
                   <button onClick={() => changeSection("Reports")}>
                     <BarChart3 />
                     View reports
+                  </button>
+                  <button onClick={reset}>
+                    <Activity />
+                    Reset demo
                   </button>
                 </div>
               </article>
@@ -377,6 +426,7 @@ function Admin() {
             onMouseDown={(e) => e.stopPropagation()}
           >
             <button
+              ref={closeButtonRef}
               className="modal-close"
               onClick={() => setModal(false)}
               aria-label="Close dialog"

@@ -1,43 +1,58 @@
-import type { Transaction } from "@/data/rewards";
+import { seedTransactions, type Reward, type Transaction } from "../data/rewards.ts";
+import {
+  awardPoints,
+  redeemReward,
+  type DemoRewardsState,
+  type Redemption,
+} from "./rewards-engine.ts";
 
 export type WalletState = {
   points: number;
   claimed: string[];
+  redemptions: Redemption[];
 };
 
-const walletKey = "elite-wallet";
-const transactionsKey = "elite-admin-transactions";
-const defaultWallet: WalletState = { points: 1240, claimed: [] };
+type StoredDemoState = DemoRewardsState & { version: 2 };
 
-function readJson<T>(key: string, fallback: T, validate: (value: unknown) => value is T): T {
+const stateKey = "elite-demo-state-v2";
+const legacyWalletKey = "elite-wallet";
+const legacyTransactionsKey = "elite-admin-transactions";
+const defaultState: StoredDemoState = {
+  version: 2,
+  points: 1240,
+  redemptions: [],
+  transactions: seedTransactions,
+};
+
+function readJson(key: string): unknown {
   try {
     const value = window.localStorage.getItem(key);
-    if (!value) return fallback;
-    const parsed: unknown = JSON.parse(value);
-    return validate(parsed) ? parsed : fallback;
+    return value ? (JSON.parse(value) as unknown) : undefined;
   } catch {
-    return fallback;
+    return undefined;
   }
 }
 
-function writeJson<T>(key: string, value: T): boolean {
+function writeState(value: DemoRewardsState): boolean {
   try {
-    window.localStorage.setItem(key, JSON.stringify(value));
+    const stored: StoredDemoState = { version: 2, ...value };
+    window.localStorage.setItem(stateKey, JSON.stringify(stored));
     return true;
   } catch {
     return false;
   }
 }
 
-function isWalletState(value: unknown): value is WalletState {
+function isRedemption(value: unknown): value is Redemption {
   if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<WalletState>;
+  const candidate = value as Partial<Redemption>;
   return (
+    typeof candidate.rewardId === "string" &&
+    typeof candidate.rewardName === "string" &&
     typeof candidate.points === "number" &&
-    Number.isFinite(candidate.points) &&
-    candidate.points >= 0 &&
-    Array.isArray(candidate.claimed) &&
-    candidate.claimed.every((id) => typeof id === "string")
+    Number.isSafeInteger(candidate.points) &&
+    candidate.points > 0 &&
+    typeof candidate.redeemedAt === "string"
   );
 }
 
@@ -50,34 +65,102 @@ function isTransaction(value: unknown): value is Transaction {
     typeof candidate.initials === "string" &&
     typeof candidate.amount === "number" &&
     Number.isFinite(candidate.amount) &&
+    candidate.amount >= 0 &&
     typeof candidate.points === "number" &&
-    Number.isFinite(candidate.points) &&
+    Number.isSafeInteger(candidate.points) &&
+    candidate.points > 0 &&
     (candidate.type === "earned" || candidate.type === "redeemed") &&
-    typeof candidate.time === "string"
+    typeof candidate.time === "string" &&
+    (candidate.rewardId === undefined || typeof candidate.rewardId === "string") &&
+    (candidate.rewardName === undefined || typeof candidate.rewardName === "string")
   );
 }
 
-function isTransactionList(value: unknown): value is Transaction[] {
-  return Array.isArray(value) && value.every(isTransaction);
+function isStoredState(value: unknown): value is StoredDemoState {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<StoredDemoState>;
+  return (
+    candidate.version === 2 &&
+    typeof candidate.points === "number" &&
+    Number.isSafeInteger(candidate.points) &&
+    candidate.points >= 0 &&
+    Array.isArray(candidate.redemptions) &&
+    candidate.redemptions.every(isRedemption) &&
+    Array.isArray(candidate.transactions) &&
+    candidate.transactions.every(isTransaction)
+  );
+}
+
+function migrateLegacyState(): StoredDemoState {
+  const wallet = readJson(legacyWalletKey);
+  const transactions = readJson(legacyTransactionsKey);
+  const legacyPoints =
+    wallet &&
+    typeof wallet === "object" &&
+    typeof (wallet as { points?: unknown }).points === "number" &&
+    Number.isSafeInteger((wallet as { points: number }).points) &&
+    (wallet as { points: number }).points >= 0
+      ? (wallet as { points: number }).points
+      : defaultState.points;
+  const legacyTransactions =
+    Array.isArray(transactions) && transactions.every(isTransaction)
+      ? transactions
+      : defaultState.transactions;
+  return { ...defaultState, points: legacyPoints, transactions: legacyTransactions };
+}
+
+function readState(): StoredDemoState {
+  const current = readJson(stateKey);
+  if (isStoredState(current)) return current;
+  const migrated = migrateLegacyState();
+  writeState(migrated);
+  return migrated;
 }
 
 export function readWallet(): WalletState {
-  return readJson(walletKey, defaultWallet, isWalletState);
+  const state = readState();
+  return {
+    points: state.points,
+    claimed: state.redemptions.map((item) => item.rewardId),
+    redemptions: state.redemptions,
+  };
 }
 
-export function saveWallet(value: WalletState): boolean {
-  return writeJson(walletKey, value);
+export function readTransactions(_fallback: Transaction[] = seedTransactions): Transaction[] {
+  return readState().transactions;
 }
 
-export function readTransactions(fallback: Transaction[]): Transaction[] {
-  return readJson(transactionsKey, fallback, isTransactionList);
+export function applyDemoAward(
+  transaction: Transaction,
+): { ok: true; transactions: Transaction[]; saved: boolean } | { ok: false; reason: string } {
+  const result = awardPoints(readState(), transaction);
+  if (!result.ok) return result;
+  return {
+    ok: true,
+    transactions: result.state.transactions,
+    saved: writeState(result.state),
+  };
 }
 
-export function saveTransactions(value: Transaction[]): boolean {
-  return writeJson(transactionsKey, value);
+export function applyDemoRedemption(
+  reward: Reward,
+  redeemedAt: string,
+  transactionId: string,
+): { ok: true; wallet: WalletState; saved: boolean } | { ok: false; reason: string } {
+  const result = redeemReward(readState(), reward, redeemedAt, transactionId);
+  if (!result.ok) return result;
+  const saved = writeState(result.state);
+  return {
+    ok: true,
+    saved,
+    wallet: {
+      points: result.state.points,
+      claimed: result.state.redemptions.map((item) => item.rewardId),
+      redemptions: result.state.redemptions,
+    },
+  };
 }
 
-export function addDemoPoints(points: number): boolean {
-  const wallet = readWallet();
-  return saveWallet({ ...wallet, points: wallet.points + points });
+export function resetDemoState(): boolean {
+  return writeState(defaultState);
 }

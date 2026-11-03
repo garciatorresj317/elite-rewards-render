@@ -8,6 +8,8 @@
     "build": "vite build",
     "preview": "npx wrangler dev",
     "deploy": "npm run build && npx wrangler deploy",
+    "test": "node --experimental-strip-types --test src/lib/*.test.ts",
+    "check": "npm run test && npm run typecheck && npm run lint && npm run build",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write ."

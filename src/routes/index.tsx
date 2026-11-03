@@ -91,10 +91,10 @@ function Home() {
                 <Check size={16} /> No app required
               </span>
               <span>
-                <Check size={16} /> Set up in minutes
+                <Check size={16} /> Interactive preview
               </span>
               <span>
-                <Check size={16} /> Cancel anytime
+                <Check size={16} /> Production services pending
               </span>
             </div>
           </div>

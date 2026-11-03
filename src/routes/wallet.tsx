@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Check, ChevronRight, Gift, History, QrCode, Sparkles } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, Gift, History, QrCode, Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
 import { rewards } from "@/data/rewards";
-import { readWallet, saveWallet } from "@/lib/demo-storage";
+import { applyDemoRedemption, readWallet } from "@/lib/demo-storage";
+import type { Redemption } from "@/lib/rewards-engine";
 
 export const Route = createFileRoute("/wallet")({
   head: () => ({
@@ -21,20 +22,33 @@ export const Route = createFileRoute("/wallet")({
 function Wallet() {
   const [points, setPoints] = useState(1240);
   const [claimed, setClaimed] = useState<string[]>([]);
+  const [redemptions, setRedemptions] = useState<Redemption[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [notice, setNotice] = useState("");
   useEffect(() => {
     const state = readWallet();
     setPoints(state.points);
     setClaimed(state.claimed);
+    setRedemptions(state.redemptions);
   }, []);
   const redeem = (id: string, cost: number, name: string) => {
     if (points < cost || claimed.includes(id)) return;
-    const next = { points: points - cost, claimed: [...claimed, id] };
-    setPoints(next.points);
-    setClaimed(next.claimed);
-    const saved = saveWallet(next);
+    const reward = rewards.find((item) => item.id === id);
+    if (!reward) return;
+    const redeemedAt = new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(new Date());
+    const result = applyDemoRedemption(reward, redeemedAt, crypto.randomUUID());
+    if (!result.ok) return;
+    setPoints(result.wallet.points);
+    setClaimed(result.wallet.claimed);
+    setRedemptions(result.wallet.redemptions);
     setNotice(
-      saved
+      result.saved
         ? `${name} is ready to use.`
         : `${name} was redeemed for this session, but this browser blocked saving it.`,
     );
@@ -98,7 +112,7 @@ function Wallet() {
             <span className="section-kicker">Choose your perk</span>
             <h2>Rewards for you</h2>
           </div>
-          <button className="text-button">
+          <button className="text-button" onClick={() => setHistoryOpen(true)}>
             <History size={17} /> Reward history
           </button>
         </div>
@@ -143,6 +157,45 @@ function Wallet() {
           </button>
         </section>
       </main>
+      {historyOpen && (
+        <div className="modal-backdrop" onMouseDown={() => setHistoryOpen(false)}>
+          <div
+            className="award-modal history-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="history-modal-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              className="modal-close"
+              onClick={() => setHistoryOpen(false)}
+              aria-label="Close reward history"
+            >
+              <X />
+            </button>
+            <span className="modal-icon">
+              <History />
+            </span>
+            <span className="section-kicker">Demonstration ledger</span>
+            <h2 id="history-modal-title">Reward history</h2>
+            {redemptions.length === 0 ? (
+              <p>No rewards redeemed yet. Your demonstration redemptions will appear here.</p>
+            ) : (
+              <ul className="history-list">
+                {redemptions.map((item) => (
+                  <li key={`${item.rewardId}-${item.redeemedAt}`}>
+                    <span>
+                      <strong>{item.rewardName}</strong>
+                      <small>{item.redeemedAt}</small>
+                    </span>
+                    <b>−{item.points} pts</b>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

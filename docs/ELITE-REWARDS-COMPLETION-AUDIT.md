@@ -17,7 +17,10 @@ The previous temporary Cloudflare URL is expired and is not a production deploym
 - Approved Elite black-and-gold visual system applied across public, wallet, admin, 404, and error states.
 - Responsive desktop and mobile layouts.
 - Demo reward redemption and demo point-award interactions.
-- Browser-local persistence for demonstration transactions and wallet state.
+- Browser-local persistence for a shared demonstration wallet, redemption history, and activity ledger.
+- Wallet reward history and cross-view redemption activity.
+- Searchable demonstration activity and deterministic demonstration reset.
+- Automated rewards-engine and storage regression tests.
 - TanStack Start server-side rendering and Cloudflare-targeted production build.
 - CSRF middleware for future TanStack server functions.
 - Catastrophic SSR error normalization.
@@ -32,6 +35,22 @@ The previous temporary Cloudflare URL is expired and is not a production deploym
 - Synced the demo admin point-award action to the demo member wallet balance.
 - Replaced misleading roadmap/completeness language with explicit not-implemented/demo language.
 - Updated the README to state the actual implementation boundary.
+
+## Implemented in the next audit slice
+
+- Added a deterministic rewards-engine domain layer for point awards and reward redemptions.
+- Added ledger invariants that reject non-integer/non-positive awards, insufficient balances, and duplicate redemptions.
+- Added eight automated tests covering ledger changes, immutability, corrupted storage, blocked storage, and reset behavior.
+- Migrated separate legacy browser keys into one versioned demonstration state.
+- Connected wallet redemptions to the admin activity ledger.
+- Made wallet Reward History functional.
+- Added admin activity search and an empty-result state.
+- Added a deterministic Reset demo action.
+- Added Escape-key close and focus restoration to the award dialog.
+- Added `npm run check` as a reproducible test/type/lint/build release gate.
+- Added a GitHub Actions verification gate for pushes and pull requests.
+- Added baseline response security headers, visible keyboard focus, and reduced-motion handling.
+- Removed unsubstantiated “Set up in minutes” and “Cancel anytime” marketing claims.
 
 ## Remaining work required for production completion
 
@@ -51,7 +70,7 @@ The previous temporary Cloudflare URL is expired and is not a production deploym
 9. Provision separate development, staging, and production environments.
 10. Add managed database, migrations, backups, restore rehearsal, and retention policy.
 11. Add secure secret management and key rotation.
-12. Add CI/CD with protected production deployment and rollback.
+12. Expand the new CI verification workflow into protected production deployment and rollback.
 
 ### P0 — Identity, tenancy, and security
 
@@ -84,7 +103,7 @@ The previous temporary Cloudflare URL is expired and is not a production deploym
 33. Build Store Settings, locations, staff invitations, roles, branding, and program settings.
 34. Build Plan & Billing, invoices, payment failures, plan limits, and cancellation.
 35. Build Help & Training and support contact paths.
-36. Make global search, notifications, store selector, owner menu, chart filters, “View all,” and status panels functional.
+36. Complete notifications, store selector, owner menu, chart filters, “View all,” and status panels. Activity search is now functional for the demonstration ledger; production global search still requires backend data.
 37. Replace all hard-coded merchant, member, sales, health, and chart values with authorized live data.
 
 ### P1 — Member experience
@@ -92,7 +111,7 @@ The previous temporary Cloudflare URL is expired and is not a production deploym
 38. Build member enrollment and login/access flow.
 39. Build a real member wallet with current balance and authoritative ledger history.
 40. Build reward details, redemption confirmation, active reward codes, expiration, and used state.
-41. Make Reward History functional.
+41. Replace the now-functional browser-local Reward History demonstration with an authenticated, server-authoritative history and active reward-code lifecycle.
 42. Add business/location context, program terms, accessibility, and support links.
 43. Add digital wallet/NFC/QR integration only after secure identifier and redemption flows are finalized.
 
@@ -114,7 +133,7 @@ The previous temporary Cloudflare URL is expired and is not a production deploym
 
 ### P1 — Test and release gates
 
-54. Add unit tests for all points/reward rules and ledger invariants.
+54. Expand the initial eight unit tests to cover every finalized production points/reward policy and server ledger invariant.
 55. Add API/database integration tests including concurrency, retries, idempotency, reversals, and authorization isolation.
 56. Add browser end-to-end tests for owner, staff, and member critical paths.
 57. Add accessibility, responsive visual-regression, performance, and cross-browser tests.
@@ -130,7 +149,7 @@ The previous temporary Cloudflare URL is expired and is not a production deploym
 - No authentication, authorization, tenancy enforcement, or production account model exists.
 - Most admin navigation items are placeholders rather than working modules.
 - No payment/POS, billing, notification, or operational integration exists.
-- No automated test suite exists beyond type/lint/build checks.
+- Initial domain/storage tests exist, but API, database, authorization, end-to-end, accessibility, security, performance, and cross-browser suites remain absent.
 - Legal, privacy, accessibility, monitoring, backup/restore, and incident gates are incomplete.
 
 ## Definition of done
