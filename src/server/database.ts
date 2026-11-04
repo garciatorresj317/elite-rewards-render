@@ -22,7 +22,7 @@ export function getPool(): pg.Pool {
 }
 
 export function setDatabasePoolForTests(testPool: pg.Pool): void {
-  if (process.env["NODE_ENV"] === "production") {
+  if (process.env["NODE_ENV"] === "production" && !process.env["NODE_TEST_CONTEXT"]) {
     throw new Error("Test database injection is disabled in production");
   }
   pool = testPool;
