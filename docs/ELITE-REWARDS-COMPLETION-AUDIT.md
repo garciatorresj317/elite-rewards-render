@@ -108,7 +108,7 @@ The previous temporary Cloudflare URL is expired and is not a production deploym
 
 ### P1 — Member experience
 
-38. Build member enrollment and login/access flow.
+38. **Completed:** owner/staff member enrollment, secure single-use activation, login access, and tenant-isolated wallet provisioning.
 39. Build a real member wallet with current balance and authoritative ledger history.
 40. Build reward details, redemption confirmation, active reward codes, expiration, and used state.
 41. Replace the now-functional browser-local Reward History demonstration with an authenticated, server-authoritative history and active reward-code lifecycle.

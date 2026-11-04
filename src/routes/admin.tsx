@@ -15,11 +15,18 @@ import {
   Store,
   Trophy,
   Users,
+  UserPlus,
   X,
 } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
-import { api, type ClientSummary, type DashboardData, type SessionUser } from "@/lib/api-client";
+import {
+  api,
+  type ClientSummary,
+  type DashboardData,
+  type MemberSummary,
+  type SessionUser,
+} from "@/lib/api-client";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Business dashboard | Elite Rewards" }] }),
@@ -38,11 +45,14 @@ function Admin() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
   const [clients, setClients] = useState<ClientSummary[]>([]);
+  const [members, setMembers] = useState<MemberSummary[]>([]);
   const [active, setActive] = useState("Dashboard");
   const [mobile, setMobile] = useState(false);
   const [modal, setModal] = useState(false);
   const [clientModal, setClientModal] = useState(false);
   const [activationPath, setActivationPath] = useState("");
+  const [memberModal, setMemberModal] = useState(false);
+  const [memberActivationPath, setMemberActivationPath] = useState("");
   const [search, setSearch] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -59,6 +69,7 @@ function Admin() {
     ownerName: "",
     ownerEmail: "",
   });
+  const [memberForm, setMemberForm] = useState({ name: "", email: "" });
   const load = useCallback(async () => {
     try {
       const session = await api.session();
@@ -67,12 +78,14 @@ function Admin() {
         return;
       }
       setUser(session.user);
-      const [dashboard, clientResult] = await Promise.all([
+      const [dashboard, clientResult, memberResult] = await Promise.all([
         api.dashboard(),
         session.user.platformAdmin ? api.clients() : Promise.resolve({ clients: [] }),
+        api.members(),
       ]);
       setData(dashboard);
       setClients(clientResult.clients);
+      setMembers(memberResult.members);
       const firstMember = dashboard.members[0];
       if (!award.memberId && firstMember)
         setAward((current) => ({ ...current, memberId: firstMember.id }));
@@ -113,6 +126,19 @@ function Admin() {
       setClientForm({ businessName: "", locationName: "", ownerName: "", ownerEmail: "" });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Client creation failed");
+    }
+  };
+  const submitMember = async (event: FormEvent) => {
+    event.preventDefault();
+    setError("");
+    try {
+      const result = await api.createMember(memberForm);
+      setMembers((current) => [result.member, ...current]);
+      setMemberActivationPath(result.activationPath);
+      setNotice(`${result.member.name} was enrolled.`);
+      setMemberForm({ name: "", email: "" });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Member enrollment failed");
     }
   };
   const logout = async () => {
@@ -324,21 +350,36 @@ function Admin() {
           )}
           {active === "Members" && (
             <section className="panel">
-              <div className="panel-title">
+              <div className="panel-title client-panel-title">
                 <div>
                   <span>
                     <Users />
                   </span>
-                  <h3>Members</h3>
+                  <div>
+                    <h3>Members</h3>
+                    <small>Enroll customers and track wallet activation.</small>
+                  </div>
                 </div>
+                <button
+                  className="admin-primary"
+                  onClick={() => {
+                    setMemberModal(true);
+                    setMemberActivationPath("");
+                  }}
+                >
+                  <UserPlus /> Enroll member
+                </button>
               </div>
               <div className="member-list">
-                {data.members.map((member) => (
+                {members.map((member) => (
                   <button
                     key={member.id}
+                    disabled={member.status !== "active"}
                     onClick={() => {
-                      setAward({ ...award, memberId: member.id });
-                      setModal(true);
+                      if (member.status === "active") {
+                        setAward({ ...award, memberId: member.id });
+                        setModal(true);
+                      }
                     }}
                   >
                     <span className="member-avatar">{initials(member.name)}</span>
@@ -348,13 +389,12 @@ function Admin() {
                         {member.email} · {member.points.toLocaleString()} points
                       </small>
                     </span>
-                    <Award />
+                    <span className={`client-status ${member.status}`}>{member.status}</span>
                   </button>
                 ))}
-                {!data.members.length && (
+                {!members.length && (
                   <p className="empty-table">
-                    No members have been added yet. Member enrollment is the next account setup
-                    step.
+                    No members yet. Use Enroll member to create the first secure wallet invitation.
                   </p>
                 )}
               </div>
@@ -471,6 +511,79 @@ function Admin() {
                   />
                 </label>
                 <button className="admin-primary full">Create client</button>
+              </>
+            )}
+          </form>
+        </div>
+      )}
+      {memberModal && (
+        <div className="modal-backdrop" onMouseDown={() => setMemberModal(false)}>
+          <form
+            className="award-modal client-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="enroll-member-title"
+            onSubmit={submitMember}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="modal-close"
+              onClick={() => setMemberModal(false)}
+              aria-label="Close"
+            >
+              <X />
+            </button>
+            <span className="modal-icon">
+              <UserPlus />
+            </span>
+            <span className="section-kicker">Member enrollment</span>
+            <h2 id="enroll-member-title">Enroll a rewards member</h2>
+            <p>Create a secure, single-use wallet activation invitation.</p>
+            {memberActivationPath ? (
+              <div className="activation-result" role="status">
+                <strong>Member enrolled</strong>
+                <p>Copy this private activation link and send it to the member:</p>
+                <code>{`${window.location.origin}${memberActivationPath}`}</code>
+                <button
+                  type="button"
+                  className="admin-primary full"
+                  onClick={() =>
+                    void navigator.clipboard.writeText(
+                      `${window.location.origin}${memberActivationPath}`,
+                    )
+                  }
+                >
+                  Copy activation link
+                </button>
+              </div>
+            ) : (
+              <>
+                <label>
+                  Member name
+                  <input
+                    required
+                    minLength={2}
+                    maxLength={120}
+                    autoComplete="name"
+                    value={memberForm.name}
+                    onChange={(event) => setMemberForm({ ...memberForm, name: event.target.value })}
+                  />
+                </label>
+                <label>
+                  Member email
+                  <input
+                    required
+                    type="email"
+                    maxLength={254}
+                    autoComplete="email"
+                    value={memberForm.email}
+                    onChange={(event) =>
+                      setMemberForm({ ...memberForm, email: event.target.value })
+                    }
+                  />
+                </label>
+                <button className="admin-primary full">Create member invitation</button>
               </>
             )}
           </form>

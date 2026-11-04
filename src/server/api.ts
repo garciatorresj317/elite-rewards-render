@@ -18,6 +18,12 @@ import {
   getClientInvitation,
   listClients,
 } from "./clients-service.ts";
+import {
+  activateMember,
+  createMemberInvitation,
+  getMemberInvitation,
+  listMembers,
+} from "./members-service.ts";
 import { awardPoints, getDashboard, getWallet, redeemReward } from "./rewards-service.ts";
 
 const jsonHeaders = {
@@ -192,6 +198,18 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       );
       return json({ ok: true }, 201, { "set-cookie": setSessionCookie(result.sessionToken) });
     }
+    if (url.pathname === "/api/member-invitations/status" && request.method === "GET") {
+      const token = text(url.searchParams.get("token"), "Invitation token", 32, 200);
+      return json(await getMemberInvitation(token));
+    }
+    if (url.pathname === "/api/member-invitations/activate" && request.method === "POST") {
+      const payload = await body(request);
+      const result = await activateMember(
+        text(payload["token"], "Invitation token", 32, 200),
+        text(payload["password"], "Password", 12, 200),
+      );
+      return json({ ok: true }, 201, { "set-cookie": setSessionCookie(result.sessionToken) });
+    }
     const user = await getSessionUser(request);
     if (url.pathname === "/api/auth/session" && request.method === "GET") return json({ user });
     if (url.pathname === "/api/admin/dashboard" && request.method === "GET") {
@@ -210,6 +228,19 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
         locationName: text(payload["locationName"], "Location name", 2, 120),
         ownerName: text(payload["ownerName"], "Owner name", 2, 120),
         ownerEmail: text(payload["ownerEmail"], "Owner email", 5, 254).toLowerCase(),
+      });
+      return json(result, 201);
+    }
+    if (url.pathname === "/api/admin/members" && request.method === "GET") {
+      requireRole(user, ["owner", "staff"]);
+      return json({ members: await listMembers(user) });
+    }
+    if (url.pathname === "/api/admin/members" && request.method === "POST") {
+      requireRole(user, ["owner", "staff"]);
+      const payload = await body(request);
+      const result = await createMemberInvitation(user, {
+        name: text(payload["name"], "Member name", 2, 120),
+        email: text(payload["email"], "Member email", 5, 254).toLowerCase(),
       });
       return json(result, 201);
     }

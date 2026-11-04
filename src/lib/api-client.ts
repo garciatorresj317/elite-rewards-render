@@ -66,6 +66,24 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ token, password }),
     }),
+  members: () => request<{ members: MemberSummary[] }>("/api/admin/members"),
+  createMember: (payload: { name: string; email: string }) =>
+    request<{ member: MemberSummary; activationPath: string }>("/api/admin/members", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  memberInvitation: (token: string) =>
+    request<{
+      businessName: string;
+      locationName: string;
+      memberName: string;
+      memberEmail: string;
+    }>(`/api/member-invitations/status?token=${encodeURIComponent(token)}`),
+  activateMember: (token: string, password: string) =>
+    request<{ ok: boolean }>("/api/member-invitations/activate", {
+      method: "POST",
+      body: JSON.stringify({ token, password }),
+    }),
   wallet: () => request<WalletData>("/api/wallet"),
   redeem: (rewardId: string) =>
     request<{ id: string; code: string; duplicate: boolean }>("/api/wallet/redeem", {
@@ -128,5 +146,15 @@ export type ClientSummary = {
   ownerEmail: string;
   status: "active" | "invited";
   members: number;
+  createdAt: string;
+};
+
+export type MemberSummary = {
+  id: string;
+  name: string;
+  email: string;
+  memberCode: string | null;
+  status: "active" | "invited";
+  points: number;
   createdAt: string;
 };

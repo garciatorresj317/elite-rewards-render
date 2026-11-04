@@ -43,6 +43,7 @@ export async function migrateDatabase(): Promise<void> {
     const migrations = [
       [1, "001_production_rewards.sql"],
       [2, "002_platform_clients.sql"],
+      [3, "003_member_enrollment.sql"],
     ] as const;
     for (const [version, filename] of migrations) {
       if (versions.has(version)) continue;

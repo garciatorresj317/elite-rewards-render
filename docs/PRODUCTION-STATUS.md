@@ -20,14 +20,16 @@ Date: 2026-11-04
 - Cryptographically random member and redemption codes.
 - Audit events for setup, point awards, and redemptions.
 - Live admin metrics, members, rewards, and transaction views.
+- Owner/staff member enrollment with tenant-bound, 72-hour, single-use activation links.
+- Atomic member activation with an initial zero-point balance and authenticated wallet session.
 - Live member balance, ledger history, reward catalog, codes, and redemption flow.
 - Database-aware `/api/health` endpoint.
 - Render Blueprint for the web service and PostgreSQL database.
-- Seventeen passing unit/integration tests, including owner-only setup and production ledger behavior.
+- Twenty-two passing unit/integration tests, including owner-only setup, member enrollment isolation, and production ledger behavior.
 
 ## Verification
 
-- `npm test`: 17/17 tests passed.
+- `npm test`: 22/22 tests passed.
 - `npm run typecheck`: passed.
 - `npm run lint`: passed.
 - `npm run build`: passed.
@@ -47,7 +49,8 @@ The code is ready for deployment, but it is not truthful to call the new backend
 
 ## Remaining platform work after this slice
 
-- Owner-managed creation of additional staff and members.
+- Owner-managed creation of additional staff accounts.
+- Member invitation revocation/reissue and automated email delivery of enrollment links.
 - Password recovery, password change, session revocation, and MFA.
 - Persistent IP/account rate limiting and login-event audit.
 - Reward creation/editing, scheduling, inventory, and archival.

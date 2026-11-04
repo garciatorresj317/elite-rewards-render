@@ -594,3 +594,5 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 .activation-summary { display: grid; gap: 5px; margin-bottom: 18px; padding: 16px; border: 1px solid var(--gold-line); border-radius: 11px; background: rgba(246,185,0,.05); }
 .activation-summary strong { color: var(--gold-pale); font: 700 21px var(--serif); }
 .activation-summary span, .activation-summary small { color: var(--muted); }
+.member-list button:disabled { cursor: default; opacity: .82; }
+.member-list button:disabled:hover { border-color: transparent; background: transparent; }
