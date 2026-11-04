@@ -31,7 +31,16 @@ Run the complete local gate with `npm run check`.
 
 ## Deployment
 
-Built with TanStack Start and the Lovable-compatible Vite configuration. `npm run preview` runs the generated Cloudflare Worker locally after a build. `npm run deploy` builds and deploys through the authenticated Cloudflare account. Elite Rewards deploys independently from the Dynasty Designs site.
+Elite Rewards deploys independently from the Dynasty Designs site as a Render Node web service. The root [`render.yaml`](render.yaml) is the infrastructure Blueprint used by Render:
+
+- Build: `npm ci --include=dev && npm run check`
+- Start: `npm run start`
+- Health check: `/`
+- Deploy branch: `main`, after its GitHub checks pass
+
+`npm run build` generates the standalone Node server at `.output/server/index.mjs`. `npm run preview` builds and starts that same production server locally. Render supplies `PORT`; Nitro binds the production server to it automatically.
+
+To create the service, connect the GitHub repository to Render and apply the repository Blueprint. After creation, pushes to `main` deploy automatically.
 
 ## Production status
 

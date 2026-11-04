@@ -3,11 +3,14 @@
   "private": true,
   "sideEffects": false,
   "type": "module",
+  "engines": {
+    "node": ">=22 <23"
+  },
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "preview": "npx wrangler dev",
-    "deploy": "npm run build && npx wrangler deploy",
+    "start": "node .output/server/index.mjs",
+    "preview": "npm run build && npm run start",
     "test": "node --experimental-strip-types --test src/lib/*.test.ts",
     "check": "npm run test && npm run typecheck && npm run lint && npm run build",
     "lint": "eslint .",

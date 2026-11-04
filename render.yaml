@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: elite-rewards
+    runtime: node
+    plan: free
+    branch: main
+    buildCommand: npm ci --include=dev && npm run check
+    startCommand: npm run start
+    healthCheckPath: /
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.0
+      - key: NODE_ENV
+        value: production
+      - key: NITRO_PRESET
+        value: render_com
