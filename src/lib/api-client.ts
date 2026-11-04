@@ -6,6 +6,7 @@ export type SessionUser = {
   name: string;
   email: string;
   memberCode: string | null;
+  platformAdmin: boolean;
 };
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -36,11 +37,34 @@ export const api = {
   setup: (payload: Record<string, string>) =>
     request<{ ok: boolean }>("/api/setup", { method: "POST", body: JSON.stringify(payload) }),
   dashboard: () => request<DashboardData>("/api/admin/dashboard"),
+  clients: () => request<{ clients: ClientSummary[] }>("/api/admin/clients"),
+  createClient: (payload: {
+    businessName: string;
+    locationName: string;
+    ownerName: string;
+    ownerEmail: string;
+  }) =>
+    request<{ client: ClientSummary; activationPath: string }>("/api/admin/clients", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
   award: (payload: { memberId: string; points: number; amountCents: number; note?: string }) =>
     request<{ id: string; duplicate: boolean }>("/api/admin/award", {
       method: "POST",
       headers: { "idempotency-key": crypto.randomUUID() },
       body: JSON.stringify(payload),
+    }),
+  clientInvitation: (token: string) =>
+    request<{
+      businessName: string;
+      locationName: string;
+      ownerName: string;
+      ownerEmail: string;
+    }>(`/api/client-invitations/status?token=${encodeURIComponent(token)}`),
+  activateClient: (token: string, password: string) =>
+    request<{ ok: boolean }>("/api/client-invitations/activate", {
+      method: "POST",
+      body: JSON.stringify({ token, password }),
     }),
   wallet: () => request<WalletData>("/api/wallet"),
   redeem: (rewardId: string) =>
@@ -94,4 +118,15 @@ export type WalletData = {
     status: string;
     created_at: string;
   }>;
+};
+
+export type ClientSummary = {
+  id: string;
+  name: string;
+  locationName: string;
+  ownerName: string;
+  ownerEmail: string;
+  status: "active" | "invited";
+  members: number;
+  createdAt: string;
 };

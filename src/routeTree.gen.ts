@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ActivateClientRouteImport } from './routes/activate-client'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SetupRouteImport } from './routes/setup'
@@ -18,6 +19,11 @@ import { Route as WalletRouteImport } from './routes/wallet'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ActivateClientRoute = ActivateClientRouteImport.update({
+  id: '/activate-client',
+  path: '/activate-client',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -43,6 +49,7 @@ const WalletRoute = WalletRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/activate-client': typeof ActivateClientRoute
   '/admin': typeof AdminRoute
   '/login': typeof LoginRoute
   '/setup': typeof SetupRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/activate-client': typeof ActivateClientRoute
   '/admin': typeof AdminRoute
   '/login': typeof LoginRoute
   '/setup': typeof SetupRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/activate-client': typeof ActivateClientRoute
   '/admin': typeof AdminRoute
   '/login': typeof LoginRoute
   '/setup': typeof SetupRoute
@@ -65,14 +74,23 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/login' | '/setup' | '/wallet'
+  fullPaths:
+    '/' | '/activate-client' | '/admin' | '/login' | '/setup' | '/wallet'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/login' | '/setup' | '/wallet'
-  id: '__root__' | '/' | '/admin' | '/login' | '/setup' | '/wallet'
+  to: '/' | '/activate-client' | '/admin' | '/login' | '/setup' | '/wallet'
+  id:
+    | '__root__'
+    | '/'
+    | '/activate-client'
+    | '/admin'
+    | '/login'
+    | '/setup'
+    | '/wallet'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ActivateClientRoute: typeof ActivateClientRoute
   AdminRoute: typeof AdminRoute
   LoginRoute: typeof LoginRoute
   SetupRoute: typeof SetupRoute
@@ -86,6 +104,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/activate-client': {
+      id: '/activate-client'
+      path: '/activate-client'
+      fullPath: '/activate-client'
+      preLoaderRoute: typeof ActivateClientRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -121,6 +146,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ActivateClientRoute: ActivateClientRoute,
   AdminRoute: AdminRoute,
   LoginRoute: LoginRoute,
   SetupRoute: SetupRoute,

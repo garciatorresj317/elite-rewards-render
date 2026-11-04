@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   Award,
+  Building2,
   Check,
   CircleDollarSign,
   Gift,
@@ -18,26 +19,30 @@ import {
 } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
-import { api, type DashboardData, type SessionUser } from "@/lib/api-client";
+import { api, type ClientSummary, type DashboardData, type SessionUser } from "@/lib/api-client";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Business dashboard | Elite Rewards" }] }),
   component: Admin,
 });
 const sections = [
-  { label: "Dashboard", icon: LayoutDashboard },
-  { label: "Members", icon: Users },
-  { label: "Transactions", icon: ReceiptText },
-  { label: "Rewards", icon: Trophy },
+  { label: "Dashboard", icon: LayoutDashboard, platformOnly: false },
+  { label: "Clients", icon: Building2, platformOnly: true },
+  { label: "Members", icon: Users, platformOnly: false },
+  { label: "Transactions", icon: ReceiptText, platformOnly: false },
+  { label: "Rewards", icon: Trophy, platformOnly: false },
 ];
 
 function Admin() {
   const navigate = useNavigate();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
+  const [clients, setClients] = useState<ClientSummary[]>([]);
   const [active, setActive] = useState("Dashboard");
   const [mobile, setMobile] = useState(false);
   const [modal, setModal] = useState(false);
+  const [clientModal, setClientModal] = useState(false);
+  const [activationPath, setActivationPath] = useState("");
   const [search, setSearch] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -48,6 +53,12 @@ function Admin() {
     points: "",
     note: "Eligible purchase",
   });
+  const [clientForm, setClientForm] = useState({
+    businessName: "",
+    locationName: "",
+    ownerName: "",
+    ownerEmail: "",
+  });
   const load = useCallback(async () => {
     try {
       const session = await api.session();
@@ -56,8 +67,12 @@ function Admin() {
         return;
       }
       setUser(session.user);
-      const dashboard = await api.dashboard();
+      const [dashboard, clientResult] = await Promise.all([
+        api.dashboard(),
+        session.user.platformAdmin ? api.clients() : Promise.resolve({ clients: [] }),
+      ]);
       setData(dashboard);
+      setClients(clientResult.clients);
       const firstMember = dashboard.members[0];
       if (!award.memberId && firstMember)
         setAward((current) => ({ ...current, memberId: firstMember.id }));
@@ -85,6 +100,19 @@ function Admin() {
       await load();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Award failed");
+    }
+  };
+  const submitClient = async (event: FormEvent) => {
+    event.preventDefault();
+    setError("");
+    try {
+      const result = await api.createClient(clientForm);
+      setClients((current) => [...current, result.client]);
+      setActivationPath(result.activationPath);
+      setNotice(`${result.client.name} was added.`);
+      setClientForm({ businessName: "", locationName: "", ownerName: "", ownerEmail: "" });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Client creation failed");
     }
   };
   const logout = async () => {
@@ -128,19 +156,21 @@ function Admin() {
           </div>
         </div>
         <nav>
-          {sections.map(({ label, icon: Icon }) => (
-            <button
-              className={active === label ? "active" : ""}
-              key={label}
-              onClick={() => {
-                setActive(label);
-                setMobile(false);
-              }}
-            >
-              <Icon />
-              {label}
-            </button>
-          ))}
+          {sections
+            .filter((section) => !section.platformOnly || user.platformAdmin)
+            .map(({ label, icon: Icon }) => (
+              <button
+                className={active === label ? "active" : ""}
+                key={label}
+                onClick={() => {
+                  setActive(label);
+                  setMobile(false);
+                }}
+              >
+                <Icon />
+                {label}
+              </button>
+            ))}
         </nav>
         <div className="sidebar-footer">
           <button onClick={logout}>
@@ -242,6 +272,56 @@ function Admin() {
               </section>
             </>
           )}
+          {active === "Clients" && user.platformAdmin && (
+            <section className="panel client-panel">
+              <div className="panel-title client-panel-title">
+                <div>
+                  <span>
+                    <Building2 />
+                  </span>
+                  <div>
+                    <h3>Business clients</h3>
+                    <small>Create and track each rewards program from one place.</small>
+                  </div>
+                </div>
+                <button
+                  className="admin-primary"
+                  onClick={() => {
+                    setClientModal(true);
+                    setActivationPath("");
+                  }}
+                >
+                  <Plus /> Add client
+                </button>
+              </div>
+              <div className="client-grid">
+                {clients.map((client) => (
+                  <article className="client-card" key={client.id}>
+                    <div className="client-card-top">
+                      <span className="client-avatar">{initials(client.name)}</span>
+                      <span className={`client-status ${client.status}`}>{client.status}</span>
+                    </div>
+                    <h3>{client.name}</h3>
+                    <p>{client.locationName}</p>
+                    <dl>
+                      <div>
+                        <dt>Owner</dt>
+                        <dd>{client.ownerName}</dd>
+                      </div>
+                      <div>
+                        <dt>Email</dt>
+                        <dd>{client.ownerEmail}</dd>
+                      </div>
+                      <div>
+                        <dt>Members</dt>
+                        <dd>{client.members.toLocaleString()}</dd>
+                      </div>
+                    </dl>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
           {active === "Members" && (
             <section className="panel">
               <div className="panel-title">
@@ -301,6 +381,101 @@ function Admin() {
           )}
         </main>
       </div>
+      {clientModal && (
+        <div className="modal-backdrop" onMouseDown={() => setClientModal(false)}>
+          <form
+            className="award-modal client-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="add-client-title"
+            onSubmit={submitClient}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="modal-close"
+              onClick={() => setClientModal(false)}
+              aria-label="Close"
+            >
+              <X />
+            </button>
+            <span className="modal-icon">
+              <Building2 />
+            </span>
+            <span className="section-kicker">Platform client</span>
+            <h2 id="add-client-title">Add a business client</h2>
+            <p>Create an isolated rewards program and a secure owner activation invitation.</p>
+            {activationPath ? (
+              <div className="activation-result" role="status">
+                <strong>Client created</strong>
+                <p>Copy this private activation link and send it to the client owner:</p>
+                <code>{`${window.location.origin}${activationPath}`}</code>
+                <button
+                  type="button"
+                  className="admin-primary full"
+                  onClick={() =>
+                    void navigator.clipboard.writeText(`${window.location.origin}${activationPath}`)
+                  }
+                >
+                  Copy activation link
+                </button>
+              </div>
+            ) : (
+              <>
+                <label>
+                  Business name
+                  <input
+                    required
+                    minLength={2}
+                    maxLength={120}
+                    value={clientForm.businessName}
+                    onChange={(event) =>
+                      setClientForm({ ...clientForm, businessName: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  First location
+                  <input
+                    required
+                    minLength={2}
+                    maxLength={120}
+                    value={clientForm.locationName}
+                    onChange={(event) =>
+                      setClientForm({ ...clientForm, locationName: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  Client owner name
+                  <input
+                    required
+                    minLength={2}
+                    maxLength={120}
+                    value={clientForm.ownerName}
+                    onChange={(event) =>
+                      setClientForm({ ...clientForm, ownerName: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  Client owner email
+                  <input
+                    required
+                    type="email"
+                    maxLength={254}
+                    value={clientForm.ownerEmail}
+                    onChange={(event) =>
+                      setClientForm({ ...clientForm, ownerEmail: event.target.value })
+                    }
+                  />
+                </label>
+                <button className="admin-primary full">Create client</button>
+              </>
+            )}
+          </form>
+        </div>
+      )}
       {modal && (
         <div className="modal-backdrop" onMouseDown={() => setModal(false)}>
           <form

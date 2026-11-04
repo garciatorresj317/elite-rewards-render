@@ -16,6 +16,7 @@ export type SessionUser = {
   name: string;
   email: string;
   memberCode: string | null;
+  platformAdmin: boolean;
 };
 
 export async function hashPassword(password: string): Promise<string> {
@@ -87,8 +88,10 @@ export async function getSessionUser(request: Request): Promise<SessionUser | nu
     name: string;
     email: string;
     member_code: string | null;
+    platform_admin: boolean;
   }>(
-    `SELECT u.id, u.business_id, u.location_id, u.role, u.name, u.email, u.member_code
+    `SELECT u.id, u.business_id, u.location_id, u.role, u.name, u.email, u.member_code,
+            u.platform_admin
        FROM sessions s JOIN users u ON u.id = s.user_id
       WHERE s.token_hash = $1 AND s.expires_at > now() AND u.active = true`,
     [tokenHash(token)],
@@ -103,12 +106,19 @@ export async function getSessionUser(request: Request): Promise<SessionUser | nu
     name: user.name,
     email: user.email,
     memberCode: user.member_code,
+    platformAdmin: user.platform_admin,
   };
 }
 
 export function requireRole(user: SessionUser | null, roles: Role[]): asserts user is SessionUser {
   if (!user) throw Object.assign(new Error("Authentication required"), { status: 401 });
   if (!roles.includes(user.role)) throw Object.assign(new Error("Not authorized"), { status: 403 });
+}
+
+export function requirePlatformAdmin(user: SessionUser | null): asserts user is SessionUser {
+  requireRole(user, ["owner"]);
+  if (!user.platformAdmin)
+    throw Object.assign(new Error("Platform administrator access required"), { status: 403 });
 }
 
 export async function authenticate(
@@ -126,11 +136,12 @@ export async function authenticate(
       name: string;
       email: string;
       member_code: string | null;
+      platform_admin: boolean;
       password_hash: string;
       failed_login_count: number;
       locked_until: Date | null;
     }>(
-      `SELECT id, business_id, location_id, role, name, email, member_code, password_hash,
+      `SELECT id, business_id, location_id, role, name, email, member_code, platform_admin, password_hash,
               failed_login_count, locked_until
          FROM users WHERE lower(email) = lower($1) AND active = true FOR UPDATE`,
       [email],
@@ -168,6 +179,7 @@ export async function authenticate(
         name: candidate.name,
         email: candidate.email,
         memberCode: candidate.member_code,
+        platformAdmin: candidate.platform_admin,
       },
     };
   } catch (error) {

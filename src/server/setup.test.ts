@@ -32,6 +32,9 @@ describe("one-time production setup", () => {
       "utf8",
     );
     await pool.query(sql);
+    await pool.query(
+      await readFile(join(process.cwd(), "migrations", "002_platform_clients.sql"), "utf8"),
+    );
     process.env["SETUP_TOKEN"] = setupToken;
   });
 
@@ -57,6 +60,12 @@ describe("one-time production setup", () => {
     assert.ok(result.token);
     assert.ok(result.ownerId);
     assert.deepEqual(Object.keys(result).sort(), ["ownerId", "token"]);
+
+    const platformAdmin = await pool.query<{ platform_admin: boolean }>(
+      "SELECT platform_admin FROM users WHERE id = $1",
+      [result.ownerId],
+    );
+    assert.equal(platformAdmin.rows[0]?.platform_admin, true);
 
     const roles = await pool.query<{ role: string; count: string }>(
       "SELECT role, count(*) AS count FROM users GROUP BY role ORDER BY role",

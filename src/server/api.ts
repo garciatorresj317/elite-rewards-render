@@ -7,10 +7,17 @@ import {
   getSessionUser,
   hashPassword,
   newUserId,
+  requirePlatformAdmin,
   requireRole,
   setSessionCookie,
 } from "./auth.ts";
 import { getPool, id, migrateDatabase } from "./database.ts";
+import {
+  activateClient,
+  createClient,
+  getClientInvitation,
+  listClients,
+} from "./clients-service.ts";
 import { awardPoints, getDashboard, getWallet, redeemReward } from "./rewards-service.ts";
 
 const jsonHeaders = {
@@ -86,7 +93,7 @@ export async function setupProductionProgram(payload: Record<string, unknown>) {
       locationName,
     ]);
     await client.query(
-      "INSERT INTO users(id,business_id,location_id,role,name,email,password_hash) VALUES ($1,$2,$3,'owner',$4,$5,$6)",
+      "INSERT INTO users(id,business_id,location_id,role,name,email,password_hash,platform_admin) VALUES ($1,$2,$3,'owner',$4,$5,$6,true)",
       [ownerId, businessId, locationId, ownerName, ownerEmail, await hashPassword(ownerPassword)],
     );
     const rewardRows = [
@@ -173,11 +180,38 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       await destroySession(request);
       return json({ ok: true }, 200, { "set-cookie": clearSessionCookie() });
     }
+    if (url.pathname === "/api/client-invitations/status" && request.method === "GET") {
+      const token = text(url.searchParams.get("token"), "Invitation token", 32, 200);
+      return json(await getClientInvitation(token));
+    }
+    if (url.pathname === "/api/client-invitations/activate" && request.method === "POST") {
+      const payload = await body(request);
+      const result = await activateClient(
+        text(payload["token"], "Invitation token", 32, 200),
+        text(payload["password"], "Password", 12, 200),
+      );
+      return json({ ok: true }, 201, { "set-cookie": setSessionCookie(result.sessionToken) });
+    }
     const user = await getSessionUser(request);
     if (url.pathname === "/api/auth/session" && request.method === "GET") return json({ user });
     if (url.pathname === "/api/admin/dashboard" && request.method === "GET") {
       requireRole(user, ["owner", "staff"]);
       return json(await getDashboard(user));
+    }
+    if (url.pathname === "/api/admin/clients" && request.method === "GET") {
+      requirePlatformAdmin(user);
+      return json({ clients: await listClients(user) });
+    }
+    if (url.pathname === "/api/admin/clients" && request.method === "POST") {
+      requirePlatformAdmin(user);
+      const payload = await body(request);
+      const result = await createClient(user, {
+        businessName: text(payload["businessName"], "Business name", 2, 120),
+        locationName: text(payload["locationName"], "Location name", 2, 120),
+        ownerName: text(payload["ownerName"], "Owner name", 2, 120),
+        ownerEmail: text(payload["ownerEmail"], "Owner email", 5, 254).toLowerCase(),
+      });
+      return json(result, 201);
     }
     if (url.pathname === "/api/admin/award" && request.method === "POST") {
       requireRole(user, ["owner", "staff"]);

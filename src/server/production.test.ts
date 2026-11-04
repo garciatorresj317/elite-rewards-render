@@ -22,6 +22,7 @@ const owner: SessionUser = {
   name: "Test Owner",
   email: "owner@example.com",
   memberCode: null,
+  platformAdmin: true,
 };
 const member: SessionUser = {
   id: memberId,
@@ -31,6 +32,7 @@ const member: SessionUser = {
   name: "Test Member",
   email: "member@example.com",
   memberCode: "ELITE-TEST",
+  platformAdmin: false,
 };
 
 describe("production rewards ledger", () => {
@@ -55,6 +57,9 @@ describe("production rewards ledger", () => {
       "utf8",
     );
     await pool.query(sql.replaceAll("CREATE INDEX IF NOT EXISTS", "CREATE INDEX IF NOT EXISTS"));
+    await pool.query(
+      await readFile(join(process.cwd(), "migrations", "002_platform_clients.sql"), "utf8"),
+    );
     await pool.query("INSERT INTO businesses(id,name) VALUES ($1,'Test Business')", [businessId]);
     await pool.query("INSERT INTO locations(id,business_id,name) VALUES ($1,$2,'Test Location')", [
       locationId,

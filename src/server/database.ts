@@ -40,17 +40,20 @@ export async function migrateDatabase(): Promise<void> {
       "SELECT version FROM schema_migrations",
     );
     const versions = new Set(applied.rows.map((row) => row.version));
-    if (!versions.has(1)) {
-      const sql = await readFile(
-        join(process.cwd(), "migrations", "001_production_rewards.sql"),
-        "utf8",
-      );
+    const migrations = [
+      [1, "001_production_rewards.sql"],
+      [2, "002_platform_clients.sql"],
+    ] as const;
+    for (const [version, filename] of migrations) {
+      if (versions.has(version)) continue;
+      const sql = await readFile(join(process.cwd(), "migrations", filename), "utf8");
       const client = await database.connect();
       try {
         await client.query("BEGIN");
         await client.query(sql);
         await client.query(
-          "INSERT INTO schema_migrations(version) VALUES (1) ON CONFLICT DO NOTHING",
+          "INSERT INTO schema_migrations(version) VALUES ($1) ON CONFLICT DO NOTHING",
+          [version],
         );
         await client.query("COMMIT");
       } catch (error) {
