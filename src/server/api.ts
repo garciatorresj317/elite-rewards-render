@@ -135,10 +135,6 @@ async function setup(payload: Record<string, unknown>) {
   }
 }
 
-function firstForwardedValue(value: string | null): string | null {
-  return value?.split(",", 1)[0]?.trim() || null;
-}
-
 function normalizedOrigin(value: string | null): string | null {
   if (!value) return null;
   try {
@@ -151,24 +147,15 @@ function normalizedOrigin(value: string | null): string | null {
   }
 }
 
-function forwardedOrigin(request: Request): string | null {
-  const host = firstForwardedValue(request.headers.get("x-forwarded-host"));
-  const protocol = firstForwardedValue(request.headers.get("x-forwarded-proto"));
-  if (!host || (protocol !== "http" && protocol !== "https")) return null;
-  return normalizedOrigin(`${protocol}://${host}`);
-}
-
 export function isSameOrigin(request: Request): boolean {
   const origin = normalizedOrigin(request.headers.get("origin"));
   const fetchSite = request.headers.get("sec-fetch-site");
   if (!origin || (fetchSite && fetchSite !== "same-origin")) return false;
 
   const allowedOrigins = new Set<string>([new URL(request.url).origin]);
-  const proxyOrigin = forwardedOrigin(request);
   const configuredOrigin = normalizedOrigin(
     process.env["APP_ORIGIN"] ?? process.env["RENDER_EXTERNAL_URL"] ?? null,
   );
-  if (proxyOrigin) allowedOrigins.add(proxyOrigin);
   if (configuredOrigin) allowedOrigins.add(configuredOrigin);
   return allowedOrigins.has(origin);
 }

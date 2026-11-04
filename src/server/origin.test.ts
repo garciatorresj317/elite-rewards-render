@@ -25,32 +25,23 @@ describe("same-origin mutation guard", () => {
     );
   });
 
-  it("accepts the public origin supplied by Render's trusted proxy headers", () => {
-    assert.equal(
-      isSameOrigin(
-        request({
-          origin: "https://elite-rewards.onrender.com",
-          "sec-fetch-site": "same-origin",
-          "x-forwarded-host": "elite-rewards.onrender.com",
-          "x-forwarded-proto": "https",
-        }),
-      ),
-      true,
-    );
-  });
-
-  it("accepts the first proxy hop when forwarded headers contain a chain", () => {
-    assert.equal(
-      isSameOrigin(
-        request({
-          origin: "https://elite-rewards.onrender.com",
-          "sec-fetch-site": "same-origin",
-          "x-forwarded-host": "elite-rewards.onrender.com, internal-render-host:10000",
-          "x-forwarded-proto": "https, http",
-        }),
-      ),
-      true,
-    );
+  it("accepts Render's configured public URL when the internal request URL differs", () => {
+    const previous = process.env["RENDER_EXTERNAL_URL"];
+    process.env["RENDER_EXTERNAL_URL"] = "https://elite-rewards.onrender.com";
+    try {
+      assert.equal(
+        isSameOrigin(
+          request({
+            origin: "https://elite-rewards.onrender.com",
+            "sec-fetch-site": "same-origin",
+          }),
+        ),
+        true,
+      );
+    } finally {
+      if (previous === undefined) delete process.env["RENDER_EXTERNAL_URL"];
+      else process.env["RENDER_EXTERNAL_URL"] = previous;
+    }
   });
 
   it("rejects a different origin even when it targets the public service", () => {
@@ -59,7 +50,19 @@ describe("same-origin mutation guard", () => {
         request({
           origin: "https://attacker.example",
           "sec-fetch-site": "cross-site",
-          "x-forwarded-host": "elite-rewards.onrender.com",
+        }),
+      ),
+      false,
+    );
+  });
+
+  it("does not trust spoofed forwarded headers", () => {
+    assert.equal(
+      isSameOrigin(
+        request({
+          origin: "https://attacker.example",
+          "sec-fetch-site": "same-origin",
+          "x-forwarded-host": "attacker.example",
           "x-forwarded-proto": "https",
         }),
       ),
