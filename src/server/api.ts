@@ -1,4 +1,4 @@
-import { randomBytes, timingSafeEqual } from "node:crypto";
+import { timingSafeEqual } from "node:crypto";
 import {
   authenticate,
   clearSessionCookie,
@@ -53,7 +53,7 @@ function safeEqual(left: string, right: string): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-async function setup(payload: Record<string, unknown>) {
+export async function setupProductionProgram(payload: Record<string, unknown>) {
   const setupToken = process.env["SETUP_TOKEN"];
   if (!setupToken || !safeEqual(text(payload["setupToken"], "Setup token", 24), setupToken))
     throw Object.assign(new Error("Invalid setup token"), { status: 403 });
@@ -68,15 +68,11 @@ async function setup(payload: Record<string, unknown>) {
     const businessId = id("biz");
     const locationId = id("loc");
     const ownerId = newUserId();
-    const memberId = newUserId();
     const businessName = text(payload["businessName"], "Business name", 2, 120);
     const locationName = text(payload["locationName"], "Location name", 2, 120);
     const ownerName = text(payload["ownerName"], "Owner name", 2, 120);
     const ownerEmail = text(payload["ownerEmail"], "Owner email", 5, 254).toLowerCase();
     const ownerPassword = text(payload["ownerPassword"], "Owner password", 12, 200);
-    const memberName = text(payload["memberName"] ?? "Maya Thompson", "Member name", 2, 120);
-    const memberEmail = text(payload["memberEmail"], "Member email", 5, 254).toLowerCase();
-    const memberPassword = text(payload["memberPassword"], "Member password", 12, 200);
     await client.query("INSERT INTO businesses(id,name) VALUES ($1,$2)", [
       businessId,
       businessName,
@@ -93,23 +89,6 @@ async function setup(payload: Record<string, unknown>) {
       "INSERT INTO users(id,business_id,location_id,role,name,email,password_hash) VALUES ($1,$2,$3,'owner',$4,$5,$6)",
       [ownerId, businessId, locationId, ownerName, ownerEmail, await hashPassword(ownerPassword)],
     );
-    const memberCode = `ELITE-${randomBytes(8).toString("hex").toUpperCase()}`;
-    await client.query(
-      "INSERT INTO users(id,business_id,location_id,role,name,email,password_hash,member_code) VALUES ($1,$2,$3,'member',$4,$5,$6,$7)",
-      [
-        memberId,
-        businessId,
-        locationId,
-        memberName,
-        memberEmail,
-        await hashPassword(memberPassword),
-        memberCode,
-      ],
-    );
-    await client.query(
-      "INSERT INTO member_balances(business_id,member_id,points) VALUES ($1,$2,0)",
-      [businessId, memberId],
-    );
     const rewardRows = [
       [id("rew"), "$5 off", "Take $5 off your next purchase.", 500],
       [id("rew"), "Free favorite", "Choose one eligible item on us.", 850],
@@ -122,11 +101,11 @@ async function setup(payload: Record<string, unknown>) {
       );
     await client.query(
       "INSERT INTO audit_events(id,business_id,actor_user_id,action,target_type,target_id,metadata) VALUES ($1,$2,$3,'system.setup','business',$2,$4)",
-      [id("aud"), businessId, ownerId, JSON.stringify({ locationId, memberId })],
+      [id("aud"), businessId, ownerId, JSON.stringify({ locationId })],
     );
     const token = await createSession(client, ownerId);
     await client.query("COMMIT");
-    return { token, ownerId, memberId };
+    return { token, ownerId };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
@@ -178,7 +157,7 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       return json({ setupRequired: Number(result.rows[0]?.count ?? 0) === 0 });
     }
     if (url.pathname === "/api/setup" && request.method === "POST") {
-      const result = await setup(await body(request));
+      const result = await setupProductionProgram(await body(request));
       return json({ ok: true }, 201, { "set-cookie": setSessionCookie(result.token) });
     }
     if (url.pathname === "/api/auth/login" && request.method === "POST") {

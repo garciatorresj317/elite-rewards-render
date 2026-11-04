@@ -16,9 +16,6 @@ const initial = {
   ownerName: "",
   ownerEmail: "",
   ownerPassword: "",
-  memberName: "Maya Thompson",
-  memberEmail: "",
-  memberPassword: "",
 };
 function Setup() {
   const navigate = useNavigate();
@@ -73,8 +70,8 @@ function Setup() {
         ) : (
           <>
             <p>
-              This creates one business, one location, the owner account, and the first member. It
-              cannot be run twice.
+              This creates one business, one location, and the owner account. Members are added
+              after setup. This cannot be run twice.
             </p>
             {error && (
               <div className="form-error" role="alert">
@@ -88,9 +85,6 @@ function Setup() {
               {field("ownerName", "Owner name")}
               {field("ownerEmail", "Owner email", "email")}
               {field("ownerPassword", "Owner password", "password")}
-              {field("memberName", "First member name")}
-              {field("memberEmail", "First member email", "email")}
-              {field("memberPassword", "Member password", "password")}
               <button className="admin-primary full" disabled={busy}>
                 {busy ? "Creating…" : "Create production program"}
               </button>

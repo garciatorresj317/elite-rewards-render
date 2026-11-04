@@ -42,7 +42,7 @@ Elite Rewards deploys independently from the Dynasty Designs site as a Render No
 
 `npm run build` generates the standalone Node server at `.output/server/index.mjs`. `npm run preview` builds and starts that same production server locally. Render supplies `PORT`; Nitro binds the production server to it automatically.
 
-The Blueprint provisions the web service and `elite-rewards-db` PostgreSQL database, injects `DATABASE_URL`, and creates a private `SETUP_TOKEN`. After the first deployment, open `/setup`, use the private setup token from Render, and create the first owner and member credentials. The setup API permanently closes once an owner exists.
+The Blueprint provisions the web service and `elite-rewards-db` PostgreSQL database, injects `DATABASE_URL`, and creates a private `SETUP_TOKEN`. After the first deployment, open `/setup`, use the private setup token from Render, and create the business, first location, and owner credentials. Members are added after setup. The setup API permanently closes once an owner exists.
 
 ## Production status
 

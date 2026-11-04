@@ -193,8 +193,13 @@ function Admin() {
                     {data.business.business_name}.
                   </p>
                 </div>
-                <button className="admin-primary" onClick={() => setModal(true)}>
-                  <Plus /> Award points
+                <button
+                  className="admin-primary"
+                  onClick={() => setModal(true)}
+                  disabled={!data.members.length}
+                  title={!data.members.length ? "Add a member before awarding points" : undefined}
+                >
+                  <Plus /> {data.members.length ? "Award points" : "No members yet"}
                 </button>
               </section>
               <section className="metrics-grid">
@@ -266,6 +271,12 @@ function Admin() {
                     <Award />
                   </button>
                 ))}
+                {!data.members.length && (
+                  <p className="empty-table">
+                    No members have been added yet. Member enrollment is the next account setup
+                    step.
+                  </p>
+                )}
               </div>
             </section>
           )}
