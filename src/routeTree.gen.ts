@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as WalletRouteImport } from './routes/wallet'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +25,16 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WalletRoute = WalletRouteImport.update({
   id: '/wallet',
   path: '/wallet',
@@ -32,30 +44,38 @@ const WalletRoute = WalletRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/login': typeof LoginRoute
+  '/setup': typeof SetupRoute
   '/wallet': typeof WalletRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/login': typeof LoginRoute
+  '/setup': typeof SetupRoute
   '/wallet': typeof WalletRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/login': typeof LoginRoute
+  '/setup': typeof SetupRoute
   '/wallet': typeof WalletRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/wallet'
+  fullPaths: '/' | '/admin' | '/login' | '/setup' | '/wallet'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/wallet'
-  id: '__root__' | '/' | '/admin' | '/wallet'
+  to: '/' | '/admin' | '/login' | '/setup' | '/wallet'
+  id: '__root__' | '/' | '/admin' | '/login' | '/setup' | '/wallet'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  LoginRoute: typeof LoginRoute
+  SetupRoute: typeof SetupRoute
   WalletRoute: typeof WalletRoute
 }
 
@@ -75,6 +95,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/wallet': {
       id: '/wallet'
       path: '/wallet'
@@ -88,6 +122,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  LoginRoute: LoginRoute,
+  SetupRoute: SetupRoute,
   WalletRoute: WalletRoute,
 }
 export const routeTree = rootRouteImport

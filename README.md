@@ -1,14 +1,16 @@
 # Elite Rewards
 
-An independent rewards-program website and interactive product demo for businesses and their members.
+An independent rewards-program website with authenticated business and member access backed by a PostgreSQL rewards ledger.
 
 ## Product areas
 
 - `/` — public marketing site
-- `/wallet` — member wallet and rewards catalog
-- `/admin` — business dashboard with reporting, reward activity, transactions, and demo controls
+- `/login` — secure business and member access
+- `/wallet` — authenticated member wallet, balance, ledger, reward codes, and redemptions
+- `/admin` — authenticated business dashboard, members, rewards, live transactions, and point awards
+- `/setup` — one-time protected production bootstrap
 
-The current app is a front-end product demonstration. It persists demonstration activity in browser local storage so core interactions can be evaluated before authentication, database, billing, and POS services are connected.
+The current production slice supports one business and one location. Authentication, opaque server sessions, role enforcement, PostgreSQL persistence, an append-only points ledger, idempotent point awards, and atomic reward redemptions are connected. POS ingestion, billing, messaging, multi-location management, and the remaining administrative modules are later phases.
 
 ## Development
 
@@ -35,14 +37,14 @@ Elite Rewards deploys independently from the Dynasty Designs site as a Render No
 
 - Build: `npm ci --include=dev && npm run check`
 - Start: `npm run start`
-- Health check: `/`
+- Health check: `/api/health`
 - Deploy branch: `main`, after its GitHub checks pass
 
 `npm run build` generates the standalone Node server at `.output/server/index.mjs`. `npm run preview` builds and starts that same production server locally. Render supplies `PORT`; Nitro binds the production server to it automatically.
 
-To create the service, connect the GitHub repository to Render and apply the repository Blueprint. After creation, pushes to `main` deploy automatically.
+The Blueprint provisions the web service and `elite-rewards-db` PostgreSQL database, injects `DATABASE_URL`, and creates a private `SETUP_TOKEN`. After the first deployment, open `/setup`, use the private setup token from Render, and create the first owner and member credentials. The setup API permanently closes once an owner exists.
 
 ## Production status
 
-This repository is not production-complete. The detailed verified completion register is in
+The authenticated ledger vertical slice is production-capable, but the complete commercial platform is not finished. The detailed completion register is in
 [`docs/ELITE-REWARDS-COMPLETION-AUDIT.md`](docs/ELITE-REWARDS-COMPLETION-AUDIT.md).

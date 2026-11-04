@@ -56,11 +56,11 @@ function Home() {
           <a href="#pricing">Pricing</a>
         </nav>
         <div className="header-actions">
-          <Link to="/wallet" className="text-link">
-            Member demo
+          <Link to="/login" className="text-link">
+            Member sign in
           </Link>
-          <Link to="/admin" className="button button-dark">
-            Open dashboard
+          <Link to="/login" className="button button-dark">
+            Business sign in
           </Link>
         </div>
       </header>
@@ -79,11 +79,11 @@ function Home() {
               reward real loyalty, and bring people back.
             </p>
             <div className="hero-actions">
-              <Link to="/admin" className="button button-primary">
-                Explore the dashboard <ArrowRight size={18} />
+              <Link to="/login" className="button button-primary">
+                Open Elite Rewards <ArrowRight size={18} />
               </Link>
-              <Link to="/wallet" className="button button-ghost">
-                See the member view
+              <Link to="/login" className="button button-ghost">
+                Member sign in
               </Link>
             </div>
             <div className="hero-proof">
@@ -91,10 +91,10 @@ function Home() {
                 <Check size={16} /> No app required
               </span>
               <span>
-                <Check size={16} /> Interactive preview
+                <Check size={16} /> Secure member access
               </span>
               <span>
-                <Check size={16} /> Production services pending
+                <Check size={16} /> Server-backed rewards ledger
               </span>
             </div>
           </div>
@@ -199,12 +199,12 @@ function Home() {
             </span>
             <h2>Make every customer feel like a regular.</h2>
             <p>
-              Preview the business dashboard and member experience with interactive demonstration
-              data while production services are being connected.
+              Sign in to manage members, post eligible purchases, and redeem rewards from the
+              authoritative Elite Rewards ledger.
             </p>
           </div>
-          <Link to="/admin" className="button button-light">
-            Launch Elite Rewards <ArrowRight size={18} />
+          <Link to="/login" className="button button-light">
+            Sign in to Elite Rewards <ArrowRight size={18} />
           </Link>
         </section>
       </main>

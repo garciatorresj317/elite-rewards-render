@@ -1,145 +1,114 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
-  Activity,
   Award,
-  BarChart3,
-  Bell,
-  CalendarHeart,
   Check,
-  ChevronDown,
   CircleDollarSign,
   Gift,
-  HelpCircle,
   LayoutDashboard,
   LogOut,
   Menu,
   Plus,
   ReceiptText,
   Search,
-  Settings,
   ShieldCheck,
-  Sparkles,
   Store,
-  TrendingUp,
   Trophy,
   Users,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
-import { activityData, growthData, seedTransactions, type Transaction } from "@/data/rewards";
-import { applyDemoAward, readTransactions, resetDemoState } from "@/lib/demo-storage";
+import { api, type DashboardData, type SessionUser } from "@/lib/api-client";
 
 export const Route = createFileRoute("/admin")({
-  head: () => ({
-    meta: [
-      { title: "Business dashboard | Elite Rewards" },
-      { name: "description", content: "Manage members, rewards, activity, and performance." },
-    ],
-  }),
+  head: () => ({ meta: [{ title: "Business dashboard | Elite Rewards" }] }),
   component: Admin,
 });
-const nav = [
+const sections = [
   { label: "Dashboard", icon: LayoutDashboard },
   { label: "Members", icon: Users },
   { label: "Transactions", icon: ReceiptText },
-  { label: "Rewards & rules", icon: Trophy },
-  { label: "Birthday rewards", icon: CalendarHeart },
-  { label: "Reports", icon: BarChart3 },
-  { label: "Settings", icon: Settings },
+  { label: "Rewards", icon: Trophy },
 ];
+
 function Admin() {
-  const [active, setActive] = useState("Dashboard"),
-    [mobile, setMobile] = useState(false),
-    [modal, setModal] = useState(false),
-    [toast, setToast] = useState(""),
-    [search, setSearch] = useState(""),
-    [transactions, setTransactions] = useState<Transaction[]>(seedTransactions);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const showToast = (message: string) => {
-    setToast(message);
-    window.setTimeout(() => setToast(""), 3500);
-  };
-  useEffect(() => {
-    setTransactions(readTransactions(seedTransactions));
-  }, []);
-  useEffect(() => {
-    if (!modal) return;
-    const previousFocus =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setModal(false);
-    };
-    document.addEventListener("keydown", handleKey);
-    closeButtonRef.current?.focus();
-    return () => {
-      document.removeEventListener("keydown", handleKey);
-      previousFocus?.focus();
-    };
-  }, [modal]);
-  const award = () => {
-    const next: Transaction = {
-      id: crypto.randomUUID(),
-      member: "Maya Thompson",
-      initials: "MT",
-      amount: 32,
-      points: 160,
-      type: "earned",
-      time: "Just now",
-    };
-    const result = applyDemoAward(next);
-    if (!result.ok) {
-      showToast("The demonstration rejected an invalid point award.");
-      return;
+  const navigate = useNavigate();
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [active, setActive] = useState("Dashboard");
+  const [mobile, setMobile] = useState(false);
+  const [modal, setModal] = useState(false);
+  const [search, setSearch] = useState("");
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(true);
+  const [award, setAward] = useState({
+    memberId: "",
+    amount: "",
+    points: "",
+    note: "Eligible purchase",
+  });
+  const load = useCallback(async () => {
+    try {
+      const session = await api.session();
+      if (!session.user || session.user.role === "member") {
+        await navigate({ to: "/login" });
+        return;
+      }
+      setUser(session.user);
+      const dashboard = await api.dashboard();
+      setData(dashboard);
+      const firstMember = dashboard.members[0];
+      if (!award.memberId && firstMember)
+        setAward((current) => ({ ...current, memberId: firstMember.id }));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Dashboard failed to load");
+    } finally {
+      setBusy(false);
     }
-    setTransactions(result.transactions);
-    setModal(false);
-    showToast(
-      result.saved
-        ? "160 points awarded to Maya Thompson and synced to her demo wallet."
-        : "160 points awarded for this session, but this browser blocked persistent storage.",
-    );
+  }, [award.memberId, navigate]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  const submitAward = async (event: FormEvent) => {
+    event.preventDefault();
+    setError("");
+    try {
+      await api.award({
+        memberId: award.memberId,
+        amountCents: Math.round(Number(award.amount) * 100),
+        points: Number(award.points),
+        note: award.note,
+      });
+      setModal(false);
+      setNotice("Points were added to the production ledger.");
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Award failed");
+    }
   };
-  const reset = () => {
-    const saved = resetDemoState();
-    setTransactions(readTransactions(seedTransactions));
-    showToast(
-      saved ? "Demonstration data reset." : "This browser blocked the demonstration reset.",
-    );
+  const logout = async () => {
+    await api.logout();
+    await navigate({ to: "/login" });
   };
-  const normalizedSearch = search.trim().toLowerCase();
-  const visibleTransactions = normalizedSearch
-    ? transactions.filter((transaction) =>
-        [transaction.member, transaction.rewardName, transaction.type]
+  const visible = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return (data?.transactions ?? []).filter(
+      (item) =>
+        !term ||
+        [item.member, item.rewardName, item.type]
           .filter(Boolean)
-          .some((value) => value?.toLowerCase().includes(normalizedSearch)),
-      )
-    : transactions;
-  const changeSection = (label: string) => {
-    setActive(label);
-    setMobile(false);
-    if (label !== "Dashboard") {
-      showToast(`${label} is not implemented yet. It remains on the completion backlog.`);
-    }
-  };
+          .some((value) => String(value).toLowerCase().includes(term)),
+    );
+  }, [data, search]);
+  if (busy) return <Loading label="Loading secure dashboard…" />;
+  if (!data || !user) return <Loading label={error || "Dashboard is unavailable."} />;
   return (
     <div className="admin-shell">
-      {toast && (
-        <div className="toast" role="status" aria-live="polite">
+      {notice && (
+        <div className="toast" role="status">
           <Check size={18} />
-          {toast}
+          {notice}
         </div>
       )}
       <aside className={`admin-sidebar ${mobile ? "open" : ""}`}>
@@ -155,16 +124,18 @@ function Admin() {
           </span>
           <div>
             <small>Current location</small>
-            <strong>North & Pine</strong>
+            <strong>{data.business.location_name}</strong>
           </div>
-          <ChevronDown size={16} />
         </div>
         <nav>
-          {nav.map(({ label, icon: Icon }) => (
+          {sections.map(({ label, icon: Icon }) => (
             <button
               className={active === label ? "active" : ""}
               key={label}
-              onClick={() => changeSection(label)}
+              onClick={() => {
+                setActive(label);
+                setMobile(false);
+              }}
             >
               <Icon />
               {label}
@@ -172,12 +143,9 @@ function Admin() {
           ))}
         </nav>
         <div className="sidebar-footer">
-          <button onClick={() => showToast("Help and training are not connected yet.")}>
-            <HelpCircle /> Help center
+          <button onClick={logout}>
+            <LogOut /> Sign out
           </button>
-          <Link to="/">
-            <LogOut /> Exit demo
-          </Link>
         </div>
       </aside>
       <div className="admin-main">
@@ -186,7 +154,7 @@ function Admin() {
             <Menu />
           </button>
           <div>
-            <span className="admin-eyebrow">Business overview</span>
+            <span className="admin-eyebrow">{data.business.business_name}</span>
             <h1>{active}</h1>
           </div>
           <div className="admin-header-actions">
@@ -194,273 +162,228 @@ function Admin() {
               <Search />
               <input
                 aria-label="Search transactions"
-                placeholder="Search activity..."
+                placeholder="Search activity…"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(e) => setSearch(e.target.value)}
               />
             </label>
-            <button
-              className="icon-button"
-              aria-label="Notifications"
-              onClick={() => showToast("You have 3 demonstration member updates.")}
-            >
-              <Bell />
-              <span />
-            </button>
             <div className="owner-chip">
-              <span>AM</span>
+              <span>{initials(user.name)}</span>
               <div>
-                <strong>Alex Morgan</strong>
-                <small>Owner</small>
+                <strong>{user.name}</strong>
+                <small>{user.role}</small>
               </div>
-              <ChevronDown />
             </div>
           </div>
         </header>
         <main className="dashboard-content">
-          <section className="dashboard-welcome">
-            <div>
-              <span className="demo-badge">Interactive demonstration</span>
-              <h2>Here’s how loyalty is growing.</h2>
-              <p>Sample members, rewards, and revenue for North & Pine.</p>
+          {error && (
+            <div className="form-error" role="alert">
+              {error}
             </div>
-            <button className="admin-primary" onClick={() => setModal(true)}>
-              <Plus /> Award points
-            </button>
-          </section>
-          <section className="metrics-grid">
-            <Metric
-              icon={Users}
-              label="Total members"
-              value="4,892"
-              trend="6.3%"
-              note="last 30 days"
-            />
-            <Metric icon={Sparkles} label="Points awarded" value="1,248,750" trend="8.7%" />
-            <Metric icon={Gift} label="Rewards redeemed" value="3,421" trend="5.9%" />
-            <Metric icon={CircleDollarSign} label="Eligible sales" value="$286,439" trend="7.1%" />
-          </section>
-          <section className="chart-grid">
-            <article className="panel growth-panel">
-              <PanelTitle icon={TrendingUp} title="Member growth" action="Last 6 months" />
-              <div className="chart-wrap">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart
-                    data={growthData}
-                    margin={{ top: 10, right: 12, left: -16, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient id="growthFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ffd84d" stopOpacity={0.5} />
-                        <stop offset="95%" stopColor="#9b6200" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3c3118" />
-                    <XAxis
-                      dataKey="label"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: "#d4c89e", fontSize: 12 }}
-                    />
-                    <YAxis
-                      domain={[3000, 5000]}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: "#d4c89e", fontSize: 12 }}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        borderRadius: 12,
-                        color: "#fff7d5",
-                        background: "#090806",
-                        border: "1px solid #d99b17",
-                        boxShadow: "0 12px 30px rgba(255,187,28,.16)",
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="members"
-                      stroke="#ffd84d"
-                      strokeWidth={3}
-                      fill="url(#growthFill)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </article>
-            <article className="panel activity-panel">
-              <PanelTitle icon={Gift} title="Reward activity" action="30 days" />
-              <div className="activity-body">
-                <div className="donut">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={activityData}
-                        dataKey="value"
-                        innerRadius={54}
-                        outerRadius={78}
-                        paddingAngle={2}
-                        stroke="none"
-                      >
-                        {activityData.map((entry) => (
-                          <Cell key={entry.name} fill={entry.fill} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <span>
-                    <strong>3,421</strong>
-                    <small>redemptions</small>
-                  </span>
+          )}
+          {active === "Dashboard" && (
+            <>
+              <section className="dashboard-welcome">
+                <div>
+                  <span className="demo-badge">Live production ledger</span>
+                  <h2>Rewards activity you can trust.</h2>
+                  <p>
+                    Balances and transactions are stored server-side for{" "}
+                    {data.business.business_name}.
+                  </p>
                 </div>
-                <div className="activity-legend">
-                  {activityData.map((x) => (
-                    <div key={x.name}>
-                      <span style={{ background: x.fill }} />
-                      <p>{x.name}</p>
-                      <strong>{x.value}%</strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </article>
-          </section>
-          <section className="lower-grid">
-            <article className="panel transaction-panel">
-              <PanelTitle icon={ReceiptText} title="Recent transactions" action="View all" />
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Member</th>
-                      <th>Purchase</th>
-                      <th>Points</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visibleTransactions.slice(0, 8).map((t) => (
-                      <tr key={t.id}>
-                        <td>
-                          <span className="member-avatar">{t.initials}</span>
-                          <span>
-                            <strong>{t.member}</strong>
-                            <small>{t.rewardName ?? t.time}</small>
-                          </span>
-                        </td>
-                        <td>{t.amount > 0 ? `$${t.amount.toFixed(2)}` : "Reward"}</td>
-                        <td className={t.type === "earned" ? "positive" : "redeemed"}>
-                          {t.type === "earned" ? "+" : "−"}
-                          {t.points}
-                        </td>
-                        <td>
-                          <span className={`table-status ${t.type}`}>
-                            {t.type === "earned" ? "Awarded" : "Redeemed"}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                    {visibleTransactions.length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="empty-table">
-                          No demonstration activity matches “{search}”.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </article>
-            <div className="right-stack">
-              <article className="panel quick-panel">
-                <PanelTitle icon={Activity} title="Quick actions" />
-                <div className="quick-grid">
-                  <button onClick={() => setModal(true)}>
-                    <Award />
-                    Award points
-                  </button>
-                  <button onClick={() => changeSection("Members")}>
-                    <Users />
-                    View members
-                  </button>
-                  <button onClick={() => changeSection("Rewards & rules")}>
-                    <Trophy />
-                    Manage rewards
-                  </button>
-                  <button onClick={() => changeSection("Reports")}>
-                    <BarChart3 />
-                    View reports
-                  </button>
-                  <button onClick={reset}>
-                    <Activity />
-                    Reset demo
-                  </button>
-                </div>
-              </article>
-              <article className="panel health-panel">
-                <PanelTitle icon={ShieldCheck} title="Build status" />
+                <button className="admin-primary" onClick={() => setModal(true)}>
+                  <Plus /> Award points
+                </button>
+              </section>
+              <section className="metrics-grid">
+                <Metric
+                  icon={Users}
+                  label="Total members"
+                  value={data.metrics.members.toLocaleString()}
+                />
+                <Metric
+                  icon={Award}
+                  label="Points awarded"
+                  value={data.metrics.pointsAwarded.toLocaleString()}
+                />
+                <Metric
+                  icon={Gift}
+                  label="Rewards redeemed"
+                  value={data.metrics.rewardsRedeemed.toLocaleString()}
+                />
+                <Metric
+                  icon={CircleDollarSign}
+                  label="Eligible sales"
+                  value={`$${(data.metrics.eligibleSalesCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+                />
+              </section>
+              <TransactionTable transactions={visible} />
+              <section className="panel health-panel">
                 <div>
                   <span className="health-icon">
-                    <Check />
+                    <ShieldCheck />
                   </span>
                   <p>
-                    <strong>Front-end demonstration ready</strong>
+                    <strong>Production ledger active</strong>
                     <small>
-                      Authentication, database, integrations, and monitoring are not connected.
+                      Authentication, authorization, PostgreSQL persistence, and idempotent
+                      mutations are connected.
                     </small>
                   </p>
                 </div>
-                <span className="uptime">Production services pending</span>
-              </article>
-            </div>
-          </section>
+                <span className="uptime">Database connected</span>
+              </section>
+            </>
+          )}
+          {active === "Members" && (
+            <section className="panel">
+              <div className="panel-title">
+                <div>
+                  <span>
+                    <Users />
+                  </span>
+                  <h3>Members</h3>
+                </div>
+              </div>
+              <div className="member-list">
+                {data.members.map((member) => (
+                  <button
+                    key={member.id}
+                    onClick={() => {
+                      setAward({ ...award, memberId: member.id });
+                      setModal(true);
+                    }}
+                  >
+                    <span className="member-avatar">{initials(member.name)}</span>
+                    <span>
+                      <strong>{member.name}</strong>
+                      <small>
+                        {member.email} · {member.points.toLocaleString()} points
+                      </small>
+                    </span>
+                    <Award />
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+          {active === "Transactions" && <TransactionTable transactions={visible} />}
+          {active === "Rewards" && (
+            <section className="reward-grid">
+              {data.rewards.map((reward, index) => (
+                <article
+                  className={`reward-card ${["champagne", "gold", "amber"][index % 3]}`}
+                  key={reward.id}
+                >
+                  <span className="reward-card-icon">
+                    <Gift />
+                  </span>
+                  <span className="reward-cost">{reward.points} pts</span>
+                  <h3>{reward.name}</h3>
+                  <p>{reward.description}</p>
+                  <button disabled>Active reward</button>
+                </article>
+              ))}
+            </section>
+          )}
         </main>
       </div>
       {modal && (
         <div className="modal-backdrop" onMouseDown={() => setModal(false)}>
-          <div
+          <form
             className="award-modal"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="award-modal-title"
+            onSubmit={submitAward}
             onMouseDown={(e) => e.stopPropagation()}
           >
             <button
-              ref={closeButtonRef}
+              type="button"
               className="modal-close"
               onClick={() => setModal(false)}
-              aria-label="Close dialog"
+              aria-label="Close"
             >
               <X />
             </button>
             <span className="modal-icon">
               <Award />
             </span>
-            <span className="section-kicker">Quick award</span>
-            <h2 id="award-modal-title">Reward a member</h2>
-            <p>
-              Add points after an eligible purchase. This demo saves the transaction in your
-              browser.
-            </p>
+            <span className="section-kicker">Production award</span>
+            <h2>Reward a member</h2>
+            <p>This writes an immutable entry to the rewards ledger.</p>
             <label>
               Member
-              <input value="Maya Thompson" readOnly />
+              <select
+                required
+                value={award.memberId}
+                onChange={(e) => setAward({ ...award, memberId: e.target.value })}
+              >
+                {data.members.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name} — {member.points} points
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               Purchase amount
-              <input value="$32.00" readOnly />
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                required
+                value={award.amount}
+                onChange={(e) => setAward({ ...award, amount: e.target.value })}
+              />
             </label>
-            <div className="award-equation">
-              <span>$32.00 purchase</span>
-              <strong>× 5 points</strong>
-              <span>= 160 points</span>
-            </div>
-            <button className="admin-primary full" onClick={award}>
-              Award 160 points
-            </button>
-          </div>
+            <label>
+              Points
+              <input
+                type="number"
+                min="1"
+                step="1"
+                required
+                value={award.points}
+                onChange={(e) => setAward({ ...award, points: e.target.value })}
+              />
+            </label>
+            <label>
+              Reason
+              <input
+                maxLength={300}
+                value={award.note}
+                onChange={(e) => setAward({ ...award, note: e.target.value })}
+              />
+            </label>
+            <button className="admin-primary full">Post award</button>
+          </form>
         </div>
       )}
+    </div>
+  );
+}
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .map((x) => x[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+function Loading({ label }: { label: string }) {
+  return (
+    <div className="error-screen">
+      <div>
+        <BrandMark />
+        <h1>{label}</h1>
+        <p>
+          <a className="button button-dark" href="/login">
+            Go to sign in
+          </a>
+        </p>
+      </div>
     </div>
   );
 }
@@ -468,14 +391,10 @@ function Metric({
   icon: Icon,
   label,
   value,
-  trend,
-  note,
 }: {
   icon: typeof Users;
   label: string;
   value: string;
-  trend: string;
-  note?: string;
 }) {
   return (
     <article className="metric-card">
@@ -486,38 +405,65 @@ function Metric({
         <small>{label}</small>
         <strong>{value}</strong>
         <p>
-          <span>
-            <TrendingUp />+{trend}
-          </span>{" "}
-          {note}
+          <span>Live</span> production data
         </p>
       </div>
     </article>
   );
 }
-function PanelTitle({
-  icon: Icon,
-  title,
-  action,
-}: {
-  icon: typeof Users;
-  title: string;
-  action?: string;
-}) {
+function TransactionTable({ transactions }: { transactions: DashboardData["transactions"] }) {
   return (
-    <div className="panel-title">
-      <div>
-        <span>
-          <Icon />
-        </span>
-        <h3>{title}</h3>
+    <section className="panel transaction-panel">
+      <div className="panel-title">
+        <div>
+          <span>
+            <ReceiptText />
+          </span>
+          <h3>Transactions</h3>
+        </div>
       </div>
-      {action && (
-        <button>
-          {action}
-          <ChevronDown />
-        </button>
-      )}
-    </div>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Member</th>
+              <th>Purchase</th>
+              <th>Points</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {transactions.map((t) => (
+              <tr key={t.id}>
+                <td>
+                  <span className="member-avatar">{initials(t.member)}</span>
+                  <span>
+                    <strong>{t.member}</strong>
+                    <small>{t.rewardName ?? new Date(t.time).toLocaleString()}</small>
+                  </span>
+                </td>
+                <td>{t.amount ? `$${t.amount.toFixed(2)}` : "Reward"}</td>
+                <td className={t.type === "earned" ? "positive" : "redeemed"}>
+                  {t.type === "earned" ? "+" : "−"}
+                  {t.points}
+                </td>
+                <td>
+                  <span className={`table-status ${t.type}`}>
+                    {t.type === "earned" ? "Awarded" : "Redeemed"}
+                  </span>
+                </td>
+              </tr>
+            ))}
+            {!transactions.length && (
+              <tr>
+                <td colSpan={4} className="empty-table">
+                  No transactions yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }

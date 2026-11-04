@@ -544,3 +544,24 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
   .quick-grid { grid-template-columns: 1fr 1fr; }
   .award-equation { flex-direction: column; }
 }
+
+/* Production authentication and live data surfaces */
+.auth-page { min-height: 100vh; background: radial-gradient(circle at 50% 0, rgba(246,185,0,.12), transparent 34rem), var(--black); padding-bottom: 70px; }
+.auth-card { width: min(calc(100% - 36px), 560px); margin: 70px auto; padding: 38px; border: 1px solid var(--gold-line); border-radius: 22px; background: linear-gradient(145deg, rgba(20,17,9,.98), rgba(3,3,3,.99)); box-shadow: 0 24px 80px rgba(0,0,0,.6), var(--glow); }
+.auth-card h1 { font: 700 clamp(30px,5vw,44px)/1.15 var(--serif); color: var(--gold-pale); margin: 14px 0; }
+.auth-card > p, .auth-note { color: var(--muted); line-height: 1.65; }
+.auth-card form, .award-modal { display: grid; gap: 16px; }
+.auth-card label, .award-modal label { display: grid; gap: 8px; color: var(--gold-pale); font-weight: 700; }
+.auth-card input, .award-modal input, .award-modal select { width: 100%; min-height: 48px; border: 1px solid rgba(236,171,26,.45); border-radius: 10px; background: #080704; color: var(--text); padding: 0 13px; }
+.setup-card { width: min(calc(100% - 36px), 820px); }
+.setup-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.setup-grid label:first-child, .setup-grid button { grid-column: 1 / -1; }
+.form-error { padding: 13px 16px; border: 1px solid #ff7b68; color: #ffd3cc; background: rgba(120,20,10,.35); border-radius: 10px; margin-bottom: 16px; }
+.plain-button { background: none; border: 0; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.member-list { display: grid; gap: 8px; padding: 18px; }
+.member-list button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px; border: 1px solid rgba(236,171,26,.22); border-radius: 12px; background: rgba(8,7,4,.84); text-align: left; cursor: pointer; }
+.member-list button span:nth-child(2) { display: grid; gap: 4px; flex: 1; }
+.member-list button small { color: var(--muted); }
+.member-code { padding: 24px; text-align: center; border: 1px solid var(--gold-line); border-radius: 12px; font: 700 24px var(--serif); letter-spacing: .12em; color: var(--gold-bright); background: #070603; }
+.admin-primary:disabled, .reward-card button:disabled { opacity: .5; cursor: not-allowed; }
+@media (max-width: 680px) { .setup-grid { grid-template-columns: 1fr; } .setup-grid label:first-child, .setup-grid button { grid-column: auto; } .auth-card { padding: 26px 20px; margin-top: 32px; } }
