@@ -1,9 +1,21 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Check, ChevronRight, Gift, History, LogOut, QrCode, Sparkles, X } from "lucide-react";
+import {
+  Check,
+  ChevronRight,
+  Copy,
+  Gift,
+  History,
+  LogOut,
+  QrCode,
+  Share2,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { BrandMark } from "@/components/BrandMark";
-import { api, type WalletData } from "@/lib/api-client";
+import { ExperienceBackdrop } from "@/components/ExperienceTheme";
+import { api, type VisualSettings, type WalletData } from "@/lib/api-client";
 
 export const Route = createFileRoute("/wallet")({
   head: () => ({ meta: [{ title: "My wallet | Elite Rewards" }] }),
@@ -16,7 +28,9 @@ function Wallet() {
     [notice, setNotice] = useState(""),
     [error, setError] = useState(""),
     [historyOpen, setHistoryOpen] = useState(false),
-    [codeOpen, setCodeOpen] = useState(false);
+    [codeOpen, setCodeOpen] = useState(false),
+    [referral, setReferral] = useState<{ sharePath: string; referralCount: number } | null>(null),
+    [settings, setSettings] = useState<VisualSettings | null>(null);
   const load = useCallback(async () => {
     try {
       const session = await api.session();
@@ -24,7 +38,9 @@ function Wallet() {
         await navigate({ to: "/login" });
         return;
       }
-      setData(await api.wallet());
+      const [wallet, visualSettings] = await Promise.all([api.wallet(), api.visualSettings()]);
+      setData(wallet);
+      setSettings(visualSettings);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Wallet failed to load");
     } finally {
@@ -48,6 +64,13 @@ function Wallet() {
     await api.logout();
     await navigate({ to: "/login" });
   };
+  const loadReferral = async () => {
+    try {
+      setReferral(await api.referral());
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Referral link unavailable");
+    }
+  };
   if (busy) return <Status label="Loading secure wallet…" />;
   if (!data) return <Status label={error || "Wallet unavailable."} />;
   const next = Math.min(
@@ -55,7 +78,8 @@ function Wallet() {
     data.points || 500,
   );
   return (
-    <div className="wallet-page">
+    <div className={`wallet-page theme-${settings?.themeKey ?? "elite-signature"}`}>
+      <ExperienceBackdrop settings={settings} audience="member" />
       {notice && (
         <div className="toast" role="status">
           <Check size={18} />
@@ -154,6 +178,40 @@ function Wallet() {
             </div>
           </div>
           <button onClick={() => setCodeOpen(true)}>Show member code</button>
+        </section>
+        <section className="referral-panel panel">
+          <div>
+            <span className="scan-icon">
+              <Share2 />
+            </span>
+            <div>
+              <span className="section-kicker">Invite friends & family</span>
+              <h3>Share your rewards link</h3>
+              <p>
+                Friends can use your secure link to create a wallet for{" "}
+                {data.context?.business_name}.
+              </p>
+            </div>
+          </div>
+          {referral ? (
+            <div className="referral-share">
+              <code>{`${window.location.origin}${referral.sharePath}`}</code>
+              <button
+                onClick={() =>
+                  void navigator.clipboard.writeText(
+                    `${window.location.origin}${referral.sharePath}`,
+                  )
+                }
+              >
+                <Copy size={17} /> Copy link
+              </button>
+              <small>
+                {referral.referralCount} joined referral{referral.referralCount === 1 ? "" : "s"}
+              </small>
+            </div>
+          ) : (
+            <button onClick={() => void loadReferral()}>Create my referral link</button>
+          )}
         </section>
         {data.redemptions.length > 0 && (
           <section className="panel">

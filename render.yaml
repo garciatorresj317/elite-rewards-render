@@ -31,3 +31,5 @@ services:
         value: https://elite-rewards.onrender.com
       - key: SETUP_TOKEN
         generateValue: true
+      - key: RATE_LIMIT_HMAC_KEY
+        generateValue: true

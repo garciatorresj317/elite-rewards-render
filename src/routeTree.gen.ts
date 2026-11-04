@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ActivateClientRouteImport } from './routes/activate-client'
 import { Route as ActivateMemberRouteImport } from './routes/activate-member'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as JoinRouteImport } from './routes/join'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as WalletRouteImport } from './routes/wallet'
@@ -37,6 +38,11 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const JoinRoute = JoinRouteImport.update({
+  id: '/join',
+  path: '/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/activate-client': typeof ActivateClientRoute
   '/activate-member': typeof ActivateMemberRoute
   '/admin': typeof AdminRoute
+  '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/setup': typeof SetupRoute
   '/wallet': typeof WalletRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/activate-client': typeof ActivateClientRoute
   '/activate-member': typeof ActivateMemberRoute
   '/admin': typeof AdminRoute
+  '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/setup': typeof SetupRoute
   '/wallet': typeof WalletRoute
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/activate-client': typeof ActivateClientRoute
   '/activate-member': typeof ActivateMemberRoute
   '/admin': typeof AdminRoute
+  '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/setup': typeof SetupRoute
   '/wallet': typeof WalletRoute
@@ -88,6 +97,7 @@ export interface FileRouteTypes {
     | '/activate-client'
     | '/activate-member'
     | '/admin'
+    | '/join'
     | '/login'
     | '/setup'
     | '/wallet'
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
     | '/activate-client'
     | '/activate-member'
     | '/admin'
+    | '/join'
     | '/login'
     | '/setup'
     | '/wallet'
@@ -106,6 +117,7 @@ export interface FileRouteTypes {
     | '/activate-client'
     | '/activate-member'
     | '/admin'
+    | '/join'
     | '/login'
     | '/setup'
     | '/wallet'
@@ -116,6 +128,7 @@ export interface RootRouteChildren {
   ActivateClientRoute: typeof ActivateClientRoute
   ActivateMemberRoute: typeof ActivateMemberRoute
   AdminRoute: typeof AdminRoute
+  JoinRoute: typeof JoinRoute
   LoginRoute: typeof LoginRoute
   SetupRoute: typeof SetupRoute
   WalletRoute: typeof WalletRoute
@@ -151,6 +164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/join': {
+      id: '/join'
+      path: '/join'
+      fullPath: '/join'
+      preLoaderRoute: typeof JoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -180,6 +200,7 @@ const rootRouteChildren: RootRouteChildren = {
   ActivateClientRoute: ActivateClientRoute,
   ActivateMemberRoute: ActivateMemberRoute,
   AdminRoute: AdminRoute,
+  JoinRoute: JoinRoute,
   LoginRoute: LoginRoute,
   SetupRoute: SetupRoute,
   WalletRoute: WalletRoute,

@@ -84,7 +84,28 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ token, password }),
     }),
+  referralEnrollment: (referralCode: string) =>
+    request<{ businessName: string; locationName: string }>(
+      `/api/referrals/enrollment?ref=${encodeURIComponent(referralCode)}`,
+    ),
+  joinReferral: (payload: {
+    referralCode: string;
+    name: string;
+    email: string;
+    password: string;
+  }) =>
+    request<{ ok: boolean }>("/api/referrals/join", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  visualSettings: () => request<VisualSettings>("/api/visual-settings"),
+  updateVisualSettings: (payload: Omit<VisualSettings, "updatedAt">) =>
+    request<VisualSettings>("/api/admin/visual-settings", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
   wallet: () => request<WalletData>("/api/wallet"),
+  referral: () => request<{ sharePath: string; referralCount: number }>("/api/wallet/referral"),
   redeem: (rewardId: string) =>
     request<{ id: string; code: string; duplicate: boolean }>("/api/wallet/redeem", {
       method: "POST",
@@ -136,6 +157,21 @@ export type WalletData = {
     status: string;
     created_at: string;
   }>;
+};
+
+export type ThemeKey =
+  | "elite-signature"
+  | "mlk-day"
+  | "remembrance-911"
+  | "winter-holiday"
+  | "spring-celebration"
+  | "community-event";
+
+export type VisualSettings = {
+  themeKey: ThemeKey;
+  occasionTitle: string;
+  occasionMessage: string;
+  updatedAt: string | null;
 };
 
 export type ClientSummary = {

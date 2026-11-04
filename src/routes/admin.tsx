@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Palette,
   Plus,
   ReceiptText,
   Search,
@@ -20,12 +21,16 @@ import {
 } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
+import { ExperienceBackdrop } from "@/components/ExperienceTheme";
+import { themeCatalog } from "@/lib/theme-catalog";
 import {
   api,
   type ClientSummary,
   type DashboardData,
   type MemberSummary,
   type SessionUser,
+  type ThemeKey,
+  type VisualSettings,
 } from "@/lib/api-client";
 
 export const Route = createFileRoute("/admin")({
@@ -38,6 +43,7 @@ const sections = [
   { label: "Members", icon: Users, platformOnly: false },
   { label: "Transactions", icon: ReceiptText, platformOnly: false },
   { label: "Rewards", icon: Trophy, platformOnly: false },
+  { label: "Appearance", icon: Palette, platformOnly: false },
 ];
 
 function Admin() {
@@ -57,6 +63,12 @@ function Admin() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(true);
+  const [visualSettings, setVisualSettings] = useState<VisualSettings | null>(null);
+  const [visualDraft, setVisualDraft] = useState({
+    themeKey: "elite-signature" as ThemeKey,
+    occasionTitle: "",
+    occasionMessage: "",
+  });
   const [award, setAward] = useState({
     memberId: "",
     amount: "",
@@ -78,14 +90,21 @@ function Admin() {
         return;
       }
       setUser(session.user);
-      const [dashboard, clientResult, memberResult] = await Promise.all([
+      const [dashboard, clientResult, memberResult, visualResult] = await Promise.all([
         api.dashboard(),
         session.user.platformAdmin ? api.clients() : Promise.resolve({ clients: [] }),
         api.members(),
+        api.visualSettings(),
       ]);
       setData(dashboard);
       setClients(clientResult.clients);
       setMembers(memberResult.members);
+      setVisualSettings(visualResult);
+      setVisualDraft({
+        themeKey: visualResult.themeKey,
+        occasionTitle: visualResult.occasionTitle,
+        occasionMessage: visualResult.occasionMessage,
+      });
       const firstMember = dashboard.members[0];
       if (!award.memberId && firstMember)
         setAward((current) => ({ ...current, memberId: firstMember.id }));
@@ -145,6 +164,17 @@ function Admin() {
     await api.logout();
     await navigate({ to: "/login" });
   };
+  const saveVisuals = async (event: FormEvent) => {
+    event.preventDefault();
+    setError("");
+    try {
+      const result = await api.updateVisualSettings(visualDraft);
+      setVisualSettings(result);
+      setNotice("Business pages and dashboards were updated.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Appearance update failed");
+    }
+  };
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return (data?.transactions ?? []).filter(
@@ -158,7 +188,8 @@ function Admin() {
   if (busy) return <Loading label="Loading secure dashboard…" />;
   if (!data || !user) return <Loading label={error || "Dashboard is unavailable."} />;
   return (
-    <div className="admin-shell">
+    <div className={`admin-shell theme-${visualSettings?.themeKey ?? "elite-signature"}`}>
+      <ExperienceBackdrop settings={visualSettings} audience="admin" />
       {notice && (
         <div className="toast" role="status">
           <Check size={18} />
@@ -417,6 +448,82 @@ function Admin() {
                   <button disabled>Active reward</button>
                 </article>
               ))}
+            </section>
+          )}
+          {active === "Appearance" && (
+            <section className="appearance-layout">
+              <div className="panel appearance-intro">
+                <span className="modal-icon">
+                  <Palette />
+                </span>
+                <div>
+                  <span className="section-kicker">Business customization</span>
+                  <h2>Live backgrounds & event themes</h2>
+                  <p>
+                    Select a high-resolution animated visual for this business’s admin dashboard and
+                    member wallets. Motion automatically reduces when a visitor requests it.
+                  </p>
+                </div>
+              </div>
+              <form className="appearance-form" onSubmit={saveVisuals}>
+                <div className="theme-grid" role="radiogroup" aria-label="Business page theme">
+                  {themeCatalog.map((theme) => (
+                    <label
+                      className={`theme-card ${visualDraft.themeKey === theme.key ? "selected" : ""}`}
+                      key={theme.key}
+                    >
+                      <input
+                        type="radio"
+                        name="theme"
+                        value={theme.key}
+                        checked={visualDraft.themeKey === theme.key}
+                        onChange={() => setVisualDraft({ ...visualDraft, themeKey: theme.key })}
+                      />
+                      <img src={theme.image} alt="" />
+                      <span>
+                        <small>{theme.category}</small>
+                        <strong>{theme.name}</strong>
+                        <em>{theme.description}</em>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <section className="panel occasion-editor">
+                  <div>
+                    <span className="section-kicker">Optional live message</span>
+                    <h3>Holiday or event announcement</h3>
+                    <p>
+                      Use this for a respectful observance, store event, or seasonal message. Leave
+                      both fields empty for wallpaper only.
+                    </p>
+                  </div>
+                  <label>
+                    Headline
+                    <input
+                      maxLength={80}
+                      value={visualDraft.occasionTitle}
+                      onChange={(event) =>
+                        setVisualDraft({ ...visualDraft, occasionTitle: event.target.value })
+                      }
+                      placeholder="Example: Honoring Dr. Martin Luther King Jr."
+                    />
+                  </label>
+                  <label>
+                    Message
+                    <textarea
+                      maxLength={220}
+                      value={visualDraft.occasionMessage}
+                      onChange={(event) =>
+                        setVisualDraft({ ...visualDraft, occasionMessage: event.target.value })
+                      }
+                      placeholder="Add a short message for members and staff."
+                    />
+                  </label>
+                  <button className="admin-primary" disabled={user.role !== "owner"}>
+                    {user.role === "owner" ? "Publish appearance" : "Owner access required"}
+                  </button>
+                </section>
+              </form>
             </section>
           )}
         </main>

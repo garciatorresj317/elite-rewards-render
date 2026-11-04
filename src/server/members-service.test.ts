@@ -53,6 +53,7 @@ describe("member enrollment", () => {
       "001_production_rewards.sql",
       "002_platform_clients.sql",
       "003_member_enrollment.sql",
+      "004_referrals_and_visual_themes.sql",
     ]) {
       await pool.query(await readFile(join(process.cwd(), "migrations", file), "utf8"));
     }

@@ -7,11 +7,12 @@ An independent rewards-program website with authenticated business and member ac
 - `/` — public marketing site
 - `/login` — secure business and member access
 - `/wallet` — authenticated member wallet, balance, ledger, reward codes, and redemptions
-- `/admin` — authenticated business dashboard, secure member enrollment, rewards, live transactions, and point awards
+- `/admin` — authenticated business dashboard, secure member enrollment, rewards, live transactions, point awards, and business appearance controls
+- `/join` — secure member referral enrollment from a member-owned share link
 - `/activate-member` — single-use member wallet activation
 - `/setup` — one-time protected production bootstrap
 
-The current production slice supports one business and one location. Authentication, opaque server sessions, role enforcement, PostgreSQL persistence, an append-only points ledger, idempotent point awards, and atomic reward redemptions are connected. POS ingestion, billing, messaging, multi-location management, and the remaining administrative modules are later phases.
+The current production slice supports isolated business clients and one location per client. Authentication, opaque server sessions, role enforcement, PostgreSQL persistence, an append-only points ledger, idempotent point awards, atomic reward redemptions, member referral attribution, and per-business visual themes are connected. Referral links enroll members at a zero-point balance; no automatic referral award is issued until a business policy is defined. POS ingestion, billing, messaging, multi-location management, and the remaining administrative modules are later phases.
 
 ## Development
 
@@ -43,7 +44,7 @@ Elite Rewards deploys independently from the Dynasty Designs site as a Render No
 
 `npm run build` generates the standalone Node server at `.output/server/index.mjs`. `npm run preview` builds and starts that same production server locally. Render supplies `PORT`; Nitro binds the production server to it automatically.
 
-The Blueprint provisions the web service and `elite-rewards-db` PostgreSQL database, injects `DATABASE_URL`, and creates a private `SETUP_TOKEN`. After the first deployment, open `/setup`, use the private setup token from Render, and create the business, first location, and owner credentials. Owners and staff then enroll members from **Admin → Members** and send each member the generated single-use activation link. The setup API permanently closes once an owner exists.
+The Blueprint provisions the web service and `elite-rewards-db` PostgreSQL database, injects `DATABASE_URL`, and creates a private `SETUP_TOKEN`. After the first deployment, open `/setup`, use the private setup token from Render, and create the business, first location, and owner credentials. Owners and staff then enroll members from **Admin → Members** and send each member the generated single-use activation link. Active members can create a stable referral share link from their wallet; referred friends enroll through `/join`, start with zero points, and are attributed to the referrer. Owners customize the business dashboard and member wallet from **Admin → Appearance**, choosing high-resolution animated holiday, commemoration, and event themes with optional live messages. The setup API permanently closes once an owner exists.
 
 ## Production status
 

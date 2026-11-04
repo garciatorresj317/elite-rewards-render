@@ -25,6 +25,14 @@ import {
   listMembers,
 } from "./members-service.ts";
 import { awardPoints, getDashboard, getWallet, redeemReward } from "./rewards-service.ts";
+import {
+  getOrCreateReferralLink,
+  getReferralEnrollment,
+  getVisualSettings,
+  joinWithReferral,
+  themeKeys,
+  updateVisualSettings,
+} from "./experience-service.ts";
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -64,6 +72,10 @@ function safeEqual(left: string, right: string): boolean {
   const a = Buffer.from(left);
   const b = Buffer.from(right);
   return a.length === b.length && timingSafeEqual(a, b);
+}
+
+function requestSubject(request: Request): string {
+  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unavailable";
 }
 
 export async function setupProductionProgram(payload: Record<string, unknown>) {
@@ -210,11 +222,44 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       );
       return json({ ok: true }, 201, { "set-cookie": setSessionCookie(result.sessionToken) });
     }
+    if (url.pathname === "/api/referrals/enrollment" && request.method === "GET") {
+      const code = text(url.searchParams.get("ref"), "Referral code", 20, 200);
+      return json(await getReferralEnrollment(code));
+    }
+    if (url.pathname === "/api/referrals/join" && request.method === "POST") {
+      const payload = await body(request);
+      const result = await joinWithReferral({
+        referralCode: text(payload["referralCode"], "Referral code", 20, 200),
+        name: text(payload["name"], "Name", 2, 120),
+        email: text(payload["email"], "Email", 5, 254).toLowerCase(),
+        password: text(payload["password"], "Password", 12, 200),
+        requestSubject: requestSubject(request),
+      });
+      return json({ ok: true }, 201, { "set-cookie": setSessionCookie(result.sessionToken) });
+    }
     const user = await getSessionUser(request);
     if (url.pathname === "/api/auth/session" && request.method === "GET") return json({ user });
     if (url.pathname === "/api/admin/dashboard" && request.method === "GET") {
       requireRole(user, ["owner", "staff"]);
       return json(await getDashboard(user));
+    }
+    if (url.pathname === "/api/visual-settings" && request.method === "GET") {
+      requireRole(user, ["owner", "staff", "member"]);
+      return json(await getVisualSettings(user));
+    }
+    if (url.pathname === "/api/admin/visual-settings" && request.method === "PUT") {
+      requireRole(user, ["owner"]);
+      const payload = await body(request);
+      const themeKey = text(payload["themeKey"], "Theme", 3, 40);
+      if (!themeKeys.includes(themeKey as (typeof themeKeys)[number]))
+        throw Object.assign(new Error("Theme is invalid"), { status: 400 });
+      return json(
+        await updateVisualSettings(user, {
+          themeKey: themeKey as (typeof themeKeys)[number],
+          occasionTitle: text(payload["occasionTitle"] ?? "", "Occasion title", 0, 80),
+          occasionMessage: text(payload["occasionMessage"] ?? "", "Occasion message", 0, 220),
+        }),
+      );
     }
     if (url.pathname === "/api/admin/clients" && request.method === "GET") {
       requirePlatformAdmin(user);
@@ -261,6 +306,10 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       requireRole(user, ["member"]);
       return json(await getWallet(user));
     }
+    if (url.pathname === "/api/wallet/referral" && request.method === "GET") {
+      requireRole(user, ["member"]);
+      return json(await getOrCreateReferralLink(user));
+    }
     if (url.pathname === "/api/wallet/redeem" && request.method === "POST") {
       requireRole(user, ["member"]);
       const payload = await body(request);
@@ -277,6 +326,10 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       typeof error === "object" && error && "status" in error
         ? Number((error as { status: unknown }).status)
         : 500;
+    const retryAfter =
+      typeof error === "object" && error && "retryAfter" in error
+        ? String((error as { retryAfter: unknown }).retryAfter)
+        : null;
     return json(
       {
         error:
@@ -287,6 +340,7 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
               : "Request failed",
       },
       status,
+      retryAfter ? { "retry-after": retryAfter } : {},
     );
   }
 }
