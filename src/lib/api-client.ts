@@ -25,6 +25,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return payload;
 }
 
+async function uploadImage<T>(path: string, file: File): Promise<T> {
+  const origin = typeof window === "undefined" ? undefined : window.location.origin;
+  const response = await fetch(path, {
+    method: "PUT",
+    credentials: "same-origin",
+    headers: {
+      "content-type": file.type,
+      ...(origin ? { origin } : {}),
+    },
+    body: file,
+  });
+  const payload = (await response.json()) as T & { error?: string };
+  if (!response.ok) throw new Error(payload.error ?? `Request failed (${response.status})`);
+  return payload;
+}
+
 export const api = {
   session: () => request<{ user: SessionUser | null }>("/api/auth/session"),
   login: (email: string, password: string) =>
@@ -57,6 +73,13 @@ export const api = {
       `/api/admin/clients/${encodeURIComponent(businessId)}/branding`,
       { method: "PUT", body: JSON.stringify(payload) },
     ),
+  uploadClientLogo: (businessId: string, file: File) =>
+    uploadImage<{ branding: ClientBranding }>(
+      `/api/admin/clients/${encodeURIComponent(businessId)}/logo`,
+      file,
+    ),
+  publicClient: (businessId: string) =>
+    request<PublicClientExperience>(`/api/public/clients/${encodeURIComponent(businessId)}`),
   clientRewards: (businessId: string) =>
     request<{ rewards: ManagedReward[] }>(
       `/api/admin/clients/${encodeURIComponent(businessId)}/rewards`,
@@ -251,6 +274,8 @@ export type ClientSummary = {
   logoUrl: string | null;
   primaryColor: string;
   secondaryColor: string;
+  previewPath: string;
+  nfcPath: string;
 };
 
 export type ClientBranding = {
@@ -260,9 +285,16 @@ export type ClientBranding = {
   logoUrl: string | null;
   primaryColor: string;
   secondaryColor: string;
+  previewPath: string;
+  nfcPath: string;
 };
 
-export type ClientBrandingDraft = Omit<ClientBranding, "id">;
+export type ClientBrandingDraft = Omit<ClientBranding, "id" | "previewPath" | "nfcPath">;
+
+export type PublicClientExperience = {
+  business: BusinessContext;
+  rewards: Array<{ id: string; name: string; description: string; points: number }>;
+};
 
 export type MemberSummary = {
   id: string;

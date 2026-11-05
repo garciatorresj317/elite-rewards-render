@@ -16,6 +16,8 @@ export type ClientSummary = {
   logoUrl: string | null;
   primaryColor: string;
   secondaryColor: string;
+  previewPath: string;
+  nfcPath: string;
 };
 
 export type ClientBranding = {
@@ -25,7 +27,28 @@ export type ClientBranding = {
   logoUrl: string | null;
   primaryColor: string;
   secondaryColor: string;
+  previewPath: string;
+  nfcPath: string;
 };
+
+export type PublicClientExperience = {
+  business: {
+    business_name: string;
+    location_name: string;
+    logo_url: string | null;
+    primary_color: string;
+    secondary_color: string;
+  };
+  rewards: Array<{ id: string; name: string; description: string; points: number }>;
+};
+
+function clientPath(businessId: string): string {
+  return `/clients/${encodeURIComponent(businessId)}`;
+}
+
+function logoPath(businessId: string): string {
+  return `/api/public/clients/${encodeURIComponent(businessId)}/logo`;
+}
 
 function requirePlatformAdmin(user: SessionUser): void {
   if (!user.platformAdmin) {
@@ -134,8 +157,10 @@ export async function listClients(user: SessionUser): Promise<ClientSummary[]> {
     logo_url: string | null;
     primary_color: string;
     secondary_color: string;
+    has_logo: boolean;
   }>(
-    `SELECT id, name, created_at, logo_url, primary_color, secondary_color
+    `SELECT id, name, created_at, logo_url, primary_color, secondary_color,
+            (logo_data IS NOT NULL) AS has_logo
        FROM businesses
       WHERE id <> (SELECT business_id FROM platform_state WHERE singleton = true)
       ORDER BY created_at, name`,
@@ -171,9 +196,11 @@ export async function listClients(user: SessionUser): Promise<ClientSummary[]> {
       status: businessOwner ? "active" : "invited",
       members: Number(members.rows[0]?.count ?? 0),
       createdAt: business.created_at.toISOString(),
-      logoUrl: business.logo_url,
+      logoUrl: business.has_logo ? logoPath(business.id) : business.logo_url,
       primaryColor: business.primary_color,
       secondaryColor: business.secondary_color,
+      previewPath: clientPath(business.id),
+      nfcPath: clientPath(business.id),
     });
   }
   return clients;
@@ -261,6 +288,8 @@ export async function createClient(
         logoUrl: null,
         primaryColor: "#F6B900",
         secondaryColor: "#FFE27A",
+        previewPath: clientPath(businessId),
+        nfcPath: clientPath(businessId),
       },
       activationPath: `/activate-client?token=${encodeURIComponent(invitationToken)}`,
     };
@@ -284,9 +313,11 @@ export async function getClientBranding(
     logo_url: string | null;
     primary_color: string;
     secondary_color: string;
+    has_logo: boolean;
   }>(
     `SELECT b.id, b.name, COALESCE(l.name, 'Primary location') AS location_name,
-            b.logo_url, b.primary_color, b.secondary_color
+            b.logo_url, b.primary_color, b.secondary_color,
+            (b.logo_data IS NOT NULL) AS has_logo
        FROM businesses b
        LEFT JOIN locations l ON l.business_id = b.id
       WHERE b.id = $1
@@ -301,9 +332,11 @@ export async function getClientBranding(
     id: row.id,
     name: row.name,
     locationName: row.location_name,
-    logoUrl: row.logo_url,
+    logoUrl: row.has_logo ? logoPath(row.id) : row.logo_url,
     primaryColor: row.primary_color,
     secondaryColor: row.secondary_color,
+    previewPath: clientPath(row.id),
+    nfcPath: clientPath(row.id),
   };
 }
 
@@ -313,7 +346,6 @@ export async function updateClientBranding(
   input: {
     name: string;
     locationName: string;
-    logoUrl: string | null;
     primaryColor: string;
     secondaryColor: string;
   },
@@ -332,9 +364,9 @@ export async function updateClientBranding(
     if (!business.rowCount) throw Object.assign(new Error("Client not found"), { status: 404 });
     await client.query(
       `UPDATE businesses
-          SET name = $2, logo_url = $3, primary_color = $4, secondary_color = $5, updated_at = now()
+          SET name = $2, primary_color = $3, secondary_color = $4, updated_at = now()
         WHERE id = $1`,
-      [businessId, input.name, input.logoUrl, input.primaryColor, input.secondaryColor],
+      [businessId, input.name, input.primaryColor, input.secondaryColor],
     );
     const location = await client.query<{ id: string }>(
       "SELECT id FROM locations WHERE business_id = $1 ORDER BY created_at, id LIMIT 1 FOR UPDATE",
@@ -356,7 +388,6 @@ export async function updateClientBranding(
         JSON.stringify({
           name: input.name,
           locationName: input.locationName,
-          logoUrl: input.logoUrl,
           primaryColor: input.primaryColor,
           secondaryColor: input.secondaryColor,
         }),
@@ -370,4 +401,112 @@ export async function updateClientBranding(
   } finally {
     client.release();
   }
+}
+
+export async function updateClientLogo(
+  user: SessionUser,
+  businessId: string,
+  input: { mime: "image/png" | "image/jpeg" | "image/webp"; data: Buffer },
+): Promise<ClientBranding> {
+  requirePlatformAdmin(user);
+  if (!input.data.length || input.data.length > 2_097_152)
+    throw Object.assign(new Error("Logo must be 2 MB or smaller"), { status: 400 });
+  const signatures: Record<typeof input.mime, (data: Buffer) => boolean> = {
+    "image/png": (data) => data.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex")),
+    "image/jpeg": (data) => data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff,
+    "image/webp": (data) =>
+      data.subarray(0, 4).toString("ascii") === "RIFF" &&
+      data.subarray(8, 12).toString("ascii") === "WEBP",
+  };
+  if (!signatures[input.mime](input.data))
+    throw Object.assign(new Error("Logo file content does not match its image type"), {
+      status: 400,
+    });
+  const result = await getPool().query(
+    `UPDATE businesses
+        SET logo_data = $2, logo_mime = $3, logo_url = NULL, updated_at = now()
+      WHERE id = $1
+        AND id <> (SELECT business_id FROM platform_state WHERE singleton = true)`,
+    [businessId, input.data, input.mime],
+  );
+  if (!result.rowCount) throw Object.assign(new Error("Client not found"), { status: 404 });
+  await getPool().query(
+    `INSERT INTO audit_events(id,business_id,actor_user_id,action,target_type,target_id,metadata)
+     VALUES ($1,$2,$3,'platform.client.logo.updated','business',$2,$4)`,
+    [
+      id("aud"),
+      businessId,
+      user.id,
+      JSON.stringify({ mime: input.mime, bytes: input.data.length }),
+    ],
+  );
+  return getClientBranding(user, businessId);
+}
+
+export async function getClientLogo(
+  businessId: string,
+): Promise<{ mime: string; data: Buffer } | null> {
+  const result = await getPool().query<{ logo_mime: string | null; logo_data: Buffer | null }>(
+    `SELECT logo_mime, logo_data FROM businesses
+      WHERE id = $1
+        AND id <> (SELECT business_id FROM platform_state WHERE singleton = true)`,
+    [businessId],
+  );
+  const row = result.rows[0];
+  return row?.logo_mime && row.logo_data ? { mime: row.logo_mime, data: row.logo_data } : null;
+}
+
+export async function getPublicClientExperience(
+  businessId: string,
+): Promise<PublicClientExperience> {
+  const business = await getPool().query<{
+    id: string;
+    name: string;
+    location_name: string;
+    logo_url: string | null;
+    primary_color: string;
+    secondary_color: string;
+    has_logo: boolean;
+  }>(
+    `SELECT b.id, b.name, COALESCE(l.name, 'Primary location') AS location_name,
+            b.logo_url, b.primary_color, b.secondary_color,
+            (b.logo_data IS NOT NULL) AS has_logo
+       FROM businesses b
+       LEFT JOIN locations l ON l.business_id = b.id
+      WHERE b.id = $1
+        AND b.id <> (SELECT business_id FROM platform_state WHERE singleton = true)
+      ORDER BY l.created_at, l.id
+      LIMIT 1`,
+    [businessId],
+  );
+  const row = business.rows[0];
+  if (!row) throw Object.assign(new Error("Client not found"), { status: 404 });
+  const rewards = await getPool().query<{
+    id: string;
+    name: string;
+    description: string;
+    points_cost: number;
+  }>(
+    `SELECT id, name, description, points_cost
+       FROM rewards
+      WHERE business_id = $1 AND active AND archived_at IS NULL
+        AND (inventory_remaining IS NULL OR inventory_remaining > 0)
+      ORDER BY points_cost, created_at, id`,
+    [businessId],
+  );
+  return {
+    business: {
+      business_name: row.name,
+      location_name: row.location_name,
+      logo_url: row.has_logo ? logoPath(row.id) : row.logo_url,
+      primary_color: row.primary_color,
+      secondary_color: row.secondary_color,
+    },
+    rewards: rewards.rows.map((reward) => ({
+      id: reward.id,
+      name: reward.name,
+      description: reward.description,
+      points: reward.points_cost,
+    })),
+  };
 }

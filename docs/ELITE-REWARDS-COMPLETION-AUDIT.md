@@ -74,7 +74,7 @@ Elite Rewards is now a live, database-backed rewards platform on Render rather t
 
 ### Release verification
 
-- `npm test`: 39/39 passed.
+- `npm test`: 47/47 passed.
 - `npm run typecheck`: passed.
 - `npm run lint`: passed.
 - `npm run build`: passed.
@@ -130,7 +130,7 @@ Elite Rewards is now a live, database-backed rewards platform on Render rather t
 30. Add reward detail pages and explicit redemption confirmation.
 31. Add active, used, expired, revoked, and consumed reward-code states.
 32. Add program terms, privacy links, support, and business/location context.
-33. Add secure rotating QR/NFC identifiers after staff redemption consumption is complete.
+33. Add secure rotating member redemption QR/NFC identifiers after staff redemption consumption is complete. Static client NFC cards now have permanent public program-page links; this open item covers member-specific redemption security only.
 34. Add invitation and referral delivery by email/SMS rather than manual link copying.
 
 ### P1 — Integrations and automation

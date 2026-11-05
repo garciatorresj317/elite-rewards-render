@@ -10,8 +10,11 @@ import {
   createClient,
   getClientBranding,
   getClientInvitation,
+  getClientLogo,
+  getPublicClientExperience,
   listClients,
   updateClientBranding,
+  updateClientLogo,
 } from "./clients-service.ts";
 import { closeDatabase, setDatabasePoolForTests } from "./database.ts";
 
@@ -70,6 +73,9 @@ describe("platform client management", () => {
     await pool.query(
       await readFile(join(process.cwd(), "migrations", "002_platform_clients.sql"), "utf8"),
     );
+    await pool.query(
+      await readFile(join(process.cwd(), "migrations", "006_editable_rewards.sql"), "utf8"),
+    );
     await pool.query("UPDATE users SET platform_admin = false WHERE id = 'usr_ordinary'");
     await pool.query("ALTER TABLE businesses ADD COLUMN logo_url text");
     await pool.query(
@@ -81,6 +87,8 @@ describe("platform client management", () => {
     await pool.query(
       "ALTER TABLE businesses ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now()",
     );
+    await pool.query("ALTER TABLE businesses ADD COLUMN logo_data bytea");
+    await pool.query("ALTER TABLE businesses ADD COLUMN logo_mime text");
     await pool.query(
       "CREATE TABLE platform_administrator(singleton boolean PRIMARY KEY, user_id text NOT NULL UNIQUE REFERENCES users(id))",
     );
@@ -164,12 +172,12 @@ describe("platform client management", () => {
     const saved = await updateClientBranding(platformOwner, client.id, {
       name: "Big Smoke",
       locationName: "Big Smoke Main",
-      logoUrl: "https://example.com/big-smoke.png",
       primaryColor: "#112233",
       secondaryColor: "#DDAA33",
     });
     assert.equal(saved.name, "Big Smoke");
-    assert.equal(saved.logoUrl, "https://example.com/big-smoke.png");
+    assert.equal(saved.previewPath, `/clients/${client.id}`);
+    assert.equal(saved.nfcPath, saved.previewPath);
     assert.equal((await getClientBranding(platformOwner, client.id)).primaryColor, "#112233");
     await assert.rejects(
       () => getClientBranding(ordinaryOwner, client.id),
@@ -178,6 +186,45 @@ describe("platform client management", () => {
     await assert.rejects(
       () => getClientBranding(platformOwner, platformOwner.businessId),
       /Client not found/,
+    );
+  });
+
+  it("stores validated file-uploaded logos and exposes the branded NFC destination", async () => {
+    const client = (await listClients(platformOwner)).find((item) => item.name === "Big Smoke");
+    assert.ok(client);
+    // Use an ASCII-only WebP signature because pg-mem's bytea adapter rewrites non-UTF-8
+    // bytes; real PostgreSQL preserves the uploaded Buffer exactly.
+    const webp = Buffer.from("RIFF0000WEBPVP8 ", "ascii");
+    const saved = await updateClientLogo(platformOwner, client.id, {
+      mime: "image/webp",
+      data: webp,
+    });
+    assert.equal(saved.logoUrl, `/api/public/clients/${client.id}/logo`);
+    assert.deepEqual(await getClientLogo(client.id), { mime: "image/webp", data: webp });
+    const png = Buffer.from("89504e470d0a1a0a00000000", "hex");
+    const publicPage = await getPublicClientExperience(client.id);
+    assert.equal(publicPage.business.business_name, "Big Smoke");
+    assert.equal(publicPage.business.logo_url, saved.logoUrl);
+    assert.equal(publicPage.rewards.length, 3);
+    await assert.rejects(
+      () =>
+        updateClientLogo(platformOwner, platformOwner.businessId, {
+          mime: "image/webp",
+          data: webp,
+        }),
+      /Client not found/,
+    );
+    await assert.rejects(
+      () => updateClientLogo(ordinaryOwner, client.id, { mime: "image/png", data: png }),
+      /Platform administrator access required/,
+    );
+    await assert.rejects(
+      () =>
+        updateClientLogo(platformOwner, client.id, {
+          mime: "image/png",
+          data: Buffer.from("not an image"),
+        }),
+      /does not match/,
     );
   });
 

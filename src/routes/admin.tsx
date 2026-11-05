@@ -5,6 +5,8 @@ import {
   CalendarClock,
   Check,
   CircleDollarSign,
+  Copy,
+  ExternalLink,
   Gift,
   LayoutDashboard,
   LogOut,
@@ -19,6 +21,7 @@ import {
   Trophy,
   Users,
   UserPlus,
+  Upload,
   X,
 } from "lucide-react";
 import { CSSProperties, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
@@ -79,6 +82,7 @@ function Admin() {
     primaryColor: "#F6B900",
     secondaryColor: "#FFE27A",
   });
+  const [logoUploading, setLogoUploading] = useState(false);
   const [activationPath, setActivationPath] = useState("");
   const [memberModal, setMemberModal] = useState(false);
   const [memberActivationPath, setMemberActivationPath] = useState("");
@@ -241,6 +245,41 @@ function Admin() {
       setClientEditor(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Client customization failed");
+    }
+  };
+  const uploadClientLogo = async (file: File) => {
+    if (!clientEditor) return;
+    setError("");
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      setError("Choose a PNG, JPEG, or WebP logo.");
+      return;
+    }
+    if (file.size > 2_097_152) {
+      setError("Logo must be 2 MB or smaller.");
+      return;
+    }
+    try {
+      setLogoUploading(true);
+      const result = await api.uploadClientLogo(clientEditor.id, file);
+      setClientBranding((current) => ({ ...current, logoUrl: result.branding.logoUrl }));
+      setClients((current) =>
+        current.map((client) =>
+          client.id === clientEditor.id ? { ...client, logoUrl: result.branding.logoUrl } : client,
+        ),
+      );
+      setNotice(`${clientEditor.name} logo was uploaded.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Logo upload failed");
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+  const copyClientLink = async (path: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}${path}`);
+      setNotice(`${label} link copied.`);
+    } catch {
+      setError("The link could not be copied. Open it and copy the browser address instead.");
     }
   };
   const submitMember = async (event: FormEvent) => {
@@ -569,12 +608,22 @@ function Admin() {
                         <dd>{client.members.toLocaleString()}</dd>
                       </div>
                     </dl>
-                    <button
-                      className="client-customize"
-                      onClick={() => void openClientEditor(client)}
-                    >
-                      <Palette size={16} /> Customize client
-                    </button>
+                    <div className="client-card-actions">
+                      <a
+                        className="client-customize"
+                        href={client.previewPath}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <ExternalLink size={16} /> Open client page
+                      </a>
+                      <button
+                        className="client-customize"
+                        onClick={() => void openClientEditor(client)}
+                      >
+                        <Palette size={16} /> Customize client
+                      </button>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -804,6 +853,41 @@ function Admin() {
                       <span>December 24–26</span>
                     </li>
                   </ul>
+                  <div className="automatic-live-message">
+                    <div>
+                      <span className="section-kicker">Optional live message</span>
+                      <h3>Holiday or event announcement</h3>
+                      <p>
+                        Add a respectful observance, store event, or seasonal message. Leave both
+                        fields empty for wallpaper only.
+                      </p>
+                    </div>
+                    <label>
+                      Headline
+                      <input
+                        maxLength={80}
+                        value={visualDraft.occasionTitle}
+                        onChange={(event) =>
+                          setVisualDraft({ ...visualDraft, occasionTitle: event.target.value })
+                        }
+                        placeholder="Example: Honoring Dr. Martin Luther King Jr."
+                      />
+                    </label>
+                    <label>
+                      Message
+                      <textarea
+                        maxLength={220}
+                        value={visualDraft.occasionMessage}
+                        onChange={(event) =>
+                          setVisualDraft({ ...visualDraft, occasionMessage: event.target.value })
+                        }
+                        placeholder="Add a short message for members and staff."
+                      />
+                    </label>
+                    <button className="admin-primary" disabled={user.role !== "owner"}>
+                      {user.role === "owner" ? "Publish appearance" : "Owner access required"}
+                    </button>
+                  </div>
                 </section>
                 <div className="theme-grid" role="radiogroup" aria-label="Business page theme">
                   {themeCatalog.map((theme) => (
@@ -827,41 +911,6 @@ function Admin() {
                     </label>
                   ))}
                 </div>
-                <section className="panel occasion-editor">
-                  <div>
-                    <span className="section-kicker">Optional live message</span>
-                    <h3>Holiday or event announcement</h3>
-                    <p>
-                      Use this for a respectful observance, store event, or seasonal message. Leave
-                      both fields empty for wallpaper only.
-                    </p>
-                  </div>
-                  <label>
-                    Headline
-                    <input
-                      maxLength={80}
-                      value={visualDraft.occasionTitle}
-                      onChange={(event) =>
-                        setVisualDraft({ ...visualDraft, occasionTitle: event.target.value })
-                      }
-                      placeholder="Example: Honoring Dr. Martin Luther King Jr."
-                    />
-                  </label>
-                  <label>
-                    Message
-                    <textarea
-                      maxLength={220}
-                      value={visualDraft.occasionMessage}
-                      onChange={(event) =>
-                        setVisualDraft({ ...visualDraft, occasionMessage: event.target.value })
-                      }
-                      placeholder="Add a short message for members and staff."
-                    />
-                  </label>
-                  <button className="admin-primary" disabled={user.role !== "owner"}>
-                    {user.role === "owner" ? "Publish appearance" : "Owner access required"}
-                  </button>
-                </section>
               </form>
             </section>
           )}
@@ -926,17 +975,24 @@ function Admin() {
                 }
               />
             </label>
-            <label>
-              Company logo URL
+            <label className="client-logo-upload">
+              Company logo
+              <span>
+                <Upload size={18} /> Choose logo from files
+              </span>
               <input
-                type="url"
-                inputMode="url"
-                placeholder="https://example.com/logo.png"
-                value={clientBranding.logoUrl ?? ""}
-                onChange={(event) =>
-                  setClientBranding({ ...clientBranding, logoUrl: event.target.value || null })
-                }
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                disabled={logoUploading}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void uploadClientLogo(file);
+                  event.target.value = "";
+                }}
               />
+              <small>
+                {logoUploading ? "Uploading logo…" : "PNG, JPEG, or WebP · maximum 2 MB"}
+              </small>
             </label>
             <div className="client-color-fields">
               <label>
@@ -967,6 +1023,32 @@ function Admin() {
             >
               Publish client branding
             </button>
+            <section className="client-links">
+              <div>
+                <span className="section-kicker">Client page & NFC</span>
+                <h3>Customer-facing destination</h3>
+                <p>
+                  Open this page to verify branding and rewards. Program the same URL into this
+                  client’s NFC cards.
+                </p>
+              </div>
+              <a
+                className="client-customize"
+                href={clientEditor.previewPath}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <ExternalLink size={16} /> Open client page
+              </a>
+              <button
+                type="button"
+                className="client-customize"
+                onClick={() => void copyClientLink(clientEditor.nfcPath, "NFC card")}
+              >
+                <Copy size={16} /> Copy NFC card link
+              </button>
+              <code>{clientEditor.nfcPath}</code>
+            </section>
             <div className="client-reward-manager">
               <div>
                 <span className="section-kicker">Client rewards</span>

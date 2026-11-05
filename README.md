@@ -8,11 +8,12 @@ An independent rewards-program website with authenticated business and member ac
 2. **Client business owner/staff** — operates only that isolated business, its members, points ledger, appearance, and rewards.
 3. **Member/customer** — sees only that business’s branded wallet, balance, history, referral link, and published rewards.
 
-The Elite platform tenant is never listed as one of its own clients. Client logos use public HTTPS asset URLs; Render’s ephemeral filesystem is not used for uploads.
+The Elite platform tenant is never listed as one of its own clients. Platform administrators upload PNG, JPEG, or WebP client logos from local files; the application validates them and stores them durably in PostgreSQL rather than Render’s ephemeral filesystem.
 
 ## Product areas
 
 - `/` — public marketing site
+- `/clients/:clientId` — permanent public client page and NFC-card destination
 - `/login` — secure business and member access
 - `/wallet` — authenticated member wallet, balance, ledger, reward codes, and redemptions
 - `/admin` — authenticated business dashboard, secure member enrollment, editable reward catalog, live transactions, point awards, and business appearance controls

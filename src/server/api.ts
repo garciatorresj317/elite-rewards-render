@@ -17,8 +17,11 @@ import {
   createClient,
   getClientBranding,
   getClientInvitation,
+  getClientLogo,
+  getPublicClientExperience,
   listClients,
   updateClientBranding,
+  updateClientLogo,
 } from "./clients-service.ts";
 import {
   activateMember,
@@ -53,6 +56,22 @@ const jsonHeaders = {
 
 function json(body: unknown, status = 200, headers: HeadersInit = {}): Response {
   return new Response(JSON.stringify(body), { status, headers: { ...jsonHeaders, ...headers } });
+}
+
+async function imageUpload(request: Request): Promise<{
+  mime: "image/png" | "image/jpeg" | "image/webp";
+  data: Buffer;
+}> {
+  const mime = request.headers.get("content-type")?.split(";")[0]?.trim();
+  if (mime !== "image/png" && mime !== "image/jpeg" && mime !== "image/webp")
+    throw Object.assign(new Error("Logo must be a PNG, JPEG, or WebP image"), { status: 415 });
+  const contentLength = Number(request.headers.get("content-length") ?? 0);
+  if (contentLength > 2_097_152)
+    throw Object.assign(new Error("Logo must be 2 MB or smaller"), { status: 413 });
+  const data = Buffer.from(await request.arrayBuffer());
+  if (!data.length || data.length > 2_097_152)
+    throw Object.assign(new Error("Logo must be 2 MB or smaller"), { status: 413 });
+  return { mime, data };
 }
 
 async function body(request: Request): Promise<Record<string, unknown>> {
@@ -270,6 +289,24 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       });
       return json({ ok: true }, 201, { "set-cookie": setSessionCookie(result.sessionToken) });
     }
+    const publicClientMatch = url.pathname.match(/^\/api\/public\/clients\/([^/]+)$/);
+    if (publicClientMatch && request.method === "GET") {
+      const businessId = text(decodeURIComponent(publicClientMatch[1] ?? ""), "Client", 8, 120);
+      return json(await getPublicClientExperience(businessId));
+    }
+    const publicClientLogoMatch = url.pathname.match(/^\/api\/public\/clients\/([^/]+)\/logo$/);
+    if (publicClientLogoMatch && request.method === "GET") {
+      const businessId = text(decodeURIComponent(publicClientLogoMatch[1] ?? ""), "Client", 8, 120);
+      const logo = await getClientLogo(businessId);
+      if (!logo) return json({ error: "Logo not found" }, 404);
+      return new Response(new Uint8Array(logo.data), {
+        headers: {
+          "content-type": logo.mime,
+          "cache-control": "public, max-age=3600, must-revalidate",
+          "x-content-type-options": "nosniff",
+        },
+      });
+    }
     const user = await getSessionUser(request);
     if (url.pathname === "/api/auth/session" && request.method === "GET") return json({ user });
     if (url.pathname === "/api/admin/dashboard" && request.method === "GET") {
@@ -324,11 +361,18 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       const branding = await updateClientBranding(user, businessId, {
         name: text(payload["name"], "Business name", 2, 120),
         locationName: text(payload["locationName"], "Location name", 2, 120),
-        logoUrl: optionalHttpsUrl(payload["logoUrl"], "Logo URL"),
         primaryColor: color(payload["primaryColor"], "Primary color"),
         secondaryColor: color(payload["secondaryColor"], "Secondary color"),
       });
       return json({ branding });
+    }
+    const clientLogoMatch = url.pathname.match(/^\/api\/admin\/clients\/([^/]+)\/logo$/);
+    if (clientLogoMatch && request.method === "PUT") {
+      requirePlatformAdmin(user);
+      const businessId = text(decodeURIComponent(clientLogoMatch[1] ?? ""), "Client", 8, 120);
+      return json({
+        branding: await updateClientLogo(user, businessId, await imageUpload(request)),
+      });
     }
     const clientRewardsMatch = url.pathname.match(/^\/api\/admin\/clients\/([^/]+)\/rewards$/);
     if (clientRewardsMatch && request.method === "GET") {

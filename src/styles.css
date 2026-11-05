@@ -769,3 +769,36 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 .client-reward-actions .client-customize { margin: 0; }
 .client-reward-form { display: grid; gap: 13px; padding: 14px; border: 1px solid var(--gold-faint); border-radius: 11px; background: rgba(246,185,0,.035); }
 .client-reward-form textarea { width: 100%; min-height: 80px; padding: 11px; border: 1px solid rgba(236,171,26,.45); border-radius: 10px; color: var(--text); background: #080704; resize: vertical; }
+
+
+/* Client verification, durable logo upload, and NFC destinations */
+.client-card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 16px; }
+.client-card-actions .client-customize { margin-top: 0; text-decoration: none; }
+.client-logo-upload { position: relative; display: grid; gap: 8px; }
+.client-logo-upload > span { min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 9px; border: 1px dashed var(--gold-line); border-radius: 10px; color: var(--gold-pale); background: rgba(246,185,0,.07); cursor: pointer; }
+.client-logo-upload input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.client-logo-upload small { color: var(--muted); font-weight: 500; }
+.client-links { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; padding: 15px; border: 1px solid var(--gold-faint); border-radius: 11px; background: rgba(246,185,0,.035); }
+.client-links > div, .client-links code { grid-column: 1 / -1; }
+.client-links h3 { margin: 5px 0; color: var(--gold-pale); font: 800 19px var(--serif); }
+.client-links p { margin: 0; color: var(--muted); line-height: 1.5; }
+.client-links .client-customize { margin: 0; text-decoration: none; }
+.client-links code { overflow: hidden; padding: 9px 11px; border-radius: 8px; color: var(--gold-pale); background: #030303; text-overflow: ellipsis; white-space: nowrap; }
+.automatic-live-message { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(240px,.75fr) 1fr 1fr auto; align-items: end; gap: 14px; padding-top: 18px; border-top: 1px solid var(--gold-faint); }
+.automatic-live-message h3 { margin: 5px 0; color: var(--gold-pale); font: 700 19px var(--serif); }
+.automatic-live-message p { margin: 0; color: var(--muted); line-height: 1.55; }
+.automatic-live-message label { display: grid; gap: 7px; color: var(--gold-pale); font-weight: 700; font-size: 11px; }
+.automatic-live-message input, .automatic-live-message textarea { width: 100%; min-height: 48px; padding: 11px 13px; border: 1px solid var(--gold-faint); border-radius: 9px; color: white; background: #030303; resize: vertical; }
+.automatic-live-message textarea { min-height: 76px; }
+.client-public-page { min-height: 100vh; color: var(--text); background: radial-gradient(circle at 50% -20%, color-mix(in srgb, var(--client-primary) 22%, transparent), transparent 42%), #030303; }
+.client-public-header { min-height: 96px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid color-mix(in srgb, var(--client-primary) 45%, transparent); }
+.client-public-main { display: grid; gap: 46px; padding-block: 72px; }
+.client-public-hero { max-width: 780px; display: grid; gap: 19px; }
+.client-public-hero h1 { max-width: 700px; margin: 0; color: var(--client-secondary); font: 800 clamp(44px,7vw,76px)/.98 var(--serif); }
+.client-public-hero p { max-width: 660px; margin: 0; color: var(--muted); font-size: 19px; line-height: 1.65; }
+.client-public-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
+.client-public-actions > span { display: flex; align-items: center; gap: 8px; color: var(--client-secondary); font-weight: 800; }
+.client-public-rewards { display: grid; gap: 22px; }
+.client-public-rewards h2 { margin: 5px 0 0; color: var(--client-secondary); font: 800 31px var(--serif); }
+@media (max-width: 900px) { .automatic-live-message { grid-template-columns: 1fr 1fr; } .automatic-live-message > div { grid-column: 1 / -1; } }
+@media (max-width: 620px) { .client-card-actions, .client-links, .automatic-live-message { grid-template-columns: 1fr; } .client-links > div, .client-links code, .automatic-live-message > div { grid-column: auto; } .client-public-header { align-items: flex-start; padding-block: 18px; flex-direction: column; } .client-public-main { padding-block: 44px; } }
