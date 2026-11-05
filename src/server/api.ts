@@ -15,8 +15,10 @@ import { getPool, id, migrateDatabase } from "./database.ts";
 import {
   activateClient,
   createClient,
+  getClientBranding,
   getClientInvitation,
   listClients,
+  updateClientBranding,
 } from "./clients-service.ts";
 import {
   activateMember,
@@ -27,8 +29,12 @@ import {
 import { awardPoints, getDashboard, getWallet, redeemReward } from "./rewards-service.ts";
 import {
   archiveReward,
+  archiveClientReward,
+  createClientReward,
   createReward,
+  listClientRewards,
   listManagedRewards,
+  updateClientReward,
   updateReward,
 } from "./reward-management-service.ts";
 import {
@@ -72,6 +78,27 @@ function integer(value: unknown, name: string, min = 0, max = Number.MAX_SAFE_IN
   if (!Number.isSafeInteger(value) || Number(value) < min || Number(value) > max)
     throw Object.assign(new Error(`${name} is invalid`), { status: 400 });
   return Number(value);
+}
+
+function color(value: unknown, name: string): string {
+  const normalized = text(value, name, 7, 7).toUpperCase();
+  if (!/^#[0-9A-F]{6}$/.test(normalized))
+    throw Object.assign(new Error(`${name} is invalid`), { status: 400 });
+  return normalized;
+}
+
+function optionalHttpsUrl(value: unknown, name: string): string | null {
+  if (value === null || value === undefined || value === "") return null;
+  const normalized = text(value, name, 1, 2048);
+  let parsed: URL;
+  try {
+    parsed = new URL(normalized);
+  } catch {
+    throw Object.assign(new Error(`${name} is invalid`), { status: 400 });
+  }
+  if (parsed.protocol !== "https:" || parsed.username || parsed.password)
+    throw Object.assign(new Error(`${name} must use a public HTTPS URL`), { status: 400 });
+  return parsed.toString();
 }
 
 function safeEqual(left: string, right: string): boolean {
@@ -283,6 +310,83 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
         ownerEmail: text(payload["ownerEmail"], "Owner email", 5, 254).toLowerCase(),
       });
       return json(result, 201);
+    }
+    const clientBrandingMatch = url.pathname.match(/^\/api\/admin\/clients\/([^/]+)\/branding$/);
+    if (clientBrandingMatch && request.method === "GET") {
+      requirePlatformAdmin(user);
+      const businessId = text(decodeURIComponent(clientBrandingMatch[1] ?? ""), "Client", 8, 120);
+      return json({ branding: await getClientBranding(user, businessId) });
+    }
+    if (clientBrandingMatch && request.method === "PUT") {
+      requirePlatformAdmin(user);
+      const businessId = text(decodeURIComponent(clientBrandingMatch[1] ?? ""), "Client", 8, 120);
+      const payload = await body(request);
+      const branding = await updateClientBranding(user, businessId, {
+        name: text(payload["name"], "Business name", 2, 120),
+        locationName: text(payload["locationName"], "Location name", 2, 120),
+        logoUrl: optionalHttpsUrl(payload["logoUrl"], "Logo URL"),
+        primaryColor: color(payload["primaryColor"], "Primary color"),
+        secondaryColor: color(payload["secondaryColor"], "Secondary color"),
+      });
+      return json({ branding });
+    }
+    const clientRewardsMatch = url.pathname.match(/^\/api\/admin\/clients\/([^/]+)\/rewards$/);
+    if (clientRewardsMatch && request.method === "GET") {
+      requirePlatformAdmin(user);
+      const businessId = text(decodeURIComponent(clientRewardsMatch[1] ?? ""), "Client", 8, 120);
+      return json({ rewards: await listClientRewards(user, businessId) });
+    }
+    if (clientRewardsMatch && request.method === "POST") {
+      requirePlatformAdmin(user);
+      const businessId = text(decodeURIComponent(clientRewardsMatch[1] ?? ""), "Client", 8, 120);
+      const payload = await body(request);
+      if (typeof payload["active"] !== "boolean")
+        throw Object.assign(new Error("Active status is required"), { status: 400 });
+      return json(
+        {
+          reward: await createClientReward(user, businessId, {
+            name: text(payload["name"], "Reward name", 2, 120),
+            description: text(payload["description"] ?? "", "Description", 0, 500),
+            points: integer(payload["points"], "Points cost", 1, 1_000_000),
+            active: payload["active"],
+            inventoryRemaining:
+              payload["inventoryRemaining"] === null || payload["inventoryRemaining"] === undefined
+                ? null
+                : integer(payload["inventoryRemaining"], "Inventory", 0, 1_000_000),
+          }),
+        },
+        201,
+      );
+    }
+    const clientRewardMatch = url.pathname.match(
+      /^\/api\/admin\/clients\/([^/]+)\/rewards\/([^/]+)$/,
+    );
+    if (clientRewardMatch && request.method === "PUT") {
+      requirePlatformAdmin(user);
+      const businessId = text(decodeURIComponent(clientRewardMatch[1] ?? ""), "Client", 8, 120);
+      const rewardId = text(decodeURIComponent(clientRewardMatch[2] ?? ""), "Reward", 8, 120);
+      const payload = await body(request);
+      if (typeof payload["active"] !== "boolean")
+        throw Object.assign(new Error("Active status is required"), { status: 400 });
+      return json({
+        reward: await updateClientReward(user, businessId, rewardId, {
+          name: text(payload["name"], "Reward name", 2, 120),
+          description: text(payload["description"] ?? "", "Description", 0, 500),
+          points: integer(payload["points"], "Points cost", 1, 1_000_000),
+          active: payload["active"],
+          inventoryRemaining:
+            payload["inventoryRemaining"] === null || payload["inventoryRemaining"] === undefined
+              ? null
+              : integer(payload["inventoryRemaining"], "Inventory", 0, 1_000_000),
+        }),
+      });
+    }
+    if (clientRewardMatch && request.method === "DELETE") {
+      requirePlatformAdmin(user);
+      const businessId = text(decodeURIComponent(clientRewardMatch[1] ?? ""), "Client", 8, 120);
+      const rewardId = text(decodeURIComponent(clientRewardMatch[2] ?? ""), "Reward", 8, 120);
+      await archiveClientReward(user, businessId, rewardId);
+      return json({ ok: true });
     }
     if (url.pathname === "/api/admin/members" && request.method === "GET") {
       requireRole(user, ["owner", "staff"]);

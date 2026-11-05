@@ -21,12 +21,14 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { CSSProperties, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
+import { BusinessBrand } from "@/components/BusinessBrand";
 import { ExperienceBackdrop } from "@/components/ExperienceTheme";
 import { themeCatalog } from "@/lib/theme-catalog";
 import {
   api,
+  type ClientBrandingDraft,
   type ClientSummary,
   type DashboardData,
   type ManagedReward,
@@ -60,6 +62,23 @@ function Admin() {
   const [mobile, setMobile] = useState(false);
   const [modal, setModal] = useState(false);
   const [clientModal, setClientModal] = useState(false);
+  const [clientEditor, setClientEditor] = useState<ClientSummary | null>(null);
+  const [clientRewards, setClientRewards] = useState<ManagedReward[]>([]);
+  const [clientRewardEditingId, setClientRewardEditingId] = useState<string | null>(null);
+  const [clientRewardDraft, setClientRewardDraft] = useState<RewardDraft>({
+    name: "",
+    description: "",
+    points: 100,
+    active: true,
+    inventoryRemaining: null,
+  });
+  const [clientBranding, setClientBranding] = useState<ClientBrandingDraft>({
+    name: "",
+    locationName: "",
+    logoUrl: null,
+    primaryColor: "#F6B900",
+    secondaryColor: "#FFE27A",
+  });
   const [activationPath, setActivationPath] = useState("");
   const [memberModal, setMemberModal] = useState(false);
   const [memberActivationPath, setMemberActivationPath] = useState("");
@@ -171,6 +190,59 @@ function Admin() {
       setError(cause instanceof Error ? cause.message : "Client creation failed");
     }
   };
+  const openClientEditor = async (client: ClientSummary) => {
+    setError("");
+    try {
+      const [result, rewards] = await Promise.all([
+        api.clientBranding(client.id),
+        api.clientRewards(client.id),
+      ]);
+      setClientEditor(client);
+      setClientRewards(rewards.rewards);
+      setClientBranding({
+        name: result.branding.name,
+        locationName: result.branding.locationName,
+        logoUrl: result.branding.logoUrl,
+        primaryColor: result.branding.primaryColor,
+        secondaryColor: result.branding.secondaryColor,
+      });
+      setClientRewardEditingId(null);
+      setClientRewardDraft({
+        name: "",
+        description: "",
+        points: 100,
+        active: true,
+        inventoryRemaining: null,
+      });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Client customization failed to load");
+    }
+  };
+  const saveClientBranding = async () => {
+    if (!clientEditor) return;
+    setError("");
+    try {
+      const result = await api.updateClientBranding(clientEditor.id, clientBranding);
+      setClients((current) =>
+        current.map((client) =>
+          client.id === clientEditor.id
+            ? {
+                ...client,
+                name: result.branding.name,
+                locationName: result.branding.locationName,
+                logoUrl: result.branding.logoUrl,
+                primaryColor: result.branding.primaryColor,
+                secondaryColor: result.branding.secondaryColor,
+              }
+            : client,
+        ),
+      );
+      setNotice(`${result.branding.name} branding was published.`);
+      setClientEditor(null);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Client customization failed");
+    }
+  };
   const submitMember = async (event: FormEvent) => {
     event.preventDefault();
     setError("");
@@ -191,6 +263,41 @@ function Admin() {
     active: true,
     inventoryRemaining: null,
   });
+  const saveClientReward = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!clientEditor) return;
+    setError("");
+    try {
+      const wasEditing = Boolean(clientRewardEditingId);
+      if (clientRewardEditingId)
+        await api.updateClientReward(clientEditor.id, clientRewardEditingId, clientRewardDraft);
+      else await api.createClientReward(clientEditor.id, clientRewardDraft);
+      setClientRewards((await api.clientRewards(clientEditor.id)).rewards);
+      setClientRewardEditingId(null);
+      setClientRewardDraft(emptyRewardForm());
+      setNotice(wasEditing ? "Client reward updated." : "Client reward created.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Client reward update failed");
+    }
+  };
+  const editClientReward = (reward: ManagedReward) => {
+    setClientRewardEditingId(reward.id);
+    setClientRewardDraft({
+      name: reward.name,
+      description: reward.description,
+      points: reward.points,
+      active: reward.active,
+      inventoryRemaining: reward.inventoryRemaining,
+    });
+  };
+  const archiveSelectedClientReward = async () => {
+    if (!clientEditor || !clientRewardEditingId) return;
+    await api.archiveClientReward(clientEditor.id, clientRewardEditingId);
+    setClientRewards((await api.clientRewards(clientEditor.id)).rewards);
+    setClientRewardEditingId(null);
+    setClientRewardDraft(emptyRewardForm());
+    setNotice("Client reward archived.");
+  };
   const openNewReward = () => {
     setEditingRewardId(null);
     setRewardForm(emptyRewardForm());
@@ -271,7 +378,11 @@ function Admin() {
       )}
       <aside className={`admin-sidebar ${mobile ? "open" : ""}`}>
         <div className="sidebar-top">
-          <BrandMark compact />
+          {user.platformAdmin ? (
+            <BrandMark compact />
+          ) : (
+            <BusinessBrand business={data.business} compact />
+          )}
           <button onClick={() => setMobile(false)} className="mobile-close" aria-label="Close menu">
             <X />
           </button>
@@ -428,7 +539,18 @@ function Admin() {
                 {clients.map((client) => (
                   <article className="client-card" key={client.id}>
                     <div className="client-card-top">
-                      <span className="client-avatar">{initials(client.name)}</span>
+                      {client.logoUrl ? (
+                        <img className="client-logo" src={client.logoUrl} alt="" />
+                      ) : (
+                        <span
+                          className="client-avatar"
+                          style={{
+                            background: `linear-gradient(135deg, ${client.secondaryColor}, ${client.primaryColor})`,
+                          }}
+                        >
+                          {initials(client.name)}
+                        </span>
+                      )}
                       <span className={`client-status ${client.status}`}>{client.status}</span>
                     </div>
                     <h3>{client.name}</h3>
@@ -447,6 +569,12 @@ function Admin() {
                         <dd>{client.members.toLocaleString()}</dd>
                       </div>
                     </dl>
+                    <button
+                      className="client-customize"
+                      onClick={() => void openClientEditor(client)}
+                    >
+                      <Palette size={16} /> Customize client
+                    </button>
                   </article>
                 ))}
               </div>
@@ -739,6 +867,232 @@ function Admin() {
           )}
         </main>
       </div>
+      {clientEditor && (
+        <div className="modal-backdrop" onMouseDown={() => setClientEditor(null)}>
+          <div
+            className="award-modal client-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="customize-client-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="modal-close"
+              onClick={() => setClientEditor(null)}
+              aria-label="Close"
+            >
+              <X />
+            </button>
+            <span className="modal-icon">
+              <Palette />
+            </span>
+            <span className="section-kicker">Elite platform control</span>
+            <h2 id="customize-client-title">Customize {clientEditor.name}</h2>
+            <p>
+              Publish the identity used by this client’s business dashboard and member wallets.
+              Rewards remain managed in that client’s isolated catalog.
+            </p>
+            <div className="client-brand-preview" style={clientBrandStyle(clientBranding)}>
+              {clientBranding.logoUrl ? (
+                <img src={clientBranding.logoUrl} alt="" />
+              ) : (
+                <span>{initials(clientBranding.name || clientEditor.name)}</span>
+              )}
+              <strong>{clientBranding.name || clientEditor.name}</strong>
+              <small>{clientBranding.locationName || clientEditor.locationName}</small>
+            </div>
+            <label>
+              Business name
+              <input
+                required
+                minLength={2}
+                maxLength={120}
+                value={clientBranding.name}
+                onChange={(event) =>
+                  setClientBranding({ ...clientBranding, name: event.target.value })
+                }
+              />
+            </label>
+            <label>
+              Primary location
+              <input
+                required
+                minLength={2}
+                maxLength={120}
+                value={clientBranding.locationName}
+                onChange={(event) =>
+                  setClientBranding({ ...clientBranding, locationName: event.target.value })
+                }
+              />
+            </label>
+            <label>
+              Company logo URL
+              <input
+                type="url"
+                inputMode="url"
+                placeholder="https://example.com/logo.png"
+                value={clientBranding.logoUrl ?? ""}
+                onChange={(event) =>
+                  setClientBranding({ ...clientBranding, logoUrl: event.target.value || null })
+                }
+              />
+            </label>
+            <div className="client-color-fields">
+              <label>
+                Primary color
+                <input
+                  type="color"
+                  value={clientBranding.primaryColor}
+                  onChange={(event) =>
+                    setClientBranding({ ...clientBranding, primaryColor: event.target.value })
+                  }
+                />
+              </label>
+              <label>
+                Accent color
+                <input
+                  type="color"
+                  value={clientBranding.secondaryColor}
+                  onChange={(event) =>
+                    setClientBranding({ ...clientBranding, secondaryColor: event.target.value })
+                  }
+                />
+              </label>
+            </div>
+            <button
+              type="button"
+              className="admin-primary full"
+              onClick={() => void saveClientBranding()}
+            >
+              Publish client branding
+            </button>
+            <div className="client-reward-manager">
+              <div>
+                <span className="section-kicker">Client rewards</span>
+                <h3>Customer-facing offer catalog</h3>
+              </div>
+              <div className="client-reward-list">
+                {clientRewards.map((reward) => (
+                  <button
+                    type="button"
+                    key={reward.id}
+                    onClick={() => editClientReward(reward)}
+                    disabled={Boolean(reward.archivedAt)}
+                  >
+                    <span>
+                      <strong>{reward.name}</strong>
+                      <small>{reward.points.toLocaleString()} points</small>
+                    </span>
+                    <span className={`client-status ${reward.active ? "active" : "invited"}`}>
+                      {reward.archivedAt ? "archived" : reward.active ? "active" : "hidden"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <div className="client-reward-actions">
+                <button
+                  type="button"
+                  className="client-customize"
+                  onClick={() => {
+                    setClientRewardEditingId(null);
+                    setClientRewardDraft(emptyRewardForm());
+                  }}
+                >
+                  <Plus size={16} /> New client reward
+                </button>
+              </div>
+              <form className="client-reward-form" onSubmit={saveClientReward}>
+                <label>
+                  Reward name
+                  <input
+                    required
+                    minLength={2}
+                    maxLength={120}
+                    value={clientRewardDraft.name}
+                    onChange={(event) =>
+                      setClientRewardDraft({ ...clientRewardDraft, name: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  Description
+                  <textarea
+                    maxLength={500}
+                    value={clientRewardDraft.description}
+                    onChange={(event) =>
+                      setClientRewardDraft({
+                        ...clientRewardDraft,
+                        description: event.target.value,
+                      })
+                    }
+                  />
+                </label>
+                <div className="client-color-fields">
+                  <label>
+                    Points
+                    <input
+                      type="number"
+                      min="1"
+                      max="1000000"
+                      value={clientRewardDraft.points}
+                      onChange={(event) =>
+                        setClientRewardDraft({
+                          ...clientRewardDraft,
+                          points: Number(event.target.value),
+                        })
+                      }
+                    />
+                  </label>
+                  <label>
+                    Inventory
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000000"
+                      placeholder="Unlimited"
+                      value={clientRewardDraft.inventoryRemaining ?? ""}
+                      onChange={(event) =>
+                        setClientRewardDraft({
+                          ...clientRewardDraft,
+                          inventoryRemaining:
+                            event.target.value === "" ? null : Number(event.target.value),
+                        })
+                      }
+                    />
+                  </label>
+                </div>
+                <label className="reward-active-check">
+                  <input
+                    type="checkbox"
+                    checked={clientRewardDraft.active}
+                    onChange={(event) =>
+                      setClientRewardDraft({ ...clientRewardDraft, active: event.target.checked })
+                    }
+                  />
+                  <span>
+                    <strong>Visible to this client’s members</strong>
+                  </span>
+                </label>
+                <div className="reward-editor-actions">
+                  {clientRewardEditingId && (
+                    <button
+                      type="button"
+                      className="danger-button"
+                      onClick={() => void archiveSelectedClientReward()}
+                    >
+                      Archive
+                    </button>
+                  )}
+                  <button className="admin-primary">
+                    {clientRewardEditingId ? "Save client reward" : "Create client reward"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
       {clientModal && (
         <div className="modal-backdrop" onMouseDown={() => setClientModal(false)}>
           <form
@@ -1092,6 +1446,12 @@ function initials(name: string) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+}
+function clientBrandStyle(branding: ClientBrandingDraft) {
+  return {
+    "--client-primary": branding.primaryColor,
+    "--client-secondary": branding.secondaryColor,
+  } as CSSProperties;
 }
 function Loading({ label }: { label: string }) {
   return (

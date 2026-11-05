@@ -91,7 +91,10 @@ export async function getSessionUser(request: Request): Promise<SessionUser | nu
     platform_admin: boolean;
   }>(
     `SELECT u.id, u.business_id, u.location_id, u.role, u.name, u.email, u.member_code,
-            u.platform_admin
+            EXISTS (
+              SELECT 1 FROM platform_administrator pa
+               WHERE pa.singleton = true AND pa.user_id = u.id
+            ) AS platform_admin
        FROM sessions s JOIN users u ON u.id = s.user_id
       WHERE s.token_hash = $1 AND s.expires_at > now() AND u.active = true`,
     [tokenHash(token)],
@@ -141,9 +144,13 @@ export async function authenticate(
       failed_login_count: number;
       locked_until: Date | null;
     }>(
-      `SELECT id, business_id, location_id, role, name, email, member_code, platform_admin, password_hash,
-              failed_login_count, locked_until
-         FROM users WHERE lower(email) = lower($1) AND active = true FOR UPDATE`,
+      `SELECT u.id, u.business_id, u.location_id, u.role, u.name, u.email, u.member_code,
+              EXISTS (
+                SELECT 1 FROM platform_administrator pa
+                 WHERE pa.singleton = true AND pa.user_id = u.id
+              ) AS platform_admin,
+              u.password_hash, u.failed_login_count, u.locked_until
+         FROM users u WHERE lower(u.email) = lower($1) AND u.active = true FOR UPDATE`,
       [email],
     );
     const candidate = result.rows[0];

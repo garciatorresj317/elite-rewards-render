@@ -13,8 +13,15 @@ export type PublicReward = {
 export async function getDashboard(user: SessionUser) {
   const database = getPool();
   const [business, totals, transactions, members, rewards] = await Promise.all([
-    database.query<{ business_name: string; location_name: string }>(
-      `SELECT b.name AS business_name, l.name AS location_name
+    database.query<{
+      business_name: string;
+      location_name: string;
+      logo_url: string | null;
+      primary_color: string;
+      secondary_color: string;
+    }>(
+      `SELECT b.name AS business_name, l.name AS location_name, b.logo_url,
+              b.primary_color, b.secondary_color
          FROM businesses b LEFT JOIN locations l ON l.business_id = b.id
         WHERE b.id = $1 ORDER BY l.created_at LIMIT 1`,
       [user.businessId],
@@ -144,8 +151,15 @@ export async function getWallet(user: SessionUser) {
         WHERE rd.business_id = $1 AND rd.member_id = $2 ORDER BY rd.created_at DESC`,
       [user.businessId, user.id],
     ),
-    database.query<{ business_name: string; location_name: string }>(
-      `SELECT b.name AS business_name, COALESCE(l.name, 'Primary location') AS location_name
+    database.query<{
+      business_name: string;
+      location_name: string;
+      logo_url: string | null;
+      primary_color: string;
+      secondary_color: string;
+    }>(
+      `SELECT b.name AS business_name, COALESCE(l.name, 'Primary location') AS location_name,
+              b.logo_url, b.primary_color, b.secondary_color
          FROM businesses b LEFT JOIN locations l ON l.id = $2 WHERE b.id = $1`,
       [user.businessId, user.locationId],
     ),

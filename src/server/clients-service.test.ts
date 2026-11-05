@@ -8,8 +8,10 @@ import type { SessionUser } from "./auth.ts";
 import {
   activateClient,
   createClient,
+  getClientBranding,
   getClientInvitation,
   listClients,
+  updateClientBranding,
 } from "./clients-service.ts";
 import { closeDatabase, setDatabasePoolForTests } from "./database.ts";
 
@@ -69,6 +71,22 @@ describe("platform client management", () => {
       await readFile(join(process.cwd(), "migrations", "002_platform_clients.sql"), "utf8"),
     );
     await pool.query("UPDATE users SET platform_admin = false WHERE id = 'usr_ordinary'");
+    await pool.query("ALTER TABLE businesses ADD COLUMN logo_url text");
+    await pool.query(
+      "ALTER TABLE businesses ADD COLUMN primary_color text NOT NULL DEFAULT '#F6B900'",
+    );
+    await pool.query(
+      "ALTER TABLE businesses ADD COLUMN secondary_color text NOT NULL DEFAULT '#FFE27A'",
+    );
+    await pool.query(
+      "ALTER TABLE businesses ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now()",
+    );
+    await pool.query(
+      "CREATE TABLE platform_administrator(singleton boolean PRIMARY KEY, user_id text NOT NULL UNIQUE REFERENCES users(id))",
+    );
+    await pool.query(
+      "INSERT INTO platform_administrator(singleton,user_id) VALUES (true,'usr_platform')",
+    );
   });
 
   after(async () => {
@@ -103,7 +121,7 @@ describe("platform client management", () => {
     assert.equal(invitation.businessName, "First Client");
 
     const clients = await listClients(platformOwner);
-    assert.equal(clients.length, 2);
+    assert.equal(clients.length, 1);
     const created = clients.find((client) => client.id === result.client.id);
     assert.equal(created?.name, "First Client");
     assert.equal(created?.ownerEmail, "client@example.com");
@@ -132,6 +150,34 @@ describe("platform client management", () => {
     await assert.rejects(
       () => activateClient(invitationToken, "client-owner-secure-password"),
       /invalid or expired/,
+    );
+  });
+
+  it("lets the sole platform administrator brand a client without exposing the platform tenant", async () => {
+    const clients = await listClients(platformOwner);
+    assert.equal(
+      clients.some((client) => client.id === platformOwner.businessId),
+      false,
+    );
+    const client = clients.find((item) => item.name === "First Client");
+    assert.ok(client);
+    const saved = await updateClientBranding(platformOwner, client.id, {
+      name: "Big Smoke",
+      locationName: "Big Smoke Main",
+      logoUrl: "https://example.com/big-smoke.png",
+      primaryColor: "#112233",
+      secondaryColor: "#DDAA33",
+    });
+    assert.equal(saved.name, "Big Smoke");
+    assert.equal(saved.logoUrl, "https://example.com/big-smoke.png");
+    assert.equal((await getClientBranding(platformOwner, client.id)).primaryColor, "#112233");
+    await assert.rejects(
+      () => getClientBranding(ordinaryOwner, client.id),
+      /Platform administrator access required/,
+    );
+    await assert.rejects(
+      () => getClientBranding(platformOwner, platformOwner.businessId),
+      /Client not found/,
     );
   });
 

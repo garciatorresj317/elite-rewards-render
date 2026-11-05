@@ -13,6 +13,18 @@ export type ClientSummary = {
   status: "active" | "invited";
   members: number;
   createdAt: string;
+  logoUrl: string | null;
+  primaryColor: string;
+  secondaryColor: string;
+};
+
+export type ClientBranding = {
+  id: string;
+  name: string;
+  locationName: string;
+  logoUrl: string | null;
+  primaryColor: string;
+  secondaryColor: string;
 };
 
 function requirePlatformAdmin(user: SessionUser): void {
@@ -115,8 +127,18 @@ export async function activateClient(
 export async function listClients(user: SessionUser): Promise<ClientSummary[]> {
   requirePlatformAdmin(user);
   const database = getPool();
-  const businesses = await database.query<{ id: string; name: string; created_at: Date }>(
-    "SELECT id, name, created_at FROM businesses ORDER BY created_at, name",
+  const businesses = await database.query<{
+    id: string;
+    name: string;
+    created_at: Date;
+    logo_url: string | null;
+    primary_color: string;
+    secondary_color: string;
+  }>(
+    `SELECT id, name, created_at, logo_url, primary_color, secondary_color
+       FROM businesses
+      WHERE id <> (SELECT business_id FROM platform_state WHERE singleton = true)
+      ORDER BY created_at, name`,
   );
   const clients: ClientSummary[] = [];
   for (const business of businesses.rows) {
@@ -149,6 +171,9 @@ export async function listClients(user: SessionUser): Promise<ClientSummary[]> {
       status: businessOwner ? "active" : "invited",
       members: Number(members.rows[0]?.count ?? 0),
       createdAt: business.created_at.toISOString(),
+      logoUrl: business.logo_url,
+      primaryColor: business.primary_color,
+      secondaryColor: business.secondary_color,
     });
   }
   return clients;
@@ -233,9 +258,112 @@ export async function createClient(
         status: "invited",
         members: 0,
         createdAt: new Date().toISOString(),
+        logoUrl: null,
+        primaryColor: "#F6B900",
+        secondaryColor: "#FFE27A",
       },
       activationPath: `/activate-client?token=${encodeURIComponent(invitationToken)}`,
     };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function getClientBranding(
+  user: SessionUser,
+  businessId: string,
+): Promise<ClientBranding> {
+  requirePlatformAdmin(user);
+  const result = await getPool().query<{
+    id: string;
+    name: string;
+    location_name: string;
+    logo_url: string | null;
+    primary_color: string;
+    secondary_color: string;
+  }>(
+    `SELECT b.id, b.name, COALESCE(l.name, 'Primary location') AS location_name,
+            b.logo_url, b.primary_color, b.secondary_color
+       FROM businesses b
+       LEFT JOIN locations l ON l.business_id = b.id
+      WHERE b.id = $1
+        AND b.id <> (SELECT business_id FROM platform_state WHERE singleton = true)
+      ORDER BY l.created_at, l.id
+      LIMIT 1`,
+    [businessId],
+  );
+  const row = result.rows[0];
+  if (!row) throw Object.assign(new Error("Client not found"), { status: 404 });
+  return {
+    id: row.id,
+    name: row.name,
+    locationName: row.location_name,
+    logoUrl: row.logo_url,
+    primaryColor: row.primary_color,
+    secondaryColor: row.secondary_color,
+  };
+}
+
+export async function updateClientBranding(
+  user: SessionUser,
+  businessId: string,
+  input: {
+    name: string;
+    locationName: string;
+    logoUrl: string | null;
+    primaryColor: string;
+    secondaryColor: string;
+  },
+): Promise<ClientBranding> {
+  requirePlatformAdmin(user);
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    const business = await client.query<{ id: string }>(
+      `SELECT id FROM businesses
+        WHERE id = $1
+          AND id <> (SELECT business_id FROM platform_state WHERE singleton = true)
+        FOR UPDATE`,
+      [businessId],
+    );
+    if (!business.rowCount) throw Object.assign(new Error("Client not found"), { status: 404 });
+    await client.query(
+      `UPDATE businesses
+          SET name = $2, logo_url = $3, primary_color = $4, secondary_color = $5, updated_at = now()
+        WHERE id = $1`,
+      [businessId, input.name, input.logoUrl, input.primaryColor, input.secondaryColor],
+    );
+    const location = await client.query<{ id: string }>(
+      "SELECT id FROM locations WHERE business_id = $1 ORDER BY created_at, id LIMIT 1 FOR UPDATE",
+      [businessId],
+    );
+    if (!location.rows[0])
+      throw Object.assign(new Error("Client location not found"), { status: 409 });
+    await client.query("UPDATE locations SET name = $2 WHERE id = $1", [
+      location.rows[0].id,
+      input.locationName,
+    ]);
+    await client.query(
+      `INSERT INTO audit_events(id,business_id,actor_user_id,action,target_type,target_id,metadata)
+       VALUES ($1,$2,$3,'platform.client.branding.updated','business',$2,$4)`,
+      [
+        id("aud"),
+        businessId,
+        user.id,
+        JSON.stringify({
+          name: input.name,
+          locationName: input.locationName,
+          logoUrl: input.logoUrl,
+          primaryColor: input.primaryColor,
+          secondaryColor: input.secondaryColor,
+        }),
+      ],
+    );
+    await client.query("COMMIT");
+    return await getClientBranding(user, businessId);
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;

@@ -48,6 +48,34 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  clientBranding: (businessId: string) =>
+    request<{ branding: ClientBranding }>(
+      `/api/admin/clients/${encodeURIComponent(businessId)}/branding`,
+    ),
+  updateClientBranding: (businessId: string, payload: ClientBrandingDraft) =>
+    request<{ branding: ClientBranding }>(
+      `/api/admin/clients/${encodeURIComponent(businessId)}/branding`,
+      { method: "PUT", body: JSON.stringify(payload) },
+    ),
+  clientRewards: (businessId: string) =>
+    request<{ rewards: ManagedReward[] }>(
+      `/api/admin/clients/${encodeURIComponent(businessId)}/rewards`,
+    ),
+  createClientReward: (businessId: string, payload: RewardDraft) =>
+    request<{ reward: ManagedReward }>(
+      `/api/admin/clients/${encodeURIComponent(businessId)}/rewards`,
+      { method: "POST", body: JSON.stringify(payload) },
+    ),
+  updateClientReward: (businessId: string, rewardId: string, payload: RewardDraft) =>
+    request<{ reward: ManagedReward }>(
+      `/api/admin/clients/${encodeURIComponent(businessId)}/rewards/${encodeURIComponent(rewardId)}`,
+      { method: "PUT", body: JSON.stringify(payload) },
+    ),
+  archiveClientReward: (businessId: string, rewardId: string) =>
+    request<{ ok: boolean }>(
+      `/api/admin/clients/${encodeURIComponent(businessId)}/rewards/${encodeURIComponent(rewardId)}`,
+      { method: "DELETE", body: "{}" },
+    ),
   award: (payload: { memberId: string; points: number; amountCents: number; note?: string }) =>
     request<{ id: string; duplicate: boolean }>("/api/admin/award", {
       method: "POST",
@@ -130,8 +158,16 @@ export const api = {
     }),
 };
 
+export type BusinessContext = {
+  business_name: string;
+  location_name: string;
+  logo_url: string | null;
+  primary_color: string;
+  secondary_color: string;
+};
+
 export type DashboardData = {
-  business: { business_name: string; location_name: string };
+  business: BusinessContext;
   metrics: {
     members: number;
     pointsAwarded: number;
@@ -153,7 +189,7 @@ export type DashboardData = {
 
 export type WalletData = {
   member: SessionUser;
-  context: { business_name: string; location_name: string };
+  context: BusinessContext;
   points: number;
   ledger: Array<{
     id: string;
@@ -212,7 +248,21 @@ export type ClientSummary = {
   status: "active" | "invited";
   members: number;
   createdAt: string;
+  logoUrl: string | null;
+  primaryColor: string;
+  secondaryColor: string;
 };
+
+export type ClientBranding = {
+  id: string;
+  name: string;
+  locationName: string;
+  logoUrl: string | null;
+  primaryColor: string;
+  secondaryColor: string;
+};
+
+export type ClientBrandingDraft = Omit<ClientBranding, "id">;
 
 export type MemberSummary = {
   id: string;

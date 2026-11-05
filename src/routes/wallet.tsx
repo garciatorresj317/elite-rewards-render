@@ -14,6 +14,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { BrandMark } from "@/components/BrandMark";
+import { BusinessBrand } from "@/components/BusinessBrand";
 import { ExperienceBackdrop } from "@/components/ExperienceTheme";
 import { api, type VisualSettings, type WalletData } from "@/lib/api-client";
 
@@ -88,7 +89,7 @@ function Wallet() {
         </div>
       )}
       <header className="wallet-header container-mid">
-        <BrandMark />
+        <BusinessBrand business={data.context} />
         <button className="back-link plain-button" onClick={logout}>
           <LogOut size={17} /> Sign out
         </button>

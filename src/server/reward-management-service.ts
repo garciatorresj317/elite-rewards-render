@@ -29,6 +29,16 @@ function requireOwner(user: SessionUser): void {
   }
 }
 
+function requirePlatformAdmin(user: SessionUser): void {
+  if (!user.platformAdmin)
+    throw Object.assign(new Error("Platform administrator access required"), { status: 403 });
+}
+
+function clientOwnerContext(user: SessionUser, businessId: string): SessionUser {
+  requirePlatformAdmin(user);
+  return { ...user, businessId, role: "owner", platformAdmin: true };
+}
+
 function validate(input: RewardInput): RewardInput {
   const name = input.name.trim();
   const description = input.description.trim();
@@ -229,4 +239,36 @@ export async function archiveReward(user: SessionUser, rewardId: string): Promis
   } finally {
     client.release();
   }
+}
+
+export async function listClientRewards(
+  user: SessionUser,
+  businessId: string,
+): Promise<ManagedReward[]> {
+  return listManagedRewards(clientOwnerContext(user, businessId));
+}
+
+export async function createClientReward(
+  user: SessionUser,
+  businessId: string,
+  input: RewardInput,
+): Promise<ManagedReward> {
+  return createReward(clientOwnerContext(user, businessId), input);
+}
+
+export async function updateClientReward(
+  user: SessionUser,
+  businessId: string,
+  rewardId: string,
+  input: RewardInput,
+): Promise<ManagedReward> {
+  return updateReward(clientOwnerContext(user, businessId), rewardId, input);
+}
+
+export async function archiveClientReward(
+  user: SessionUser,
+  businessId: string,
+  rewardId: string,
+): Promise<void> {
+  return archiveReward(clientOwnerContext(user, businessId), rewardId);
 }

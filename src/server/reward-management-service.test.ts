@@ -8,7 +8,9 @@ import type { SessionUser } from "./auth.ts";
 import { closeDatabase, setDatabasePoolForTests } from "./database.ts";
 import {
   archiveReward,
+  createClientReward,
   createReward,
+  listClientRewards,
   listManagedRewards,
   updateReward,
 } from "./reward-management-service.ts";
@@ -38,6 +40,14 @@ const otherOwner: SessionUser = {
   businessId: "biz_two",
   locationId: "loc_two",
   email: "other@example.com",
+};
+const platformAdmin: SessionUser = {
+  ...owner,
+  id: "usr_platform",
+  businessId: "biz_platform",
+  locationId: "loc_platform",
+  email: "platform@example.com",
+  platformAdmin: true,
 };
 let pool: pg.Pool;
 
@@ -73,17 +83,25 @@ describe("editable business rewards", () => {
     ]) {
       await pool.query(await readFile(join(process.cwd(), "migrations", file), "utf8"));
     }
+    await pool.query("ALTER TABLE businesses ADD COLUMN logo_url text");
     await pool.query(
-      "INSERT INTO businesses(id,name) VALUES ('biz_one','First'),('biz_two','Second')",
+      "ALTER TABLE businesses ADD COLUMN primary_color text NOT NULL DEFAULT '#F6B900'",
     );
     await pool.query(
-      "INSERT INTO locations(id,business_id,name) VALUES ('loc_one','biz_one','Main'),('loc_two','biz_two','Main')",
+      "ALTER TABLE businesses ADD COLUMN secondary_color text NOT NULL DEFAULT '#FFE27A'",
+    );
+    await pool.query(
+      "INSERT INTO businesses(id,name) VALUES ('biz_one','First'),('biz_two','Second'),('biz_platform','Elite Rewards')",
+    );
+    await pool.query(
+      "INSERT INTO locations(id,business_id,name) VALUES ('loc_one','biz_one','Main'),('loc_two','biz_two','Main'),('loc_platform','biz_platform','HQ')",
     );
     await pool.query(`INSERT INTO users(id,business_id,location_id,role,name,email,password_hash,member_code)
       VALUES ('usr_owner','biz_one','loc_one','owner','Owner','owner@example.com','test',NULL),
              ('usr_staff','biz_one','loc_one','staff','Staff','staff@example.com','test',NULL),
              ('usr_member','biz_one','loc_one','member','Member','member@example.com','test','ELITE-MEMBER'),
-             ('usr_other_owner','biz_two','loc_two','owner','Other','other@example.com','test',NULL)`);
+             ('usr_other_owner','biz_two','loc_two','owner','Other','other@example.com','test',NULL),
+             ('usr_platform','biz_platform','loc_platform','owner','Platform','platform@example.com','test',NULL)`);
     await pool.query(
       "INSERT INTO member_balances(business_id,member_id,points) VALUES ('biz_one','usr_member',3000)",
     );
@@ -122,6 +140,25 @@ describe("editable business rewards", () => {
     await assert.rejects(() => createReward(staff, input), /owner access required/i);
     const reward = (await listManagedRewards(owner))[0]!;
     await assert.rejects(() => updateReward(otherOwner, reward.id, input), /not found/i);
+  });
+
+  it("lets only the platform administrator manage an isolated client reward catalog", async () => {
+    const created = await createClientReward(platformAdmin, "biz_two", {
+      ...input,
+      name: "Big Smoke special",
+    });
+    assert.equal(created.name, "Big Smoke special");
+    assert.ok(
+      (await listClientRewards(platformAdmin, "biz_two")).some((item) => item.id === created.id),
+    );
+    assert.equal(
+      (await listManagedRewards(owner)).some((item) => item.id === created.id),
+      false,
+    );
+    await assert.rejects(
+      () => createClientReward(owner, "biz_two", input),
+      /Platform administrator access required/,
+    );
   });
 
   it("publishes active inventory and consumes it atomically on redemption", async () => {

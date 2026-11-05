@@ -2,6 +2,14 @@
 
 An independent rewards-program website with authenticated business and member access backed by a PostgreSQL rewards ledger.
 
+## Three-level client structure
+
+1. **Elite platform administrator** — the single platform authority who creates client businesses and centrally manages each client’s identity and initial reward catalog from Admin → Clients.
+2. **Client business owner/staff** — operates only that isolated business, its members, points ledger, appearance, and rewards.
+3. **Member/customer** — sees only that business’s branded wallet, balance, history, referral link, and published rewards.
+
+The Elite platform tenant is never listed as one of its own clients. Client logos use public HTTPS asset URLs; Render’s ephemeral filesystem is not used for uploads.
+
 ## Product areas
 
 - `/` — public marketing site

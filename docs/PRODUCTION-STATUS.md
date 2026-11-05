@@ -2,6 +2,10 @@
 
 Date: 2026-11-05
 
+## Platform/client/member architecture
+
+Elite Rewards uses an explicit three-level operating model: one immutable platform administrator authority, isolated client businesses, and members scoped to one client business. The Clients list excludes the Elite Rewards platform tenant; platform administration can publish each client’s business name, primary location, HTTPS logo, validated color palette, and isolated reward catalog, and the resulting identity appears on client-business and member surfaces.
+
 ## Implemented and verified locally
 
 - PostgreSQL schema and tracked first migration.

@@ -32,40 +32,47 @@ export function setDatabasePoolForTests(testPool: pg.Pool): void {
 export async function migrateDatabase(): Promise<void> {
   migrationPromise ??= (async () => {
     const database = getPool();
-    await database.query(`CREATE TABLE IF NOT EXISTS schema_migrations (
-      version integer PRIMARY KEY,
-      applied_at timestamptz NOT NULL DEFAULT now()
-    )`);
-    const applied = await database.query<{ version: number }>(
-      "SELECT version FROM schema_migrations",
-    );
-    const versions = new Set(applied.rows.map((row) => row.version));
-    const migrations = [
-      [1, "001_production_rewards.sql"],
-      [2, "002_platform_clients.sql"],
-      [3, "003_member_enrollment.sql"],
-      [4, "004_referrals_and_visual_themes.sql"],
-      [5, "005_automatic_holiday_themes.sql"],
-      [6, "006_editable_rewards.sql"],
-    ] as const;
-    for (const [version, filename] of migrations) {
-      if (versions.has(version)) continue;
-      const sql = await readFile(join(process.cwd(), "migrations", filename), "utf8");
-      const client = await database.connect();
-      try {
-        await client.query("BEGIN");
-        await client.query(sql);
-        await client.query(
-          "INSERT INTO schema_migrations(version) VALUES ($1) ON CONFLICT DO NOTHING",
-          [version],
-        );
-        await client.query("COMMIT");
-      } catch (error) {
-        await client.query("ROLLBACK");
-        throw error;
-      } finally {
-        client.release();
+    const lockClient = await database.connect();
+    if (!process.env["NODE_TEST_CONTEXT"])
+      await lockClient.query("SELECT pg_advisory_lock(1735552117)");
+    try {
+      await lockClient.query(`CREATE TABLE IF NOT EXISTS schema_migrations (
+        version integer PRIMARY KEY,
+        applied_at timestamptz NOT NULL DEFAULT now()
+      )`);
+      const applied = await lockClient.query<{ version: number }>(
+        "SELECT version FROM schema_migrations",
+      );
+      const versions = new Set(applied.rows.map((row) => row.version));
+      const migrations = [
+        [1, "001_production_rewards.sql"],
+        [2, "002_platform_clients.sql"],
+        [3, "003_member_enrollment.sql"],
+        [4, "004_referrals_and_visual_themes.sql"],
+        [5, "005_automatic_holiday_themes.sql"],
+        [6, "006_editable_rewards.sql"],
+        [7, "007_platform_client_customization.sql"],
+      ] as const;
+      for (const [version, filename] of migrations) {
+        if (versions.has(version)) continue;
+        const sql = await readFile(join(process.cwd(), "migrations", filename), "utf8");
+        try {
+          await lockClient.query("BEGIN");
+          await lockClient.query(sql);
+          await lockClient.query(
+            "INSERT INTO schema_migrations(version) VALUES ($1) ON CONFLICT DO NOTHING",
+            [version],
+          );
+          await lockClient.query("COMMIT");
+        } catch (error) {
+          await lockClient.query("ROLLBACK");
+          throw error;
+        }
       }
+    } finally {
+      if (!process.env["NODE_TEST_CONTEXT"])
+        await lockClient.query("SELECT pg_advisory_unlock(1735552117)").catch(() => undefined);
+      lockClient.release();
     }
   })();
   return migrationPromise;
