@@ -72,6 +72,22 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  managedRewards: () => request<{ rewards: ManagedReward[] }>("/api/admin/rewards"),
+  createReward: (payload: RewardDraft) =>
+    request<{ reward: ManagedReward }>("/api/admin/rewards", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateReward: (rewardId: string, payload: RewardDraft) =>
+    request<{ reward: ManagedReward }>(`/api/admin/rewards/${encodeURIComponent(rewardId)}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  archiveReward: (rewardId: string) =>
+    request<{ ok: boolean }>(`/api/admin/rewards/${encodeURIComponent(rewardId)}`, {
+      method: "DELETE",
+      body: "{}",
+    }),
   memberInvitation: (token: string) =>
     request<{
       businessName: string;
@@ -206,4 +222,20 @@ export type MemberSummary = {
   status: "active" | "invited";
   points: number;
   createdAt: string;
+};
+
+export type RewardDraft = {
+  name: string;
+  description: string;
+  points: number;
+  active: boolean;
+  inventoryRemaining: number | null;
+};
+
+export type ManagedReward = RewardDraft & {
+  id: string;
+  archivedAt: string | null;
+  redemptionCount: number;
+  createdAt: string;
+  updatedAt: string;
 };

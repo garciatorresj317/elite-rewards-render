@@ -48,7 +48,7 @@ Render has provisioned PostgreSQL and the service health endpoint reports `datab
 - Member invitation revocation/reissue and automated email delivery of enrollment links.
 - Password recovery, password change, session revocation, and MFA.
 - Persistent IP/account rate limiting and login-event audit.
-- Reward creation/editing, scheduling, inventory, and archival.
+- Reward scheduling and time-window availability. Reward creation, editing, visibility, optional inventory, and archival are live under Admin → Rewards.
 - Redemption consumption by staff and reversal/refund workflows.
 - POS/payment transaction ingestion and webhook verification.
 - Billing, plans, invoices, and subscription enforcement.

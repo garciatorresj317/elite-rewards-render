@@ -43,7 +43,7 @@ export async function getDashboard(user: SessionUser) {
       reward_name: string | null;
     }>(
       `SELECT le.id, u.name AS member, le.amount_cents, le.points_delta, le.entry_type,
-              le.created_at, r.name AS reward_name
+              le.created_at, COALESCE(le.reward_name_snapshot, r.name) AS reward_name
          FROM ledger_entries le JOIN users u ON u.id = le.member_id
          LEFT JOIN rewards r ON r.id = le.reward_id
         WHERE le.business_id = $1 ORDER BY le.created_at DESC LIMIT 50`,
@@ -62,7 +62,10 @@ export async function getDashboard(user: SessionUser) {
       [user.businessId],
     ),
     database.query<{ id: string; name: string; description: string; points_cost: number }>(
-      "SELECT id, name, description, points_cost FROM rewards WHERE business_id = $1 AND active = true ORDER BY points_cost",
+      `SELECT id, name, description, points_cost FROM rewards
+        WHERE business_id = $1 AND active = true AND archived_at IS NULL
+          AND (inventory_remaining IS NULL OR inventory_remaining > 0)
+        ORDER BY points_cost`,
       [user.businessId],
     ),
   ]);
@@ -112,13 +115,17 @@ export async function getWallet(user: SessionUser) {
       created_at: Date;
       reward_name: string | null;
     }>(
-      `SELECT le.id, le.entry_type, le.points_delta, le.note, le.created_at, r.name AS reward_name
+      `SELECT le.id, le.entry_type, le.points_delta, le.note, le.created_at,
+              COALESCE(le.reward_name_snapshot, r.name) AS reward_name
          FROM ledger_entries le LEFT JOIN rewards r ON r.id = le.reward_id
         WHERE le.business_id = $1 AND le.member_id = $2 ORDER BY le.created_at DESC LIMIT 100`,
       [user.businessId, user.id],
     ),
     database.query<{ id: string; name: string; description: string; points_cost: number }>(
-      "SELECT id, name, description, points_cost FROM rewards WHERE business_id = $1 AND active = true ORDER BY points_cost",
+      `SELECT id, name, description, points_cost FROM rewards
+        WHERE business_id = $1 AND active = true AND archived_at IS NULL
+          AND (inventory_remaining IS NULL OR inventory_remaining > 0)
+        ORDER BY points_cost`,
       [user.businessId],
     ),
     database.query<{
@@ -130,7 +137,9 @@ export async function getWallet(user: SessionUser) {
       status: string;
       created_at: Date;
     }>(
-      `SELECT rd.id, rd.reward_id, r.name, r.points_cost, rd.code, rd.status, rd.created_at
+      `SELECT rd.id, rd.reward_id, COALESCE(rd.reward_name_snapshot, r.name) AS name,
+              COALESCE(rd.points_cost_snapshot, r.points_cost) AS points_cost,
+              rd.code, rd.status, rd.created_at
          FROM redemptions rd JOIN rewards r ON r.id = rd.reward_id
         WHERE rd.business_id = $1 AND rd.member_id = $2 ORDER BY rd.created_at DESC`,
       [user.businessId, user.id],
@@ -317,8 +326,16 @@ export async function redeemReward(
       await client.query("COMMIT");
       return { ...existing.rows[0], duplicate: true };
     }
-    const rewardResult = await client.query<{ id: string; points_cost: number }>(
-      "SELECT id, points_cost FROM rewards WHERE id = $1 AND business_id = $2 AND active = true",
+    const rewardResult = await client.query<{
+      id: string;
+      name: string;
+      points_cost: number;
+      inventory_remaining: number | null;
+    }>(
+      `SELECT id, name, points_cost, inventory_remaining FROM rewards
+        WHERE id = $1 AND business_id = $2 AND active = true AND archived_at IS NULL
+          AND (inventory_remaining IS NULL OR inventory_remaining > 0)
+        FOR UPDATE`,
       [input.rewardId, user.businessId],
     );
     const reward = rewardResult.rows[0];
@@ -341,8 +358,8 @@ export async function redeemReward(
       throw Object.assign(new Error("Balance changed; retry redemption"), { status: 409 });
     const entryId = id("led");
     await client.query(
-      `INSERT INTO ledger_entries(id,business_id,location_id,member_id,actor_user_id,entry_type,points_delta,reward_id,idempotency_key,note)
-       VALUES ($1,$2,$3,$4,$4,'redeem',$5,$6,$7,'Reward redemption')`,
+      `INSERT INTO ledger_entries(id,business_id,location_id,member_id,actor_user_id,entry_type,points_delta,reward_id,idempotency_key,note,reward_name_snapshot)
+       VALUES ($1,$2,$3,$4,$4,'redeem',$5,$6,$7,'Reward redemption',$8)`,
       [
         entryId,
         user.businessId,
@@ -351,15 +368,35 @@ export async function redeemReward(
         -reward.points_cost,
         reward.id,
         input.idempotencyKey,
+        reward.name,
       ],
     );
 
     const redemptionId = id("red");
     const code = `ELITE-${randomBytes(10).toString("hex").toUpperCase()}`;
     await client.query(
-      "INSERT INTO redemptions(id,business_id,member_id,reward_id,ledger_entry_id,code) VALUES ($1,$2,$3,$4,$5,$6)",
-      [redemptionId, user.businessId, user.id, reward.id, entryId, code],
+      `INSERT INTO redemptions(id,business_id,member_id,reward_id,ledger_entry_id,code,reward_name_snapshot,points_cost_snapshot)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [
+        redemptionId,
+        user.businessId,
+        user.id,
+        reward.id,
+        entryId,
+        code,
+        reward.name,
+        reward.points_cost,
+      ],
     );
+    if (reward.inventory_remaining !== null) {
+      const inventory = await client.query(
+        `UPDATE rewards SET inventory_remaining = inventory_remaining - 1, updated_at = now()
+          WHERE id = $1 AND business_id = $2 AND inventory_remaining > 0`,
+        [reward.id, user.businessId],
+      );
+      if (!inventory.rowCount)
+        throw Object.assign(new Error("Reward is no longer available"), { status: 409 });
+    }
     await audit(client, user.businessId, user.id, "reward.redeemed", "redemption", redemptionId, {
       rewardId: reward.id,
       points: reward.points_cost,

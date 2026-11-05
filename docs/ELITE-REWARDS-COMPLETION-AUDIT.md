@@ -104,7 +104,7 @@ Elite Rewards is now a live, database-backed rewards platform on Render rather t
 
 ### P0 — Rewards operations
 
-13. Build reward creation, editing, inventory, availability, scheduling, and archival.
+13. Add reward scheduling and time-window availability. Reward creation, editing, active/hidden availability, optional inventory, and archival are complete.
 14. Build staff validation and consumption of issued reward codes.
 15. Build refunds, reversals, manual adjustments, and evidence/reason capture.
 16. Implement point expiration and scheduled processing after policy approval.

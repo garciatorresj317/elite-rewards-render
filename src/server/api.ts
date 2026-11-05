@@ -26,6 +26,12 @@ import {
 } from "./members-service.ts";
 import { awardPoints, getDashboard, getWallet, redeemReward } from "./rewards-service.ts";
 import {
+  archiveReward,
+  createReward,
+  listManagedRewards,
+  updateReward,
+} from "./reward-management-service.ts";
+import {
   getOrCreateReferralLink,
   getReferralEnrollment,
   getVisualSettings,
@@ -290,6 +296,52 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
         email: text(payload["email"], "Member email", 5, 254).toLowerCase(),
       });
       return json(result, 201);
+    }
+    if (url.pathname === "/api/admin/rewards" && request.method === "GET") {
+      requireRole(user, ["owner"]);
+      return json({ rewards: await listManagedRewards(user) });
+    }
+    if (url.pathname === "/api/admin/rewards" && request.method === "POST") {
+      requireRole(user, ["owner"]);
+      const payload = await body(request);
+      if (typeof payload["active"] !== "boolean")
+        throw Object.assign(new Error("Active status is required"), { status: 400 });
+      const reward = await createReward(user, {
+        name: text(payload["name"], "Reward name", 2, 120),
+        description: text(payload["description"] ?? "", "Description", 0, 500),
+        points: integer(payload["points"], "Points cost", 1, 1_000_000),
+        active: payload["active"],
+        inventoryRemaining:
+          payload["inventoryRemaining"] === null || payload["inventoryRemaining"] === undefined
+            ? null
+            : integer(payload["inventoryRemaining"], "Inventory", 0, 1_000_000),
+      });
+      return json({ reward }, 201);
+    }
+    const rewardMatch = url.pathname.match(/^\/api\/admin\/rewards\/([^/]+)$/);
+    if (rewardMatch && request.method === "PUT") {
+      requireRole(user, ["owner"]);
+      const rewardId = text(decodeURIComponent(rewardMatch[1] ?? ""), "Reward", 8, 120);
+      const payload = await body(request);
+      if (typeof payload["active"] !== "boolean")
+        throw Object.assign(new Error("Active status is required"), { status: 400 });
+      const reward = await updateReward(user, rewardId, {
+        name: text(payload["name"], "Reward name", 2, 120),
+        description: text(payload["description"] ?? "", "Description", 0, 500),
+        points: integer(payload["points"], "Points cost", 1, 1_000_000),
+        active: payload["active"],
+        inventoryRemaining:
+          payload["inventoryRemaining"] === null || payload["inventoryRemaining"] === undefined
+            ? null
+            : integer(payload["inventoryRemaining"], "Inventory", 0, 1_000_000),
+      });
+      return json({ reward });
+    }
+    if (rewardMatch && request.method === "DELETE") {
+      requireRole(user, ["owner"]);
+      const rewardId = text(decodeURIComponent(rewardMatch[1] ?? ""), "Reward", 8, 120);
+      await archiveReward(user, rewardId);
+      return json({ ok: true });
     }
     if (url.pathname === "/api/admin/award" && request.method === "POST") {
       requireRole(user, ["owner", "staff"]);

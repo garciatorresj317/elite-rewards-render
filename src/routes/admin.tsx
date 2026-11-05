@@ -10,6 +10,7 @@ import {
   LogOut,
   Menu,
   Palette,
+  Pencil,
   Plus,
   ReceiptText,
   Search,
@@ -28,7 +29,9 @@ import {
   api,
   type ClientSummary,
   type DashboardData,
+  type ManagedReward,
   type MemberSummary,
+  type RewardDraft,
   type SessionUser,
   type ThemeKey,
   type VisualSettings,
@@ -60,6 +63,9 @@ function Admin() {
   const [activationPath, setActivationPath] = useState("");
   const [memberModal, setMemberModal] = useState(false);
   const [memberActivationPath, setMemberActivationPath] = useState("");
+  const [managedRewards, setManagedRewards] = useState<ManagedReward[]>([]);
+  const [rewardModal, setRewardModal] = useState(false);
+  const [editingRewardId, setEditingRewardId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -85,6 +91,13 @@ function Admin() {
     ownerEmail: "",
   });
   const [memberForm, setMemberForm] = useState({ name: "", email: "" });
+  const [rewardForm, setRewardForm] = useState<RewardDraft>({
+    name: "",
+    description: "",
+    points: 100,
+    active: true,
+    inventoryRemaining: null,
+  });
   const load = useCallback(async () => {
     try {
       const session = await api.session();
@@ -93,16 +106,22 @@ function Admin() {
         return;
       }
       setUser(session.user);
-      const [dashboard, clientResult, memberResult, visualResult] = await Promise.all([
-        api.dashboard(),
-        session.user.platformAdmin ? api.clients() : Promise.resolve({ clients: [] }),
-        api.members(),
-        api.visualSettings(),
-      ]);
+      const [dashboard, clientResult, memberResult, visualResult, rewardResult] = await Promise.all(
+        [
+          api.dashboard(),
+          session.user.platformAdmin ? api.clients() : Promise.resolve({ clients: [] }),
+          api.members(),
+          api.visualSettings(),
+          session.user.role === "owner"
+            ? api.managedRewards()
+            : Promise.resolve({ rewards: [] as ManagedReward[] }),
+        ],
+      );
       setData(dashboard);
       setClients(clientResult.clients);
       setMembers(memberResult.members);
       setVisualSettings(visualResult);
+      setManagedRewards(rewardResult.rewards);
       setVisualDraft({
         themeKey: visualResult.configuredThemeKey,
         occasionTitle: visualResult.configuredOccasionTitle,
@@ -163,6 +182,55 @@ function Admin() {
       setMemberForm({ name: "", email: "" });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Member enrollment failed");
+    }
+  };
+  const emptyRewardForm = (): RewardDraft => ({
+    name: "",
+    description: "",
+    points: 100,
+    active: true,
+    inventoryRemaining: null,
+  });
+  const openNewReward = () => {
+    setEditingRewardId(null);
+    setRewardForm(emptyRewardForm());
+    setRewardModal(true);
+  };
+  const openReward = (reward: ManagedReward) => {
+    setEditingRewardId(reward.id);
+    setRewardForm({
+      name: reward.name,
+      description: reward.description,
+      points: reward.points,
+      active: reward.active,
+      inventoryRemaining: reward.inventoryRemaining,
+    });
+    setRewardModal(true);
+  };
+  const submitReward = async (event: FormEvent) => {
+    event.preventDefault();
+    setError("");
+    try {
+      if (editingRewardId) await api.updateReward(editingRewardId, rewardForm);
+      else await api.createReward(rewardForm);
+      setRewardModal(false);
+      setNotice(editingRewardId ? "Reward offer updated." : "Reward offer created.");
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Reward update failed");
+    }
+  };
+  const archiveCurrentReward = async () => {
+    if (!editingRewardId || !window.confirm("Archive this reward? Members will no longer see it."))
+      return;
+    setError("");
+    try {
+      await api.archiveReward(editingRewardId);
+      setRewardModal(false);
+      setNotice("Reward offer archived.");
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Reward archive failed");
     }
   };
   const logout = async () => {
@@ -438,21 +506,66 @@ function Admin() {
           )}
           {active === "Transactions" && <TransactionTable transactions={visible} />}
           {active === "Rewards" && (
-            <section className="reward-grid">
-              {data.rewards.map((reward, index) => (
-                <article
-                  className={`reward-card ${["champagne", "gold", "amber"][index % 3]}`}
-                  key={reward.id}
-                >
-                  <span className="reward-card-icon">
-                    <Gift />
+            <section className="reward-management">
+              <div className="panel reward-management-heading">
+                <div>
+                  <span className="modal-icon">
+                    <Trophy />
                   </span>
-                  <span className="reward-cost">{reward.points} pts</span>
-                  <h3>{reward.name}</h3>
-                  <p>{reward.description}</p>
-                  <button disabled>Active reward</button>
-                </article>
-              ))}
+                  <div>
+                    <span className="section-kicker">Business reward catalog</span>
+                    <h2>Choose exactly what members can earn.</h2>
+                    <p>
+                      Set the offer, points cost, availability, and optional quantity. Wallets
+                      update from the live catalog automatically.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  className="admin-primary"
+                  onClick={openNewReward}
+                  disabled={user.role !== "owner"}
+                >
+                  <Plus /> {user.role === "owner" ? "Create reward" : "Owner access required"}
+                </button>
+              </div>
+              <div className="reward-grid">
+                {managedRewards.map((reward, index) => (
+                  <article
+                    className={`reward-card ${["champagne", "gold", "amber"][index % 3]} ${reward.archivedAt ? "archived" : ""}`}
+                    key={reward.id}
+                  >
+                    <span className="reward-card-icon">
+                      <Gift />
+                    </span>
+                    <span className="reward-cost">{reward.points.toLocaleString()} pts</span>
+                    <h3>{reward.name}</h3>
+                    <p>{reward.description || "No description added."}</p>
+                    <div className="reward-meta">
+                      <span className={`client-status ${reward.active ? "active" : "invited"}`}>
+                        {reward.archivedAt ? "archived" : reward.active ? "active" : "hidden"}
+                      </span>
+                      <small>
+                        {reward.inventoryRemaining === null
+                          ? "Unlimited"
+                          : `${reward.inventoryRemaining} remaining`}{" "}
+                        · {reward.redemptionCount} redeemed
+                      </small>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => openReward(reward)}
+                      disabled={Boolean(reward.archivedAt)}
+                    >
+                      <span>{reward.archivedAt ? "Archived" : "Edit reward"}</span>
+                      <Pencil size={17} />
+                    </button>
+                  </article>
+                ))}
+                {!managedRewards.length && (
+                  <p className="empty-table">No rewards yet. Create the first offer for members.</p>
+                )}
+              </div>
             </section>
           )}
           {active === "Appearance" && (
@@ -791,6 +904,110 @@ function Admin() {
                 <button className="admin-primary full">Create member invitation</button>
               </>
             )}
+          </form>
+        </div>
+      )}
+      {rewardModal && (
+        <div className="modal-backdrop" onMouseDown={() => setRewardModal(false)}>
+          <form
+            className="award-modal reward-editor-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reward-editor-title"
+            onSubmit={submitReward}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="modal-close"
+              onClick={() => setRewardModal(false)}
+              aria-label="Close"
+            >
+              <X />
+            </button>
+            <span className="modal-icon">
+              <Gift />
+            </span>
+            <span className="section-kicker">Business reward offer</span>
+            <h2 id="reward-editor-title">{editingRewardId ? "Edit reward" : "Create a reward"}</h2>
+            <p>Changes publish to this business’s member wallets only.</p>
+            <label>
+              Reward name
+              <input
+                required
+                minLength={2}
+                maxLength={120}
+                value={rewardForm.name}
+                onChange={(event) => setRewardForm({ ...rewardForm, name: event.target.value })}
+                placeholder="Example: Free specialty drink"
+              />
+            </label>
+            <label>
+              Description
+              <textarea
+                maxLength={500}
+                value={rewardForm.description}
+                onChange={(event) =>
+                  setRewardForm({ ...rewardForm, description: event.target.value })
+                }
+                placeholder="Explain what the member receives and any important eligibility details."
+              />
+            </label>
+            <div className="reward-editor-grid">
+              <label>
+                Points cost
+                <input
+                  required
+                  type="number"
+                  min="1"
+                  max="1000000"
+                  step="1"
+                  value={rewardForm.points}
+                  onChange={(event) =>
+                    setRewardForm({ ...rewardForm, points: Number(event.target.value) })
+                  }
+                />
+              </label>
+              <label>
+                Quantity available
+                <input
+                  type="number"
+                  min="0"
+                  max="1000000"
+                  step="1"
+                  value={rewardForm.inventoryRemaining ?? ""}
+                  onChange={(event) =>
+                    setRewardForm({
+                      ...rewardForm,
+                      inventoryRemaining:
+                        event.target.value === "" ? null : Number(event.target.value),
+                    })
+                  }
+                  placeholder="Unlimited"
+                />
+              </label>
+            </div>
+            <label className="reward-active-check">
+              <input
+                type="checkbox"
+                checked={rewardForm.active}
+                onChange={(event) => setRewardForm({ ...rewardForm, active: event.target.checked })}
+              />
+              <span>
+                <strong>Visible to members</strong>
+                <small>Turn this off to save the offer without publishing it.</small>
+              </span>
+            </label>
+            <div className="reward-editor-actions">
+              {editingRewardId && (
+                <button type="button" className="danger-button" onClick={archiveCurrentReward}>
+                  Archive reward
+                </button>
+              )}
+              <button className="admin-primary">
+                {editingRewardId ? "Save changes" : "Create reward"}
+              </button>
+            </div>
           </form>
         </div>
       )}

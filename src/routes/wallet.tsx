@@ -73,10 +73,11 @@ function Wallet() {
   };
   if (busy) return <Status label="Loading secure wallet…" />;
   if (!data) return <Status label={error || "Wallet unavailable."} />;
-  const next = Math.min(
-    ...data.rewards.map((reward) => reward.points).filter((points) => points > data.points),
-    data.points || 500,
-  );
+  const futureRewardPoints = data.rewards
+    .map((reward) => reward.points)
+    .filter((points) => points > data.points);
+  const readyReward = data.rewards.some((reward) => reward.points <= data.points);
+  const next = futureRewardPoints.length ? Math.min(...futureRewardPoints) : null;
   return (
     <div className={`wallet-page theme-${settings?.themeKey ?? "elite-signature"}`}>
       <ExperienceBackdrop settings={settings} audience="member" />
@@ -120,21 +121,31 @@ function Wallet() {
               <Gift />
             </span>
             <div>
-              <small>Next milestone</small>
+              <small>{data.rewards.length ? "Next milestone" : "Reward catalog"}</small>
               <h2>
-                {data.points >= next
-                  ? "A reward is ready."
-                  : `${next - data.points} points until your next reward`}
+                {!data.rewards.length
+                  ? "New rewards are coming soon."
+                  : readyReward
+                    ? "A reward is ready."
+                    : `${(next ?? data.points) - data.points} points until your next reward`}
               </h2>
             </div>
           </div>
-          <div className="reward-progress">
-            <span style={{ width: `${Math.min(100, (data.points / next) * 100)}%` }} />
-          </div>
-          <div className="reward-scale">
-            <span>0</span>
-            <span>{next.toLocaleString()} points</span>
-          </div>
+          {data.rewards.length && (
+            <>
+              <div className="reward-progress">
+                <span
+                  style={{
+                    width: `${readyReward ? 100 : Math.min(100, (data.points / (next ?? 1)) * 100)}%`,
+                  }}
+                />
+              </div>
+              <div className="reward-scale">
+                <span>0</span>
+                <span>{readyReward ? "Reward ready" : `${next?.toLocaleString()} points`}</span>
+              </div>
+            </>
+          )}
         </section>
         <div className="wallet-section-title">
           <div>
@@ -166,6 +177,11 @@ function Wallet() {
               </article>
             );
           })}
+          {!data.rewards.length && (
+            <p className="empty-table">
+              This business has not published an available reward yet. Check back soon.
+            </p>
+          )}
         </section>
         <section className="scan-panel">
           <div>

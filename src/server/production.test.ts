@@ -60,6 +60,9 @@ describe("production rewards ledger", () => {
     await pool.query(
       await readFile(join(process.cwd(), "migrations", "002_platform_clients.sql"), "utf8"),
     );
+    await pool.query(
+      await readFile(join(process.cwd(), "migrations", "006_editable_rewards.sql"), "utf8"),
+    );
     await pool.query("INSERT INTO businesses(id,name) VALUES ($1,'Test Business')", [businessId]);
     await pool.query("INSERT INTO locations(id,business_id,name) VALUES ($1,$2,'Test Location')", [
       locationId,

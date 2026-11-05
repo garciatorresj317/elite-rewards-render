@@ -711,3 +711,31 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
   .occasion-banner { grid-template-columns: 1fr; }
   .occasion-banner > span { grid-row: auto; }
 }
+
+/* Tenant-scoped reward catalog management */
+.reward-management { display: grid; gap: 18px; }
+.reward-management-heading { display: flex; align-items: center; justify-content: space-between; gap: 22px; padding: 22px; background: rgba(7,6,3,.92); }
+.reward-management-heading > div { display: flex; align-items: center; gap: 16px; }
+.reward-management-heading .modal-icon { flex: 0 0 auto; margin: 0; }
+.reward-management-heading h2 { margin: 5px 0; color: var(--gold-pale); font: 700 27px var(--serif); }
+.reward-management-heading p { margin: 0; max-width: 700px; color: var(--muted); line-height: 1.55; }
+.reward-card.archived { opacity: .62; filter: grayscale(.45); }
+.reward-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 18px; }
+.reward-meta small { color: var(--muted); text-align: right; }
+.reward-editor-modal { width: min(calc(100% - 30px), 620px); max-height: 92vh; overflow-y: auto; }
+.reward-editor-modal textarea { width: 100%; min-height: 110px; padding: 12px 13px; border: 1px solid rgba(236,171,26,.45); border-radius: 10px; background: #080704; color: var(--text); resize: vertical; }
+.reward-editor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.reward-active-check { display: grid !important; grid-template-columns: auto 1fr; align-items: center; padding: 13px; border: 1px solid var(--gold-faint); border-radius: 10px; background: rgba(246,185,0,.05); }
+.reward-active-check input { width: 20px; min-height: 20px; accent-color: var(--gold); }
+.reward-active-check span { display: grid; gap: 3px; }
+.reward-active-check small { color: var(--muted); font-weight: 500; }
+.reward-editor-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 4px; }
+.danger-button { min-height: 44px; padding: 0 16px; border: 1px solid #b44736; border-radius: 10px; color: #ffd3cc; background: rgba(120,20,10,.28); font-weight: 800; cursor: pointer; }
+@media (max-width: 680px) {
+  .reward-management-heading { align-items: stretch; flex-direction: column; }
+  .reward-management-heading > div { align-items: flex-start; }
+  .reward-management-heading .admin-primary { width: 100%; justify-content: center; }
+  .reward-editor-grid { grid-template-columns: 1fr; }
+  .reward-editor-actions { flex-direction: column-reverse; }
+  .reward-editor-actions > button { width: 100%; justify-content: center; }
+}

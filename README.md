@@ -7,12 +7,12 @@ An independent rewards-program website with authenticated business and member ac
 - `/` — public marketing site
 - `/login` — secure business and member access
 - `/wallet` — authenticated member wallet, balance, ledger, reward codes, and redemptions
-- `/admin` — authenticated business dashboard, secure member enrollment, rewards, live transactions, point awards, and business appearance controls
+- `/admin` — authenticated business dashboard, secure member enrollment, editable reward catalog, live transactions, point awards, and business appearance controls
 - `/join` — secure member referral enrollment from a member-owned share link
 - `/activate-member` — single-use member wallet activation
 - `/setup` — one-time protected production bootstrap
 
-The current production slice supports isolated business clients and one location per client. Authentication, opaque server sessions, role enforcement, PostgreSQL persistence, an append-only points ledger, idempotent point awards, atomic reward redemptions, member referral attribution, and per-business visual themes are connected. Referral links enroll members at a zero-point balance; no automatic referral award is issued until a business policy is defined. Business owners can enable automatic holiday themes from **Admin → Appearance**; Elite Rewards resolves dates server-side in the selected business time zone and temporarily applies MLK Day, Spring Celebration, September 11 Remembrance, and Winter Holiday themes without overwriting the business's manual theme. POS ingestion, billing, messaging, multi-location management, and the remaining administrative modules are later phases.
+The current production slice supports isolated business clients and one location per client. Authentication, opaque server sessions, role enforcement, PostgreSQL persistence, an append-only points ledger, idempotent point awards, atomic reward redemptions, member referral attribution, per-business reward catalogs, and per-business visual themes are connected. Owners can create, edit, publish, hide, inventory-limit, and archive reward offers from **Admin → Rewards**; available changes appear in that business's member wallets while redemption history retains the original offer name and points cost. Referral links enroll members at a zero-point balance; no automatic referral award is issued until a business policy is defined. Business owners can enable automatic holiday themes from **Admin → Appearance**; Elite Rewards resolves dates server-side in the selected business time zone and temporarily applies MLK Day, Spring Celebration, September 11 Remembrance, and Winter Holiday themes without overwriting the business's manual theme. POS ingestion, billing, messaging, multi-location management, and the remaining administrative modules are later phases.
 
 ## Development
 
