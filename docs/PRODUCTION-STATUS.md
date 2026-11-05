@@ -1,6 +1,6 @@
 # Elite Rewards production status
 
-Date: 2026-11-04
+Date: 2026-11-05
 
 ## Implemented and verified locally
 
@@ -25,11 +25,13 @@ Date: 2026-11-04
 - Live member balance, ledger history, reward catalog, codes, and redemption flow.
 - Database-aware `/api/health` endpoint.
 - Render Blueprint for the web service and PostgreSQL database.
-- Twenty-two passing unit/integration tests, including owner-only setup, member enrollment isolation, and production ledger behavior.
+- Member-owned referral enrollment with tenant isolation, hashed stable links, persistent abuse limits, and zero-point wallet creation.
+- Per-business manual and automatic holiday themes, resolved server-side in the business time zone without overwriting manual settings.
+- Thirty-nine passing unit/integration tests, including owner-only setup, member enrollment and referral isolation, automatic holiday boundaries, origin rejection before database work, and production ledger behavior.
 
 ## Verification
 
-- `npm test`: 22/22 tests passed.
+- `npm test`: 39/39 tests passed.
 - `npm run typecheck`: passed.
 - `npm run lint`: passed.
 - `npm run build`: passed.
@@ -38,14 +40,7 @@ Date: 2026-11-04
 
 ## Production release gate
 
-The code is ready for deployment, but it is not truthful to call the new backend live until Render has:
-
-1. Provisioned the PostgreSQL database.
-2. Injected `DATABASE_URL` and the generated `SETUP_TOKEN`.
-3. Deployed the new commit.
-4. Returned 200 from `/api/health` with `database: connected`.
-5. Completed the one-time business, location, and owner setup.
-6. Passed live login, award, wallet, redemption, unauthorized-access, restart-persistence, and logout tests.
+Render has provisioned PostgreSQL and the service health endpoint reports `database: connected`. Each release still requires the exact tested commit to be deployed and then verified through live health, route, authentication, tenant-isolation, referral, appearance, ledger, and logout smoke checks. Credentials and production data must not be reset to manufacture a smoke-test result.
 
 ## Remaining platform work after this slice
 

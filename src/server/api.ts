@@ -168,9 +168,9 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
   const url = new URL(request.url);
   if (!url.pathname.startsWith("/api/")) return null;
   try {
-    await migrateDatabase();
     if (request.method !== "GET" && !isSameOrigin(request))
       return json({ error: "Cross-origin request rejected" }, 403);
+    await migrateDatabase();
     if (url.pathname === "/api/health" && request.method === "GET") {
       await getPool().query("SELECT 1");
       return json({ ok: true, database: "connected" });

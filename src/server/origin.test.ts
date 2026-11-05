@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { isSameOrigin } from "./api.ts";
+import { handleApiRequest, isSameOrigin } from "./api.ts";
 
 function request(
   headers: Record<string, string>,
@@ -76,5 +76,26 @@ describe("same-origin mutation guard", () => {
       isSameOrigin(request({ origin: "not a URL", "sec-fetch-site": "same-origin" })),
       false,
     );
+  });
+
+  it("rejects cross-origin API mutations before database initialization", async () => {
+    const previousDatabaseUrl = process.env["DATABASE_URL"];
+    delete process.env["DATABASE_URL"];
+    try {
+      const response = await handleApiRequest(
+        new Request("https://elite-rewards.onrender.com/api/auth/logout", {
+          method: "POST",
+          headers: {
+            origin: "https://attacker.example",
+            "sec-fetch-site": "cross-site",
+          },
+        }),
+      );
+      assert.equal(response?.status, 403);
+      assert.deepEqual(await response?.json(), { error: "Cross-origin request rejected" });
+    } finally {
+      if (previousDatabaseUrl === undefined) delete process.env["DATABASE_URL"];
+      else process.env["DATABASE_URL"] = previousDatabaseUrl;
+    }
   });
 });
