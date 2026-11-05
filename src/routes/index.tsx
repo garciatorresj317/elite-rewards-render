@@ -53,7 +53,7 @@ function Home() {
         <nav aria-label="Primary navigation">
           <a href="#how">How it works</a>
           <a href="#features">Features</a>
-          <a href="#pricing">Pricing</a>
+          <a href="#access">Access</a>
         </nav>
         <div className="header-actions">
           <Link to="/login" className="text-link">
@@ -192,7 +192,7 @@ function Home() {
           ))}
         </section>
 
-        <section id="pricing" className="cta-panel container-wide">
+        <section id="access" className="cta-panel container-wide">
           <div>
             <span className="eyebrow light">
               <Sparkles size={14} /> A better reason to return

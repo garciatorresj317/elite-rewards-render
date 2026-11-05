@@ -1,157 +1,176 @@
 # Elite Rewards Completion Audit
 
-Audit date: 2026-11-03
+Audit updated: 2026-11-05
 
 ## Executive verdict
 
-Elite Rewards currently has a polished, responsive **front-end product demonstration**, not a complete production rewards platform. The marketing site, member wallet demonstration, and admin dashboard demonstration exist and use the approved black-and-gold visual system. Production completion still requires the application services listed below: identity, authorization, database-backed program state, reward and transaction APIs, business configuration, billing, integrations, observability, compliance, automated testing, and permanent hosting/domain ownership.
+Elite Rewards is now a live, database-backed rewards platform on Render rather than a browser-only demonstration. The production vertical slice supports isolated business clients, owner/staff/member authentication, secure member enrollment, a PostgreSQL points ledger, idempotent point awards, atomic reward redemption, member referrals, and per-business appearance themes. It is usable for controlled onboarding, but the broader commercial SaaS remains incomplete until the operational, billing, integration, legal, recovery, and remaining admin capabilities below are delivered.
 
-The previous temporary Cloudflare URL is expired and is not a production deployment.
+## Verified production release
 
-## Verified completed
+- Production service: `https://elite-rewards.onrender.com`
+- PostgreSQL health: `/api/health` returns `{"ok":true,"database":"connected"}`.
+- One-time setup is complete and production data was preserved.
+- Render release commit: `a5815a286f512029b7e9fa1123744b67fd375cb9`.
+- Canonical and Render mirror repositories both point to the same release commit.
+- Public `/`, `/login`, `/admin`, `/wallet`, and `/join` routes return HTTP 200; an unknown route returns HTTP 404.
+- Unauthenticated admin API requests return HTTP 401.
+- Cross-origin mutations return HTTP 403 before database initialization or other API work.
+- Production responses include CSP, frame denial, MIME-sniffing prevention, referrer, permissions, and cross-origin opener policies.
 
-- Independent repository and codebase separate from Dynasty Designs.
-- Public marketing route at `/`.
-- Member wallet route at `/wallet`.
-- Business dashboard route at `/admin`.
-- Approved Elite black-and-gold visual system applied across public, wallet, admin, 404, and error states.
-- Responsive desktop and mobile layouts.
-- Demo reward redemption and demo point-award interactions.
-- Browser-local persistence for a shared demonstration wallet, redemption history, and activity ledger.
-- Wallet reward history and cross-view redemption activity.
-- Searchable demonstration activity and deterministic demonstration reset.
-- Automated rewards-engine and storage regression tests.
-- TanStack Start server-side rendering and Cloudflare-targeted production build.
-- CSRF middleware for future TanStack server functions.
-- Catastrophic SSR error normalization.
-- Production dependency audit with zero known production vulnerabilities on 2026-11-03.
+## Implemented
 
-## Repaired during this audit
+### Hosting and data
 
-- Corrected the customer-facing brand typo from “Elite rewaerds” to “Elite Rewards.”
-- Removed the React hook warning in the root error boundary.
-- Added guarded local-storage parsing and schema validation so corrupted browser data no longer crashes the wallet or dashboard.
-- Added storage-write failure handling instead of falsely reporting persistence.
-- Synced the demo admin point-award action to the demo member wallet balance.
-- Replaced misleading roadmap/completeness language with explicit not-implemented/demo language.
-- Updated the README to state the actual implementation boundary.
+- Permanent Render Node service and managed PostgreSQL database.
+- Tracked transactional migrations with automatic startup application.
+- Database-backed health checks.
+- Two synchronized GitHub repositories and GitHub verification workflow.
 
-## Implemented in the next audit slice
+### Authentication and isolation
 
-- Added a deterministic rewards-engine domain layer for point awards and reward redemptions.
-- Added ledger invariants that reject non-integer/non-positive awards, insufficient balances, and duplicate redemptions.
-- Added eight automated tests covering ledger changes, immutability, corrupted storage, blocked storage, and reset behavior.
-- Migrated separate legacy browser keys into one versioned demonstration state.
-- Connected wallet redemptions to the admin activity ledger.
-- Made wallet Reward History functional.
-- Added admin activity search and an empty-result state.
-- Added a deterministic Reset demo action.
-- Added Escape-key close and focus restoration to the award dialog.
-- Added `npm run check` as a reproducible test/type/lint/build release gate.
-- Added a GitHub Actions verification gate for pushes and pull requests.
-- Added baseline response security headers, visible keyboard focus, and reduced-motion handling.
-- Removed unsubstantiated “Set up in minutes” and “Cancel anytime” marketing claims.
+- Scrypt password hashing.
+- Opaque database-backed sessions with secure HTTP-only cookies.
+- Owner, staff, and member roles enforced server-side.
+- Platform administrator authority separated from business owner authority.
+- Business-scoped queries and tenant-isolated client/member creation.
+- One-time setup guard, login throttling, and administrative audit events.
 
-## Remaining work required for production completion
+### Clients and members
 
-### P0 — Product and ownership decisions
+- Platform-admin Clients section for isolated business onboarding.
+- Hashed, expiring, single-use client activation links.
+- Admin Members section with tenant-bound, expiring, single-use member activation links.
+- Atomic member account, wallet, balance, and session creation.
+- Zero-point starting balances and random member codes.
 
-1. Define the exact launch scope: loyalty-only MVP versus multi-location SaaS.
-2. Confirm the canonical spelling and trademark availability for “Elite Rewards.”
-3. Define account roles and permissions: platform owner, business owner, manager, employee/cashier, and member.
-4. Define earning, expiration, refund, reversal, redemption, birthday, and abuse-prevention policies.
-5. Define the commercial model: plans, trial, transaction limits, locations, and overages.
-6. Confirm initial POS/payment integration target and supported merchant workflow.
+### Rewards ledger
 
-### P0 — Permanent infrastructure
+- Server-authoritative balances.
+- Append-only application ledger for awards and redemptions.
+- Request-bound idempotency.
+- Negative-balance, duplicate-award, replay, and double-redemption protection.
+- Live admin metrics and transaction feed.
+- Live member balance, history, rewards, and redemption codes.
 
-7. Create/claim a permanent Cloudflare account deployment; do not rely on temporary preview workers.
-8. Connect a production domain and configure DNS, TLS, redirects, and environment separation.
-9. Provision separate development, staging, and production environments.
-10. Add managed database, migrations, backups, restore rehearsal, and retention policy.
-11. Add secure secret management and key rotation.
-12. Expand the new CI verification workflow into protected production deployment and rollback.
+### Referrals
 
-### P0 — Identity, tenancy, and security
+- Stable member-owned referral links.
+- Hashed referral tokens and tenant-isolated enrollment.
+- PostgreSQL-backed abuse limits and duplicate-account prevention.
+- Atomic referral attribution, account, wallet, audit, and session creation.
+- Referred members start at zero points; no bonus is invented before a business defines that policy.
 
-13. Implement business-owner and staff authentication.
-14. Implement member authentication or secure passwordless wallet access.
-15. Enforce server-side role-based authorization on every business/member operation.
-16. Isolate each business/location’s data at the database and API layers.
-17. Add secure session management, logout, recovery, MFA for privileged users, rate limiting, and brute-force protection.
-18. Add immutable audit logs for points, redemptions, settings, staff, and billing changes.
-19. Add input validation, idempotency keys, replay protection, and transaction-safe points accounting.
-20. Complete threat modeling and independent security review before launch.
+### Appearance and automatic holidays
 
-### P0 — Core rewards engine
+- Appearance controls exist only inside authenticated Admin.
+- Member wallets display the effective theme but expose no editing controls.
+- Per-business manual theme, title, and message persistence.
+- Owner-only appearance updates.
+- Optional automatic holiday toggle and business time-zone setting.
+- Server-side schedules for MLK Day, Easter Sunday/Spring Celebration, September 11 Remembrance, and December 24–26 Winter Holiday.
+- Scheduled themes temporarily override but never overwrite the saved manual theme or message.
+- Reduced-motion behavior and responsive black-and-gold design.
 
-21. Model businesses, locations, staff, members, rewards programs, rules, balances, ledger entries, redemptions, purchases, and adjustments.
-22. Replace browser local storage with server-backed APIs and an append-only points ledger.
-23. Implement earn, redeem, reverse, refund, expire, manual adjustment, and transfer rules.
-24. Prevent negative balances, duplicate awards, double redemption, race conditions, and unauthorized adjustments.
-25. Add configurable points multipliers, minimums, exclusions, caps, and reward inventory.
-26. Add real QR/member identifiers with rotation/revocation and no sensitive data embedded.
-27. Implement member consent, enrollment, profile, history, and account deletion.
+### Release verification
+
+- `npm test`: 39/39 passed.
+- `npm run typecheck`: passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `npm audit --omit=dev --audit-level=high`: zero known production vulnerabilities.
+- `git diff --check`: passed.
+- Local and remote working trees are clean and synchronized.
+
+## Remaining work required for commercial completion
+
+### P0 — Product and policy decisions
+
+1. Confirm canonical brand/trademark availability for Elite Rewards.
+2. Define earning, expiration, refund, reversal, transfer, birthday, and fraud policies.
+3. Define referral qualification and bonus policy before issuing referral points.
+4. Define plans, trial, limits, locations, overages, cancellation, and support commitments.
+5. Select the first POS/payment integration and exact merchant workflow.
+6. Identify launch jurisdictions and messaging/privacy requirements.
+
+### P0 — Account security and recovery
+
+7. Build password reset, password change, invitation revocation/reissue, and session revocation.
+8. Add MFA for platform administrators and business owners.
+9. Expand persistent IP/account rate limiting and login-event auditing.
+10. Add owner-managed staff invitation, role, suspension, and removal workflows.
+11. Add database-enforced cross-business composite constraints and immutable ledger/audit protections.
+12. Complete an independent threat model, penetration test, and tenant-escape review.
+
+### P0 — Rewards operations
+
+13. Build reward creation, editing, inventory, availability, scheduling, and archival.
+14. Build staff validation and consumption of issued reward codes.
+15. Build refunds, reversals, manual adjustments, and evidence/reason capture.
+16. Implement point expiration and scheduled processing after policy approval.
+17. Add database-level concurrency tests against real PostgreSQL.
+18. Add audited support correction tools without permitting direct balance edits.
 
 ### P1 — Admin application
 
-28. Build the currently missing Members page and member detail/history tools.
-29. Build the full Transactions page with filters, export, reversal, and evidence.
-30. Build Rewards & Rules CRUD with validation, scheduling, availability, and archival.
-31. Build Birthday Rewards configuration and scheduler.
-32. Build Reports & Analytics with real aggregates and export.
-33. Build Store Settings, locations, staff invitations, roles, branding, and program settings.
-34. Build Plan & Billing, invoices, payment failures, plan limits, and cancellation.
-35. Build Help & Training and support contact paths.
-36. Complete notifications, store selector, owner menu, chart filters, “View all,” and status panels. Activity search is now functional for the demonstration ledger; production global search still requires backend data.
-37. Replace all hard-coded merchant, member, sales, health, and chart values with authorized live data.
+19. Build complete member details, profile changes, account suspension, and histories.
+20. Build Transactions filters, evidence, export, reversal, and detail views.
+21. Build configurable earning rules, exclusions, multipliers, minimums, and caps.
+22. Build Birthday Rewards configuration and scheduler.
+23. Build Reports & Analytics with live aggregates and export.
+24. Build store/location settings and multi-location management.
+25. Build Plan & Billing, invoices, payment failures, limits, and cancellation.
+26. Build Help & Training and support contact paths.
+27. Complete notifications, owner menu, store selector, chart filters, global search, and full status views.
+28. Remove or replace every remaining illustrative marketing/dashboard metric with authoritative or clearly labeled example data.
 
 ### P1 — Member experience
 
-38. **Completed:** owner/staff member enrollment, secure single-use activation, login access, and tenant-isolated wallet provisioning.
-39. Build a real member wallet with current balance and authoritative ledger history.
-40. Build reward details, redemption confirmation, active reward codes, expiration, and used state.
-41. Replace the now-functional browser-local Reward History demonstration with an authenticated, server-authoritative history and active reward-code lifecycle.
-42. Add business/location context, program terms, accessibility, and support links.
-43. Add digital wallet/NFC/QR integration only after secure identifier and redemption flows are finalized.
+29. Add profile management, consent history, data export, and account deletion.
+30. Add reward detail pages and explicit redemption confirmation.
+31. Add active, used, expired, revoked, and consumed reward-code states.
+32. Add program terms, privacy links, support, and business/location context.
+33. Add secure rotating QR/NFC identifiers after staff redemption consumption is complete.
+34. Add invitation and referral delivery by email/SMS rather than manual link copying.
 
-### P1 — Integrations and operations
+### P1 — Integrations and automation
 
-44. Integrate the selected POS/payment source for eligible purchases, refunds, and deduplication.
-45. Add email/SMS provider for enrollment, reward, birthday, receipt, and security messages with consent controls.
-46. Add billing provider and webhook processing with signature verification and idempotency.
-47. Add background jobs/queues for birthdays, expiration, reports, retries, and dead-letter handling.
-48. Add structured logs, error monitoring, traces, metrics, uptime checks, and actionable alerts.
-49. Add admin support tooling for safe account lookup and audited corrections.
+35. Integrate the selected POS/payment source for eligible purchases and refunds.
+36. Verify inbound webhook signatures and enforce idempotency/deduplication.
+37. Connect email/SMS with consent, unsubscribe, delivery, and retry handling.
+38. Connect billing and subscription enforcement.
+39. Add durable background jobs, retries, and dead-letter handling for birthdays, expiration, reports, and messaging.
+40. Add structured logs, error monitoring, traces, business metrics, uptime checks, and alerts.
 
-### P1 — Legal, privacy, and accessibility
+### P1 — Infrastructure and operations
 
-50. Publish Terms, Privacy Policy, rewards-program terms, cookie policy where applicable, and contact information.
-51. Define data retention, export, deletion, breach response, subprocessors, and regional compliance requirements.
-52. Complete WCAG 2.2 AA review: keyboard navigation, focus management, chart alternatives, contrast, reduced motion, form errors, and screen-reader flows.
-53. Add consent records and unsubscribe/preferences management for messaging.
+41. Add a custom production domain and branded email domain.
+42. Establish separate development, staging, and production environments.
+43. Protect the production branch and deployment environment.
+44. Define and rehearse database backups, point-in-time recovery, and data retention.
+45. Rehearse deployment rollback and database-forward recovery.
+46. Document incident response, escalation, ownership, and customer communication.
+47. Upgrade from free infrastructure before customer launch to avoid sleep, resource, and support limitations.
 
-### P1 — Test and release gates
+### P1 — Legal, privacy, accessibility, and release gates
 
-54. Expand the initial eight unit tests to cover every finalized production points/reward policy and server ledger invariant.
-55. Add API/database integration tests including concurrency, retries, idempotency, reversals, and authorization isolation.
-56. Add browser end-to-end tests for owner, staff, and member critical paths.
-57. Add accessibility, responsive visual-regression, performance, and cross-browser tests.
-58. Add security tests for tenancy escape, privilege escalation, CSRF, injection, replay, enumeration, and abuse.
-59. Define seeded staging data and production smoke tests.
-60. Pass backup/restore, rollback, incident-response, load, and owner acceptance gates before production launch.
+48. Publish Terms of Service, Privacy Policy, program terms, and contact information.
+49. Define retention, export, deletion, breach response, subprocessors, and regional compliance.
+50. Complete WCAG 2.2 AA review, including charts, focus traps, validation errors, and screen-reader flows.
+51. Add browser end-to-end tests for platform admin, business owner, staff, member, invitation, referral, award, redemption, and logout flows.
+52. Add authorization/tenant-isolation, API/database, security/abuse, accessibility, visual-regression, cross-browser, load, and performance suites.
+53. Define seeded staging data and non-destructive production smoke tests.
+54. Pass backup/restore, rollback, incident-response, load, legal, accessibility, security, and Commander acceptance gates.
 
-## Current release blockers
+## Current production limitations
 
-- The live preview URL previously supplied is unreachable/expired.
-- No permanent production deployment or claimed hosting ownership is verified.
-- No backend/database exists for authoritative balances or transactions.
-- No authentication, authorization, tenancy enforcement, or production account model exists.
-- Most admin navigation items are placeholders rather than working modules.
-- No payment/POS, billing, notification, or operational integration exists.
-- Initial domain/storage tests exist, but API, database, authorization, end-to-end, accessibility, security, performance, and cross-browser suites remain absent.
-- Legal, privacy, accessibility, monitoring, backup/restore, and incident gates are incomplete.
+- The Render service is on the free plan and may sleep during inactivity.
+- Invitation links are copied manually; automatic email/SMS delivery is not connected.
+- Referral attribution is live, but referral rewards are intentionally disabled until policy is defined.
+- Reward catalog management and staff consumption of issued reward codes are not built.
+- POS, billing, messaging, birthday automation, expiration, and full reporting are not connected.
+- Legal documents, formal accessibility certification, monitoring/alerting, and disaster-recovery rehearsals are incomplete.
 
-## Definition of done
+## Definition of commercial completion
 
-Elite Rewards is complete only when all P0/P1 work above is implemented, tested, deployed to permanent owned infrastructure, verified against staging and production smoke tests, and accepted by the Commander. A successful front-end build or temporary preview deployment does not satisfy completion.
+Elite Rewards reaches commercial completion when the approved policies are implemented, critical admin/member workflows are operational, integrations and billing are connected, production is monitored and recoverable, legal/accessibility/security gates pass, and the Commander accepts staging and production smoke results. The live vertical slice is a real production foundation; it is not yet the finished commercial SaaS.
