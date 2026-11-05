@@ -258,6 +258,8 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
           themeKey: themeKey as (typeof themeKeys)[number],
           occasionTitle: text(payload["occasionTitle"] ?? "", "Occasion title", 0, 80),
           occasionMessage: text(payload["occasionMessage"] ?? "", "Occasion message", 0, 220),
+          automaticHolidayThemes: payload["automaticHolidayThemes"] === true,
+          timeZone: text(payload["timeZone"] ?? "UTC", "Time zone", 1, 100),
         }),
       );
     }

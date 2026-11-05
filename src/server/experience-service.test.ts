@@ -65,6 +65,7 @@ describe("referrals and visual experiences", () => {
       "002_platform_clients.sql",
       "003_member_enrollment.sql",
       "004_referrals_and_visual_themes.sql",
+      "005_automatic_holiday_themes.sql",
     ]) {
       await pool.query(await readFile(join(process.cwd(), "migrations", file), "utf8"));
     }
@@ -140,6 +141,8 @@ describe("referrals and visual experiences", () => {
       themeKey: "mlk-day",
       occasionTitle: "A day of service",
       occasionMessage: "Honoring unity, service, and progress.",
+      automaticHolidayThemes: false,
+      timeZone: "America/New_York",
     });
     assert.equal(saved.themeKey, "mlk-day");
     assert.deepEqual(await getVisualSettings(member), saved);
@@ -149,9 +152,57 @@ describe("referrals and visual experiences", () => {
           themeKey: "elite-signature",
           occasionTitle: "",
           occasionMessage: "",
+          automaticHolidayThemes: false,
+          timeZone: "America/New_York",
         }),
       /owner access required/i,
     );
     assert.equal((await getVisualSettings(otherMember)).themeKey, "elite-signature");
+  });
+
+  it("temporarily applies automatic holiday themes without overwriting the manual theme", async () => {
+    await updateVisualSettings(owner, {
+      themeKey: "community-event",
+      occasionTitle: "Member appreciation",
+      occasionMessage: "Thank you for being part of our community.",
+      automaticHolidayThemes: true,
+      timeZone: "America/New_York",
+    });
+    const remembrance = await getVisualSettings(member, new Date("2026-09-11T16:00:00Z"));
+    assert.equal(remembrance.themeKey, "remembrance-911");
+    assert.equal(remembrance.automaticThemeActive, true);
+    assert.equal(remembrance.configuredThemeKey, "community-event");
+    const followingDay = await getVisualSettings(member, new Date("2026-09-12T16:00:00Z"));
+    assert.equal(followingDay.themeKey, "community-event");
+    assert.equal(followingDay.occasionTitle, "Member appreciation");
+    assert.equal(followingDay.automaticThemeActive, false);
+  });
+
+  it("keeps the manual theme when automatic scheduling is disabled", async () => {
+    const saved = await updateVisualSettings(owner, {
+      themeKey: "elite-signature",
+      occasionTitle: "Welcome",
+      occasionMessage: "Our regular experience.",
+      automaticHolidayThemes: false,
+      timeZone: "America/Los_Angeles",
+    });
+    const settings = await getVisualSettings(member, new Date("2026-09-11T20:00:00Z"));
+    assert.equal(settings.themeKey, "elite-signature");
+    assert.equal(settings.automaticThemeActive, false);
+    assert.equal(saved.timeZone, "America/Los_Angeles");
+  });
+
+  it("rejects unsupported business time zones", async () => {
+    await assert.rejects(
+      () =>
+        updateVisualSettings(owner, {
+          themeKey: "elite-signature",
+          occasionTitle: "",
+          occasionMessage: "",
+          automaticHolidayThemes: true,
+          timeZone: "Not/A_Time_Zone",
+        }),
+      /time zone is invalid/i,
+    );
   });
 });

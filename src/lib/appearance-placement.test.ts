@@ -24,5 +24,17 @@ describe("Appearance navigation placement", () => {
     assert.match(adminSource, /session\.user\.role === ["']member["']/);
     assert.match(adminSource, /active === ["']Appearance["']/);
     assert.match(adminSource, /api\.updateVisualSettings\(visualDraft\)/);
+    assert.match(adminSource, /Automatic holiday themes/);
+    assert.match(adminSource, /automaticHolidayThemes/);
+  });
+
+  it("keeps automatic theme controls out of every non-admin route", async () => {
+    const routeFiles = (await readdir(routesDirectory)).filter(
+      (file) => file.endsWith(".tsx") && file !== "admin.tsx",
+    );
+    for (const file of routeFiles) {
+      const source = await readFile(join(routesDirectory, file), "utf8");
+      assert.doesNotMatch(source, /Automatic holiday themes|automaticHolidayThemes/);
+    }
   });
 });

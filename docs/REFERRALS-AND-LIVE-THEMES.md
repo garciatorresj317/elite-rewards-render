@@ -2,9 +2,7 @@
 
 ## Release status
 
-Implementation commit: `40122de9878769178cc9ff160a728d3c85058e22`
-
-The release is pushed to both GitHub `main` branches. Production deployment is pending because the existing Render service did not auto-deploy the commit and authenticated Render access was declined during release verification.
+The referral, business-theme, and automatic holiday scheduling releases are maintained on both GitHub `main` branches and deployed through the existing Render service.
 
 ## Member referrals
 
@@ -30,12 +28,21 @@ Owners use **Admin → Appearance** to publish one of six allowlisted visual pre
 
 The selected preset and optional occasion message are stored per business and apply to that business's admin and member surfaces. Login, setup, activation, and platform marketing surfaces remain on the base Elite Rewards design.
 
+Owners can enable **Automatic holiday themes** and select the business time zone from the same admin-only Appearance page. Automatic resolution runs server-side and temporarily overrides the displayed wallpaper and occasion message without changing the saved manual theme:
+
+- MLK Day — third Monday in January
+- Spring Celebration — Easter Sunday
+- September 11 Remembrance — September 11
+- Winter Holiday — December 24 through December 26
+
+When the toggle is off or the scheduled date ends, the saved manual theme and message display again. Community Event remains manual because it has no universal date. New and existing businesses default to UTC until an owner selects the correct business time zone.
+
 All supplied backgrounds are same-origin 1920×1080 optimized WebP images. Subtle motion uses CSS transforms and is disabled by the existing reduced-motion rule. The commemorative themes contain no sales language, points promotion, or discount messaging.
 
 ## Verification
 
 - `npm run check`: passed
-- Automated tests: 25/25 passed
+- Automated tests: 38/38 passed
 - TypeScript: passed
 - ESLint: passed with zero warnings
 - Production build: passed
@@ -43,6 +50,4 @@ All supplied backgrounds are same-origin 1920×1080 optimized WebP images. Subtl
 - `git diff --check`: passed
 - MLK Day and September 11 images were independently vision-reviewed for respectful tone and UI suitability.
 
-## Remaining release action
-
-Authenticate the existing Render account and deploy commit `40122de9878769178cc9ff160a728d3c85058e22`, or restore Render auto-deploy from `garciatorresj317/elite-rewards-render`. After deployment, verify `/api/health`, `/join`, all theme assets, authenticated member referral generation, one test referral signup, tenant attribution, Appearance save/readback, reduced-motion behavior, CSP headers, and unauthorized write rejection.
+Automatic theme tests cover MLK Day, Easter Sunday, September 11 local-date boundaries, the December 24–26 winter window, manual-theme restoration, disabled automation, invalid-time-zone fallback, and the exclusion of Community Event from automatic scheduling.

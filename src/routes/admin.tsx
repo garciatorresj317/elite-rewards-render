@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   Award,
   Building2,
+  CalendarClock,
   Check,
   CircleDollarSign,
   Gift,
@@ -68,6 +69,8 @@ function Admin() {
     themeKey: "elite-signature" as ThemeKey,
     occasionTitle: "",
     occasionMessage: "",
+    automaticHolidayThemes: false,
+    timeZone: "UTC",
   });
   const [award, setAward] = useState({
     memberId: "",
@@ -101,9 +104,11 @@ function Admin() {
       setMembers(memberResult.members);
       setVisualSettings(visualResult);
       setVisualDraft({
-        themeKey: visualResult.themeKey,
-        occasionTitle: visualResult.occasionTitle,
-        occasionMessage: visualResult.occasionMessage,
+        themeKey: visualResult.configuredThemeKey,
+        occasionTitle: visualResult.configuredOccasionTitle,
+        occasionMessage: visualResult.configuredOccasionMessage,
+        automaticHolidayThemes: visualResult.automaticHolidayThemes,
+        timeZone: visualResult.timeZone,
       });
       const firstMember = dashboard.members[0];
       if (!award.memberId && firstMember)
@@ -466,6 +471,99 @@ function Admin() {
                 </div>
               </div>
               <form className="appearance-form" onSubmit={saveVisuals}>
+                <section className="panel automatic-theme-editor">
+                  <div className="automatic-theme-heading">
+                    <span className="modal-icon">
+                      <CalendarClock />
+                    </span>
+                    <div>
+                      <span className="section-kicker">Automatic schedule</span>
+                      <h3>Switch themes on holidays</h3>
+                      <p>
+                        When enabled, Elite Rewards temporarily publishes the matching holiday theme
+                        on its scheduled date, then restores your selected theme automatically.
+                      </p>
+                    </div>
+                  </div>
+                  <label className="theme-toggle">
+                    <input
+                      type="checkbox"
+                      checked={visualDraft.automaticHolidayThemes}
+                      onChange={(event) =>
+                        setVisualDraft({
+                          ...visualDraft,
+                          automaticHolidayThemes: event.target.checked,
+                        })
+                      }
+                      disabled={user.role !== "owner"}
+                    />
+                    <span aria-hidden="true" />
+                    <strong>
+                      {visualDraft.automaticHolidayThemes
+                        ? "Automatic holiday themes on"
+                        : "Automatic holiday themes off"}
+                    </strong>
+                  </label>
+                  <label className="timezone-field">
+                    Business time zone
+                    <select
+                      value={visualDraft.timeZone}
+                      onChange={(event) =>
+                        setVisualDraft({ ...visualDraft, timeZone: event.target.value })
+                      }
+                      disabled={user.role !== "owner"}
+                    >
+                      <option value="UTC">UTC</option>
+                      <option value="America/New_York">Eastern Time</option>
+                      <option value="America/Chicago">Central Time</option>
+                      <option value="America/Denver">Mountain Time</option>
+                      <option value="America/Los_Angeles">Pacific Time</option>
+                      <option value="America/Anchorage">Alaska Time</option>
+                      <option value="Pacific/Honolulu">Hawaii Time</option>
+                    </select>
+                  </label>
+                  <div className="automatic-theme-status" role="status">
+                    {!visualSettings?.automaticHolidayThemes ? (
+                      <>
+                        <strong>Automatic switching is currently off.</strong>
+                        <span>
+                          Enable the toggle and publish the appearance to start the schedule.
+                        </span>
+                      </>
+                    ) : visualSettings.automaticThemeActive ? (
+                      <>
+                        <strong>{visualSettings.automaticThemeName} is active today.</strong>
+                        <span>Your manual theme remains saved and will return afterward.</span>
+                      </>
+                    ) : visualSettings.nextAutomaticTheme ? (
+                      <>
+                        <strong>
+                          Next: {visualSettings.nextAutomaticTheme.name} on{" "}
+                          {visualSettings.nextAutomaticTheme.localDate}
+                        </strong>
+                        <span>{visualSettings.nextAutomaticTheme.dateLabel}</span>
+                      </>
+                    ) : null}
+                  </div>
+                  <ul className="automatic-theme-schedule" aria-label="Automatic holiday schedule">
+                    <li>
+                      <strong>MLK Day</strong>
+                      <span>Third Monday in January</span>
+                    </li>
+                    <li>
+                      <strong>Spring Celebration</strong>
+                      <span>Easter Sunday</span>
+                    </li>
+                    <li>
+                      <strong>September 11 Remembrance</strong>
+                      <span>September 11</span>
+                    </li>
+                    <li>
+                      <strong>Winter Holiday</strong>
+                      <span>December 24–26</span>
+                    </li>
+                  </ul>
+                </section>
                 <div className="theme-grid" role="radiogroup" aria-label="Business page theme">
                   {themeCatalog.map((theme) => (
                     <label

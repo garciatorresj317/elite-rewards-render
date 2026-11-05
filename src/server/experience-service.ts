@@ -2,6 +2,7 @@ import { createHash, createHmac, randomBytes } from "node:crypto";
 import type { SessionUser } from "./auth.ts";
 import { createSession, hashPassword, newUserId } from "./auth.ts";
 import { getPool, id } from "./database.ts";
+import { normalizeTimeZone, resolveScheduledTheme } from "./holiday-theme-schedule.ts";
 
 export const themeKeys = [
   "elite-signature",
@@ -16,8 +17,53 @@ export type VisualSettings = {
   themeKey: ThemeKey;
   occasionTitle: string;
   occasionMessage: string;
+  configuredThemeKey: ThemeKey;
+  configuredOccasionTitle: string;
+  configuredOccasionMessage: string;
+  automaticHolidayThemes: boolean;
+  timeZone: string;
+  automaticThemeActive: boolean;
+  automaticThemeName: string | null;
+  nextAutomaticTheme: { name: string; localDate: string; dateLabel: string } | null;
   updatedAt: string | null;
 };
+
+type StoredVisualSettings = {
+  themeKey: ThemeKey;
+  occasionTitle: string;
+  occasionMessage: string;
+  automaticHolidayThemes: boolean;
+  timeZone: string;
+  updatedAt: string | null;
+};
+
+function effectiveVisualSettings(
+  stored: StoredVisualSettings,
+  now: Date = new Date(),
+): VisualSettings {
+  const schedule = resolveScheduledTheme(now, stored.timeZone);
+  const automatic = stored.automaticHolidayThemes ? schedule.active : null;
+  return {
+    themeKey: automatic?.key ?? stored.themeKey,
+    occasionTitle: automatic?.title ?? stored.occasionTitle,
+    occasionMessage: automatic?.message ?? stored.occasionMessage,
+    configuredThemeKey: stored.themeKey,
+    configuredOccasionTitle: stored.occasionTitle,
+    configuredOccasionMessage: stored.occasionMessage,
+    automaticHolidayThemes: stored.automaticHolidayThemes,
+    timeZone: stored.timeZone,
+    automaticThemeActive: Boolean(automatic),
+    automaticThemeName: automatic?.name ?? null,
+    nextAutomaticTheme: schedule.next
+      ? {
+          name: schedule.next.name,
+          localDate: schedule.next.localDate,
+          dateLabel: schedule.next.dateLabel,
+        }
+      : null,
+    updatedAt: stored.updatedAt,
+  };
+}
 
 function tokenHash(token: string): string {
   return createHash("sha256").update(token).digest("hex");
@@ -72,64 +118,111 @@ function memberCode(): string {
   return `ELITE-${randomBytes(10).toString("hex").toUpperCase()}`;
 }
 
-export async function getVisualSettings(user: SessionUser): Promise<VisualSettings> {
+export async function getVisualSettings(
+  user: SessionUser,
+  now: Date = new Date(),
+): Promise<VisualSettings> {
   const result = await getPool().query<{
     theme_key: ThemeKey;
     occasion_title: string;
     occasion_message: string;
+    automatic_holiday_themes: boolean;
+    time_zone: string;
     updated_at: Date;
   }>(
-    `SELECT theme_key, occasion_title, occasion_message, updated_at
+    `SELECT theme_key, occasion_title, occasion_message, automatic_holiday_themes, time_zone, updated_at
        FROM business_visual_settings WHERE business_id = $1`,
     [user.businessId],
   );
   const row = result.rows[0];
-  return row
+  const stored: StoredVisualSettings = row
     ? {
         themeKey: row.theme_key,
         occasionTitle: row.occasion_title,
         occasionMessage: row.occasion_message,
+        automaticHolidayThemes: row.automatic_holiday_themes,
+        timeZone: normalizeTimeZone(row.time_zone),
         updatedAt: row.updated_at.toISOString(),
       }
-    : { themeKey: "elite-signature", occasionTitle: "", occasionMessage: "", updatedAt: null };
+    : {
+        themeKey: "elite-signature",
+        occasionTitle: "",
+        occasionMessage: "",
+        automaticHolidayThemes: false,
+        timeZone: normalizeTimeZone(undefined),
+        updatedAt: null,
+      };
+  return effectiveVisualSettings(stored, now);
 }
 
 export async function updateVisualSettings(
   user: SessionUser,
-  input: { themeKey: ThemeKey; occasionTitle: string; occasionMessage: string },
+  input: {
+    themeKey: ThemeKey;
+    occasionTitle: string;
+    occasionMessage: string;
+    automaticHolidayThemes: boolean;
+    timeZone: string;
+  },
 ): Promise<VisualSettings> {
   requireBusinessOwner(user);
   if (!themeKeys.includes(input.themeKey))
     throw Object.assign(new Error("Theme is invalid"), { status: 400 });
+  const timeZone = normalizeTimeZone(input.timeZone);
+  if (timeZone !== input.timeZone)
+    throw Object.assign(new Error("Time zone is invalid"), { status: 400 });
   const result = await getPool().query<{
     theme_key: ThemeKey;
     occasion_title: string;
     occasion_message: string;
+    automatic_holiday_themes: boolean;
+    time_zone: string;
     updated_at: Date;
   }>(
-    `INSERT INTO business_visual_settings(business_id, theme_key, occasion_title, occasion_message, updated_by_user_id, updated_at)
-     VALUES ($1,$2,$3,$4,$5,now())
+    `INSERT INTO business_visual_settings(business_id, theme_key, occasion_title, occasion_message, automatic_holiday_themes, time_zone, updated_by_user_id, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,now())
      ON CONFLICT (business_id) DO UPDATE SET
        theme_key = EXCLUDED.theme_key,
        occasion_title = EXCLUDED.occasion_title,
        occasion_message = EXCLUDED.occasion_message,
+       automatic_holiday_themes = EXCLUDED.automatic_holiday_themes,
+       time_zone = EXCLUDED.time_zone,
        updated_by_user_id = EXCLUDED.updated_by_user_id,
        updated_at = now()
-     RETURNING theme_key, occasion_title, occasion_message, updated_at`,
-    [user.businessId, input.themeKey, input.occasionTitle, input.occasionMessage, user.id],
+     RETURNING theme_key, occasion_title, occasion_message, automatic_holiday_themes, time_zone, updated_at`,
+    [
+      user.businessId,
+      input.themeKey,
+      input.occasionTitle,
+      input.occasionMessage,
+      input.automaticHolidayThemes,
+      timeZone,
+      user.id,
+    ],
   );
   await getPool().query(
     `INSERT INTO audit_events(id,business_id,actor_user_id,action,target_type,target_id,metadata)
      VALUES ($1,$2,$3,'business.visual_settings.updated','business',$2,$4)`,
-    [id("aud"), user.businessId, user.id, JSON.stringify({ themeKey: input.themeKey })],
+    [
+      id("aud"),
+      user.businessId,
+      user.id,
+      JSON.stringify({
+        themeKey: input.themeKey,
+        automaticHolidayThemes: input.automaticHolidayThemes,
+        timeZone,
+      }),
+    ],
   );
   const row = result.rows[0]!;
-  return {
+  return effectiveVisualSettings({
     themeKey: row.theme_key,
     occasionTitle: row.occasion_title,
     occasionMessage: row.occasion_message,
+    automaticHolidayThemes: row.automatic_holiday_themes,
+    timeZone: normalizeTimeZone(row.time_zone),
     updatedAt: row.updated_at.toISOString(),
-  };
+  });
 }
 
 export async function getOrCreateReferralLink(user: SessionUser): Promise<{

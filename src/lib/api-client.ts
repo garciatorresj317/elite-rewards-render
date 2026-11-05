@@ -99,7 +99,7 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   visualSettings: () => request<VisualSettings>("/api/visual-settings"),
-  updateVisualSettings: (payload: Omit<VisualSettings, "updatedAt">) =>
+  updateVisualSettings: (payload: VisualSettingsUpdate) =>
     request<VisualSettings>("/api/admin/visual-settings", {
       method: "PUT",
       body: JSON.stringify(payload),
@@ -171,8 +171,21 @@ export type VisualSettings = {
   themeKey: ThemeKey;
   occasionTitle: string;
   occasionMessage: string;
+  configuredThemeKey: ThemeKey;
+  configuredOccasionTitle: string;
+  configuredOccasionMessage: string;
+  automaticHolidayThemes: boolean;
+  timeZone: string;
+  automaticThemeActive: boolean;
+  automaticThemeName: string | null;
+  nextAutomaticTheme: { name: string; localDate: string; dateLabel: string } | null;
   updatedAt: string | null;
 };
+
+export type VisualSettingsUpdate = Pick<
+  VisualSettings,
+  "themeKey" | "occasionTitle" | "occasionMessage" | "automaticHolidayThemes" | "timeZone"
+>;
 
 export type ClientSummary = {
   id: string;
