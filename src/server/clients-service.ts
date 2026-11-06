@@ -18,6 +18,7 @@ export type ClientSummary = {
   secondaryColor: string;
   previewPath: string;
   nfcPath: string;
+  joinPath: string;
 };
 
 export type ClientBranding = {
@@ -29,6 +30,7 @@ export type ClientBranding = {
   secondaryColor: string;
   previewPath: string;
   nfcPath: string;
+  joinPath: string;
 };
 
 export type PublicClientExperience = {
@@ -40,6 +42,16 @@ export type PublicClientExperience = {
     secondary_color: string;
   };
   rewards: Array<{ id: string; name: string; description: string; points: number }>;
+  products: Array<{
+    id: string;
+    name: string;
+    description: string;
+    category: string;
+    priceCents: number;
+    imageUrl: string | null;
+    purchaseUrl: string | null;
+  }>;
+  joinPath: string;
 };
 
 function clientPath(businessId: string): string {
@@ -48,6 +60,10 @@ function clientPath(businessId: string): string {
 
 function logoPath(businessId: string): string {
   return `/api/public/clients/${encodeURIComponent(businessId)}/logo`;
+}
+
+function joinPath(businessId: string): string {
+  return `/join?business=${encodeURIComponent(businessId)}`;
 }
 
 function requirePlatformAdmin(user: SessionUser): void {
@@ -201,6 +217,7 @@ export async function listClients(user: SessionUser): Promise<ClientSummary[]> {
       secondaryColor: business.secondary_color,
       previewPath: clientPath(business.id),
       nfcPath: clientPath(business.id),
+      joinPath: joinPath(business.id),
     });
   }
   return clients;
@@ -290,6 +307,7 @@ export async function createClient(
         secondaryColor: "#FFE27A",
         previewPath: clientPath(businessId),
         nfcPath: clientPath(businessId),
+        joinPath: joinPath(businessId),
       },
       activationPath: `/activate-client?token=${encodeURIComponent(invitationToken)}`,
     };
@@ -337,6 +355,7 @@ export async function getClientBranding(
     secondaryColor: row.secondary_color,
     previewPath: clientPath(row.id),
     nfcPath: clientPath(row.id),
+    joinPath: joinPath(row.id),
   };
 }
 
@@ -481,19 +500,36 @@ export async function getPublicClientExperience(
   );
   const row = business.rows[0];
   if (!row) throw Object.assign(new Error("Client not found"), { status: 404 });
-  const rewards = await getPool().query<{
-    id: string;
-    name: string;
-    description: string;
-    points_cost: number;
-  }>(
-    `SELECT id, name, description, points_cost
-       FROM rewards
-      WHERE business_id = $1 AND active AND archived_at IS NULL
-        AND (inventory_remaining IS NULL OR inventory_remaining > 0)
-      ORDER BY points_cost, created_at, id`,
-    [businessId],
-  );
+  const [rewards, products] = await Promise.all([
+    getPool().query<{
+      id: string;
+      name: string;
+      description: string;
+      points_cost: number;
+    }>(
+      `SELECT id, name, description, points_cost
+         FROM rewards
+        WHERE business_id = $1 AND active AND archived_at IS NULL
+          AND (inventory_remaining IS NULL OR inventory_remaining > 0)
+        ORDER BY points_cost, created_at, id`,
+      [businessId],
+    ),
+    getPool().query<{
+      id: string;
+      name: string;
+      description: string;
+      category: string;
+      price_cents: number;
+      image_url: string | null;
+      purchase_url: string | null;
+    }>(
+      `SELECT id,name,description,category,price_cents,image_url,purchase_url
+         FROM business_products
+        WHERE business_id = $1 AND active = true AND archived_at IS NULL
+        ORDER BY category, name, created_at, id`,
+      [businessId],
+    ),
+  ]);
   return {
     business: {
       business_name: row.name,
@@ -508,5 +544,15 @@ export async function getPublicClientExperience(
       description: reward.description,
       points: reward.points_cost,
     })),
+    products: products.rows.map((item) => ({
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      category: item.category,
+      priceCents: Number(item.price_cents),
+      imageUrl: item.image_url,
+      purchaseUrl: item.purchase_url,
+    })),
+    joinPath: joinPath(row.id),
   };
 }

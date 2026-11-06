@@ -80,6 +80,13 @@ export const api = {
     ),
   publicClient: (businessId: string) =>
     request<PublicClientExperience>(`/api/public/clients/${encodeURIComponent(businessId)}`),
+  businessEnrollment: (businessId: string) =>
+    request<BusinessEnrollment>(`/api/public/clients/${encodeURIComponent(businessId)}/enrollment`),
+  joinBusiness: (businessId: string, payload: JoinBusinessPayload) =>
+    request<{ ok: boolean }>(`/api/public/clients/${encodeURIComponent(businessId)}/enrollment`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
   clientRewards: (businessId: string) =>
     request<{ rewards: ManagedReward[] }>(
       `/api/admin/clients/${encodeURIComponent(businessId)}/rewards`,
@@ -97,6 +104,25 @@ export const api = {
   archiveClientReward: (businessId: string, rewardId: string) =>
     request<{ ok: boolean }>(
       `/api/admin/clients/${encodeURIComponent(businessId)}/rewards/${encodeURIComponent(rewardId)}`,
+      { method: "DELETE", body: "{}" },
+    ),
+  clientProducts: (businessId: string) =>
+    request<{ products: ManagedProduct[] }>(
+      `/api/admin/clients/${encodeURIComponent(businessId)}/products`,
+    ),
+  createClientProduct: (businessId: string, payload: ProductDraft) =>
+    request<{ product: ManagedProduct }>(
+      `/api/admin/clients/${encodeURIComponent(businessId)}/products`,
+      { method: "POST", body: JSON.stringify(payload) },
+    ),
+  updateClientProduct: (businessId: string, productId: string, payload: ProductDraft) =>
+    request<{ product: ManagedProduct }>(
+      `/api/admin/clients/${encodeURIComponent(businessId)}/products/${encodeURIComponent(productId)}`,
+      { method: "PUT", body: JSON.stringify(payload) },
+    ),
+  archiveClientProduct: (businessId: string, productId: string) =>
+    request<{ ok: boolean }>(
+      `/api/admin/clients/${encodeURIComponent(businessId)}/products/${encodeURIComponent(productId)}`,
       { method: "DELETE", body: "{}" },
     ),
   award: (payload: { memberId: string; points: number; amountCents: number; note?: string }) =>
@@ -136,6 +162,22 @@ export const api = {
     }),
   archiveReward: (rewardId: string) =>
     request<{ ok: boolean }>(`/api/admin/rewards/${encodeURIComponent(rewardId)}`, {
+      method: "DELETE",
+      body: "{}",
+    }),
+  managedProducts: () => request<{ products: ManagedProduct[] }>("/api/admin/products"),
+  createProduct: (payload: ProductDraft) =>
+    request<{ product: ManagedProduct }>("/api/admin/products", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateProduct: (productId: string, payload: ProductDraft) =>
+    request<{ product: ManagedProduct }>(`/api/admin/products/${encodeURIComponent(productId)}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  archiveProduct: (productId: string) =>
+    request<{ ok: boolean }>(`/api/admin/products/${encodeURIComponent(productId)}`, {
       method: "DELETE",
       body: "{}",
     }),
@@ -232,6 +274,7 @@ export type WalletData = {
     status: string;
     created_at: string;
   }>;
+  products: PublicProduct[];
 };
 
 export type ThemeKey =
@@ -276,6 +319,7 @@ export type ClientSummary = {
   secondaryColor: string;
   previewPath: string;
   nfcPath: string;
+  joinPath: string;
 };
 
 export type ClientBranding = {
@@ -287,13 +331,34 @@ export type ClientBranding = {
   secondaryColor: string;
   previewPath: string;
   nfcPath: string;
+  joinPath: string;
 };
 
-export type ClientBrandingDraft = Omit<ClientBranding, "id" | "previewPath" | "nfcPath">;
+export type ClientBrandingDraft = Omit<
+  ClientBranding,
+  "id" | "previewPath" | "nfcPath" | "joinPath"
+>;
 
 export type PublicClientExperience = {
   business: BusinessContext;
   rewards: Array<{ id: string; name: string; description: string; points: number }>;
+  products: PublicProduct[];
+  joinPath: string;
+};
+
+export type BusinessEnrollment = {
+  businessId: string;
+  businessName: string;
+  locationName: string;
+  logoUrl: string | null;
+  primaryColor: string;
+  secondaryColor: string;
+};
+
+export type JoinBusinessPayload = {
+  name: string;
+  email: string;
+  password: string;
 };
 
 export type MemberSummary = {
@@ -318,6 +383,25 @@ export type ManagedReward = RewardDraft & {
   id: string;
   archivedAt: string | null;
   redemptionCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProductDraft = {
+  name: string;
+  description: string;
+  category: string;
+  priceCents: number;
+  imageUrl: string | null;
+  purchaseUrl: string | null;
+  active: boolean;
+};
+
+export type PublicProduct = Omit<ProductDraft, "active"> & { id: string };
+
+export type ManagedProduct = ProductDraft & {
+  id: string;
+  archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };

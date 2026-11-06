@@ -6,6 +6,7 @@ import {
   Gift,
   History,
   LogOut,
+  PackageOpen,
   QrCode,
   Share2,
   Sparkles,
@@ -188,6 +189,48 @@ function Wallet() {
             <p className="empty-table">
               {t("This business has not published an available reward yet. Check back soon.")}
             </p>
+          )}
+        </section>
+        <div className="wallet-section-title">
+          <div>
+            <span className="section-kicker">{t("Member products")}</span>
+            <h2>
+              {t("Products from {businessName}", { businessName: data.context.business_name })}
+            </h2>
+          </div>
+        </div>
+        <section className="product-grid member-product-grid">
+          {data.products.map((product) => (
+            <article className="product-card" key={product.id}>
+              {product.imageUrl ? (
+                <img src={product.imageUrl} alt="" loading="lazy" />
+              ) : (
+                <span className="product-placeholder">
+                  <PackageOpen />
+                </span>
+              )}
+              <div>
+                {product.category && <small>{product.category}</small>}
+                <h3>{product.name}</h3>
+                <p>{product.description}</p>
+                {product.priceCents > 0 && (
+                  <strong>
+                    {new Intl.NumberFormat(undefined, {
+                      style: "currency",
+                      currency: "USD",
+                    }).format(product.priceCents / 100)}
+                  </strong>
+                )}
+                {product.purchaseUrl && (
+                  <a href={product.purchaseUrl} target="_blank" rel="noreferrer">
+                    {t("View product")} <ChevronRight size={16} />
+                  </a>
+                )}
+              </div>
+            </article>
+          ))}
+          {!data.products.length && (
+            <p className="empty-table">{t("This business has not published products yet.")}</p>
           )}
         </section>
         <section className="scan-panel">

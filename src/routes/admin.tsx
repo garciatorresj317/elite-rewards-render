@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  PackageOpen,
   Palette,
   Pencil,
   Plus,
@@ -35,8 +36,10 @@ import {
   type ClientBrandingDraft,
   type ClientSummary,
   type DashboardData,
+  type ManagedProduct,
   type ManagedReward,
   type MemberSummary,
+  type ProductDraft,
   type RewardDraft,
   type SessionUser,
   type ThemeKey,
@@ -59,6 +62,7 @@ const sections = [
     platformOnly: false,
   },
   { id: "Rewards", en: "Rewards", es: "Recompensas", icon: Trophy, platformOnly: false },
+  { id: "Products", en: "Products", es: "Productos", icon: PackageOpen, platformOnly: false },
   {
     id: "Appearance",
     en: "Appearance",
@@ -138,6 +142,17 @@ function Admin() {
   const [clientEditor, setClientEditor] = useState<ClientSummary | null>(null);
   const [clientRewards, setClientRewards] = useState<ManagedReward[]>([]);
   const [clientRewardEditingId, setClientRewardEditingId] = useState<string | null>(null);
+  const [clientProducts, setClientProducts] = useState<ManagedProduct[]>([]);
+  const [clientProductEditingId, setClientProductEditingId] = useState<string | null>(null);
+  const [clientProductDraft, setClientProductDraft] = useState<ProductDraft>({
+    name: "",
+    description: "",
+    category: "",
+    priceCents: 0,
+    imageUrl: null,
+    purchaseUrl: null,
+    active: true,
+  });
   const [clientRewardDraft, setClientRewardDraft] = useState<RewardDraft>({
     name: "",
     description: "",
@@ -157,6 +172,18 @@ function Admin() {
   const [memberModal, setMemberModal] = useState(false);
   const [memberActivationPath, setMemberActivationPath] = useState("");
   const [managedRewards, setManagedRewards] = useState<ManagedReward[]>([]);
+  const [managedProducts, setManagedProducts] = useState<ManagedProduct[]>([]);
+  const [productModal, setProductModal] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [productForm, setProductForm] = useState<ProductDraft>({
+    name: "",
+    description: "",
+    category: "",
+    priceCents: 0,
+    imageUrl: null,
+    purchaseUrl: null,
+    active: true,
+  });
   const [rewardModal, setRewardModal] = useState(false);
   const [editingRewardId, setEditingRewardId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -199,8 +226,8 @@ function Admin() {
         return;
       }
       setUser(session.user);
-      const [dashboard, clientResult, memberResult, visualResult, rewardResult] = await Promise.all(
-        [
+      const [dashboard, clientResult, memberResult, visualResult, rewardResult, productResult] =
+        await Promise.all([
           api.dashboard(),
           session.user.platformAdmin ? api.clients() : Promise.resolve({ clients: [] }),
           api.members(),
@@ -208,13 +235,14 @@ function Admin() {
           session.user.role === "owner"
             ? api.managedRewards()
             : Promise.resolve({ rewards: [] as ManagedReward[] }),
-        ],
-      );
+          api.managedProducts(),
+        ]);
       setData(dashboard);
       setClients(clientResult.clients);
       setMembers(memberResult.members);
       setVisualSettings(visualResult);
       setManagedRewards(rewardResult.rewards);
+      setManagedProducts(productResult.products);
       setVisualDraft({
         themeKey: visualResult.configuredThemeKey,
         occasionTitle: visualResult.configuredOccasionTitle,
@@ -275,12 +303,16 @@ function Admin() {
   const openClientEditor = async (client: ClientSummary) => {
     setError("");
     try {
-      const [result, rewards] = await Promise.all([
+      const [result, rewards, products] = await Promise.all([
         api.clientBranding(client.id),
         api.clientRewards(client.id),
+        api.clientProducts(client.id),
       ]);
       setClientEditor(client);
       setClientRewards(rewards.rewards);
+      setClientProducts(products.products);
+      setClientProductEditingId(null);
+      setClientProductDraft(emptyProductForm());
       setClientBranding({
         name: result.branding.name,
         locationName: result.branding.locationName,
@@ -392,6 +424,96 @@ function Admin() {
     } catch (cause) {
       setError(tr("Member enrollment failed", "No se pudo inscribir al miembro"));
     }
+  };
+  const emptyProductForm = (): ProductDraft => ({
+    name: "",
+    description: "",
+    category: "",
+    priceCents: 0,
+    imageUrl: null,
+    purchaseUrl: null,
+    active: true,
+  });
+  const saveClientProduct = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!clientEditor) return;
+    setError("");
+    try {
+      if (clientProductEditingId)
+        await api.updateClientProduct(clientEditor.id, clientProductEditingId, clientProductDraft);
+      else await api.createClientProduct(clientEditor.id, clientProductDraft);
+      setClientProducts((await api.clientProducts(clientEditor.id)).products);
+      setClientProductEditingId(null);
+      setClientProductDraft(emptyProductForm());
+      setNotice(
+        tr("Client product catalog updated.", "Se actualizó el catálogo de productos del cliente."),
+      );
+    } catch {
+      setError(tr("Client product update failed", "No se pudo actualizar el producto del cliente"));
+    }
+  };
+  const editClientProduct = (product: ManagedProduct) => {
+    setClientProductEditingId(product.id);
+    setClientProductDraft({
+      name: product.name,
+      description: product.description,
+      category: product.category,
+      priceCents: product.priceCents,
+      imageUrl: product.imageUrl,
+      purchaseUrl: product.purchaseUrl,
+      active: product.active,
+    });
+  };
+  const archiveSelectedClientProduct = async () => {
+    if (!clientEditor || !clientProductEditingId) return;
+    await api.archiveClientProduct(clientEditor.id, clientProductEditingId);
+    setClientProducts((await api.clientProducts(clientEditor.id)).products);
+    setClientProductEditingId(null);
+    setClientProductDraft(emptyProductForm());
+    setNotice(tr("Client product archived.", "Se archivó el producto del cliente."));
+  };
+  const openNewProduct = () => {
+    setEditingProductId(null);
+    setProductForm(emptyProductForm());
+    setProductModal(true);
+  };
+  const openProduct = (product: ManagedProduct) => {
+    setEditingProductId(product.id);
+    setProductForm({
+      name: product.name,
+      description: product.description,
+      category: product.category,
+      priceCents: product.priceCents,
+      imageUrl: product.imageUrl,
+      purchaseUrl: product.purchaseUrl,
+      active: product.active,
+    });
+    setProductModal(true);
+  };
+  const submitProduct = async (event: FormEvent) => {
+    event.preventDefault();
+    setError("");
+    try {
+      if (editingProductId) await api.updateProduct(editingProductId, productForm);
+      else await api.createProduct(productForm);
+      setProductModal(false);
+      setNotice(
+        tr(
+          "Business product catalog updated.",
+          "Se actualizó el catálogo de productos del negocio.",
+        ),
+      );
+      await load();
+    } catch {
+      setError(tr("Product update failed", "No se pudo actualizar el producto"));
+    }
+  };
+  const archiveCurrentProduct = async () => {
+    if (!editingProductId) return;
+    await api.archiveProduct(editingProductId);
+    setProductModal(false);
+    setNotice(tr("Product archived.", "Se archivó el producto."));
+    await load();
   };
   const emptyRewardForm = (): RewardDraft => ({
     name: "",
@@ -804,6 +926,18 @@ function Admin() {
                       </a>
                       <button
                         className="client-customize"
+                        onClick={() =>
+                          void copyClientLink(
+                            client.joinPath,
+                            tr("Join Rewards", "Únete a Recompensas"),
+                          )
+                        }
+                      >
+                        <Copy size={16} />{" "}
+                        {tr("Copy Join Rewards link", "Copiar enlace para unirse")}
+                      </button>
+                      <button
+                        className="client-customize"
                         onClick={() => void openClientEditor(client)}
                       >
                         <Palette size={16} /> {tr("Customize client", "Personalizar cliente")}
@@ -973,6 +1107,78 @@ function Admin() {
                       "Aún no hay recompensas. Crea la primera oferta para los miembros.",
                     )}
                   </p>
+                )}
+              </div>
+            </section>
+          )}
+          {active === "Products" && (
+            <section className="reward-management">
+              <div className="panel reward-management-heading">
+                <div>
+                  <span className="modal-icon">
+                    <PackageOpen />
+                  </span>
+                  <div>
+                    <span className="section-kicker">
+                      {tr("Business products", "Productos del negocio")}
+                    </span>
+                    <h2>
+                      {tr(
+                        "Show members what your business offers.",
+                        "Muestra a los miembros lo que ofrece tu negocio.",
+                      )}
+                    </h2>
+                    <p>
+                      {tr(
+                        "Publish products to the member wallet and public customer page.",
+                        "Publica productos en la billetera de miembros y en la página pública para clientes.",
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  className="admin-primary"
+                  onClick={openNewProduct}
+                  disabled={user.role !== "owner"}
+                >
+                  <Plus /> {tr("Add product", "Agregar producto")}
+                </button>
+              </div>
+              <div className="product-grid admin-product-grid">
+                {managedProducts.map((product) => (
+                  <article
+                    className={`product-card ${product.archivedAt ? "archived" : ""}`}
+                    key={product.id}
+                  >
+                    {product.imageUrl ? (
+                      <img src={product.imageUrl} alt="" />
+                    ) : (
+                      <span className="product-placeholder">
+                        <PackageOpen />
+                      </span>
+                    )}
+                    <div>
+                      {product.category && <small>{product.category}</small>}
+                      <h3>{product.name}</h3>
+                      <p>{product.description}</p>
+                      <strong>
+                        {new Intl.NumberFormat(localeCode, {
+                          style: "currency",
+                          currency: "USD",
+                        }).format(product.priceCents / 100)}
+                      </strong>
+                      <button
+                        type="button"
+                        onClick={() => openProduct(product)}
+                        disabled={Boolean(product.archivedAt)}
+                      >
+                        <Pencil size={16} /> {tr("Edit product", "Editar producto")}
+                      </button>
+                    </div>
+                  </article>
+                ))}
+                {!managedProducts.length && (
+                  <p className="empty-table">{tr("No products yet.", "Aún no hay productos.")}</p>
                 )}
               </div>
             </section>
@@ -1362,6 +1568,97 @@ function Admin() {
             <div className="client-reward-manager">
               <div>
                 <span className="section-kicker">
+                  {tr("Join Rewards link", "Enlace Únete a Recompensas")}
+                </span>
+                <h3>{tr("Customer self-enrollment", "Autoinscripción de clientes")}</h3>
+                <p>
+                  {tr(
+                    "Share this permanent link so customers can create their own secure member wallet.",
+                    "Comparte este enlace permanente para que los clientes creen su propia billetera segura.",
+                  )}
+                </p>
+              </div>
+              <div className="client-links compact-client-links">
+                <a
+                  className="client-customize"
+                  href={clientEditor.joinPath}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <ExternalLink size={16} /> {tr("Open Join Rewards", "Abrir Únete a Recompensas")}
+                </a>
+                <button
+                  type="button"
+                  className="client-customize"
+                  onClick={() =>
+                    void copyClientLink(
+                      clientEditor.joinPath,
+                      tr("Join Rewards", "Únete a Recompensas"),
+                    )
+                  }
+                >
+                  <Copy size={16} /> {tr("Copy Join Rewards link", "Copiar enlace para unirse")}
+                </button>
+                <code>{clientEditor.joinPath}</code>
+              </div>
+            </div>
+            <div className="client-reward-manager">
+              <div>
+                <span className="section-kicker">
+                  {tr("Client products", "Productos del cliente")}
+                </span>
+                <h3>
+                  {tr("Member-facing product catalog", "Catálogo de productos para miembros")}
+                </h3>
+              </div>
+              <div className="client-reward-list">
+                {clientProducts.map((product) => (
+                  <button
+                    type="button"
+                    key={product.id}
+                    onClick={() => editClientProduct(product)}
+                    disabled={Boolean(product.archivedAt)}
+                  >
+                    <span>
+                      <strong>{product.name}</strong>
+                      <small>
+                        {new Intl.NumberFormat(localeCode, {
+                          style: "currency",
+                          currency: "USD",
+                        }).format(product.priceCents / 100)}
+                      </small>
+                    </span>
+                    <span className={`client-status ${product.active ? "active" : "invited"}`}>
+                      {localizeStatus(
+                        product.archivedAt ? "archived" : product.active ? "active" : "hidden",
+                        tr,
+                      )}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="client-customize"
+                onClick={() => {
+                  setClientProductEditingId(null);
+                  setClientProductDraft(emptyProductForm());
+                }}
+              >
+                <Plus size={16} /> {tr("New client product", "Nuevo producto del cliente")}
+              </button>
+              <ProductEditorFields
+                draft={clientProductDraft}
+                setDraft={setClientProductDraft}
+                tr={tr}
+                onSubmit={saveClientProduct}
+                editing={Boolean(clientProductEditingId)}
+                onArchive={archiveSelectedClientProduct}
+              />
+            </div>
+            <div className="client-reward-manager">
+              <div>
+                <span className="section-kicker">
                   {tr("Client rewards", "Recompensas del cliente")}
                 </span>
                 <h3>{tr("Customer-facing offer catalog", "Catálogo de ofertas para clientes")}</h3>
@@ -1699,6 +1996,42 @@ function Admin() {
           </form>
         </div>
       )}
+      {productModal && (
+        <div className="modal-backdrop" onMouseDown={() => setProductModal(false)}>
+          <div
+            className="award-modal reward-editor-modal"
+            role="dialog"
+            aria-modal="true"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="modal-close"
+              onClick={() => setProductModal(false)}
+              aria-label={tr("Close", "Cerrar")}
+            >
+              <X />
+            </button>
+            <span className="modal-icon">
+              <PackageOpen />
+            </span>
+            <span className="section-kicker">{tr("Business product", "Producto del negocio")}</span>
+            <h2>
+              {editingProductId
+                ? tr("Edit product", "Editar producto")
+                : tr("Add a product", "Agregar un producto")}
+            </h2>
+            <ProductEditorFields
+              draft={productForm}
+              setDraft={setProductForm}
+              tr={tr}
+              onSubmit={submitProduct}
+              editing={Boolean(editingProductId)}
+              onArchive={archiveCurrentProduct}
+            />
+          </div>
+        </div>
+      )}
       {rewardModal && (
         <div className="modal-backdrop" onMouseDown={() => setRewardModal(false)}>
           <form
@@ -2033,5 +2366,110 @@ function TransactionTable({
         </table>
       </div>
     </section>
+  );
+}
+
+function ProductEditorFields({
+  draft,
+  setDraft,
+  tr,
+  onSubmit,
+  editing,
+  onArchive,
+}: {
+  draft: ProductDraft;
+  setDraft: (draft: ProductDraft) => void;
+  tr: TranslatePair;
+  onSubmit: (event: FormEvent) => void | Promise<void>;
+  editing: boolean;
+  onArchive: () => void | Promise<void>;
+}) {
+  return (
+    <form className="client-reward-form product-editor-form" onSubmit={onSubmit}>
+      <label>
+        {tr("Product name", "Nombre del producto")}
+        <input
+          required
+          minLength={2}
+          maxLength={120}
+          value={draft.name}
+          onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+        />
+      </label>
+      <label>
+        {tr("Description", "Descripción")}
+        <textarea
+          maxLength={1000}
+          value={draft.description}
+          onChange={(event) => setDraft({ ...draft, description: event.target.value })}
+        />
+      </label>
+      <div className="client-color-fields">
+        <label>
+          {tr("Category", "Categoría")}
+          <input
+            maxLength={80}
+            value={draft.category}
+            onChange={(event) => setDraft({ ...draft, category: event.target.value })}
+          />
+        </label>
+        <label>
+          {tr("Price", "Precio")}
+          <input
+            type="number"
+            min="0"
+            max="1000000"
+            step="0.01"
+            value={draft.priceCents / 100}
+            onChange={(event) =>
+              setDraft({
+                ...draft,
+                priceCents: Math.max(0, Math.round(Number(event.target.value) * 100)),
+              })
+            }
+          />
+        </label>
+      </div>
+      <label>
+        {tr("Product image URL", "URL de imagen del producto")}
+        <input
+          type="url"
+          placeholder="https://"
+          value={draft.imageUrl ?? ""}
+          onChange={(event) => setDraft({ ...draft, imageUrl: event.target.value || null })}
+        />
+      </label>
+      <label>
+        {tr("Purchase or details URL", "URL de compra o detalles")}
+        <input
+          type="url"
+          placeholder="https://"
+          value={draft.purchaseUrl ?? ""}
+          onChange={(event) => setDraft({ ...draft, purchaseUrl: event.target.value || null })}
+        />
+      </label>
+      <label className="reward-active-check">
+        <input
+          type="checkbox"
+          checked={draft.active}
+          onChange={(event) => setDraft({ ...draft, active: event.target.checked })}
+        />
+        <span>
+          <strong>{tr("Visible to members", "Visible para miembros")}</strong>
+        </span>
+      </label>
+      <div className="reward-editor-actions">
+        {editing && (
+          <button type="button" className="danger-button" onClick={() => void onArchive()}>
+            {tr("Archive", "Archivar")}
+          </button>
+        )}
+        <button className="admin-primary">
+          {editing
+            ? tr("Save product", "Guardar producto")
+            : tr("Publish product", "Publicar producto")}
+        </button>
+      </div>
+    </form>
   );
 }

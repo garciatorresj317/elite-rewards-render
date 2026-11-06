@@ -109,7 +109,7 @@ export async function getDashboard(user: SessionUser) {
 
 export async function getWallet(user: SessionUser) {
   const database = getPool();
-  const [balance, ledger, rewards, redemptions, context] = await Promise.all([
+  const [balance, ledger, rewards, redemptions, context, products] = await Promise.all([
     database.query<{ points: number }>(
       "SELECT points FROM member_balances WHERE business_id = $1 AND member_id = $2",
       [user.businessId, user.id],
@@ -163,6 +163,21 @@ export async function getWallet(user: SessionUser) {
          FROM businesses b LEFT JOIN locations l ON l.id = $2 WHERE b.id = $1`,
       [user.businessId, user.locationId],
     ),
+    database.query<{
+      id: string;
+      name: string;
+      description: string;
+      category: string;
+      price_cents: number;
+      image_url: string | null;
+      purchase_url: string | null;
+    }>(
+      `SELECT id,name,description,category,price_cents,image_url,purchase_url
+         FROM business_products
+        WHERE business_id = $1 AND active = true AND archived_at IS NULL
+        ORDER BY category, name, created_at, id`,
+      [user.businessId],
+    ),
   ]);
   return {
     member: user,
@@ -176,6 +191,15 @@ export async function getWallet(user: SessionUser) {
       points: row.points_cost,
     })),
     redemptions: redemptions.rows,
+    products: products.rows.map((item) => ({
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      category: item.category,
+      priceCents: Number(item.price_cents),
+      imageUrl: item.image_url,
+      purchaseUrl: item.purchase_url,
+    })),
   };
 }
 

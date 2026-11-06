@@ -30,12 +30,14 @@ Elite Rewards uses an explicit three-level operating model: one immutable platfo
 - Database-aware `/api/health` endpoint.
 - Render Blueprint for the web service and PostgreSQL database.
 - Member-owned referral enrollment with tenant isolation, hashed stable links, persistent abuse limits, and zero-point wallet creation.
+- Permanent tenant-specific Join Rewards links for customer self-enrollment with zero-point wallet creation; the Elite platform tenant cannot be enrolled into.
+- Separate tenant-owned product catalogs managed by business owners or the sole platform administrator; published products appear on public client and authenticated member pages but never enter reward redemption or points inventory.
 - Per-business manual and automatic holiday themes, resolved server-side in the business time zone without overwriting manual settings.
-- Thirty-nine passing unit/integration tests, including owner-only setup, member enrollment and referral isolation, automatic holiday boundaries, origin rejection before database work, and production ledger behavior.
+- Fifty-five passing unit/integration tests, including owner-only setup, customer self-enrollment, member/referral isolation, product tenant isolation, automatic holiday boundaries, origin rejection before database work, and production ledger behavior.
 
 ## Verification
 
-- `npm test`: 39/39 tests passed.
+- `npm test`: 55/55 tests passed.
 - `npm run typecheck`: passed.
 - `npm run lint`: passed.
 - `npm run build`: passed.
@@ -49,7 +51,7 @@ Render has provisioned PostgreSQL and the service health endpoint reports `datab
 ## Remaining platform work after this slice
 
 - Owner-managed creation of additional staff accounts.
-- Member invitation revocation/reissue and automated email delivery of enrollment links.
+- Member invitation revocation/reissue and automated email delivery of optional staff-created enrollment links; permanent self-enrollment links are live.
 - Password recovery, password change, session revocation, and MFA.
 - Persistent IP/account rate limiting and login-event audit.
 - Reward scheduling and time-window availability. Reward creation, editing, visibility, optional inventory, and archival are live under Admin → Rewards.

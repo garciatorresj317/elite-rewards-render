@@ -41,13 +41,25 @@ import {
   updateReward,
 } from "./reward-management-service.ts";
 import {
+  getBusinessEnrollment,
   getOrCreateReferralLink,
   getReferralEnrollment,
   getVisualSettings,
+  joinBusinessRewards,
   joinWithReferral,
   themeKeys,
   updateVisualSettings,
 } from "./experience-service.ts";
+import {
+  archiveClientProduct,
+  archiveProduct,
+  createClientProduct,
+  createProduct,
+  listClientProducts,
+  listManagedProducts,
+  updateClientProduct,
+  updateProduct,
+} from "./products-service.ts";
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -118,6 +130,20 @@ function optionalHttpsUrl(value: unknown, name: string): string | null {
   if (parsed.protocol !== "https:" || parsed.username || parsed.password)
     throw Object.assign(new Error(`${name} must use a public HTTPS URL`), { status: 400 });
   return parsed.toString();
+}
+
+function productInput(payload: Record<string, unknown>) {
+  if (typeof payload["active"] !== "boolean")
+    throw Object.assign(new Error("Active status is required"), { status: 400 });
+  return {
+    name: text(payload["name"], "Product name", 2, 120),
+    description: text(payload["description"] ?? "", "Description", 0, 1000),
+    category: text(payload["category"] ?? "", "Category", 0, 80),
+    priceCents: integer(payload["priceCents"], "Price", 0, 100_000_000),
+    imageUrl: optionalHttpsUrl(payload["imageUrl"], "Product image"),
+    purchaseUrl: optionalHttpsUrl(payload["purchaseUrl"], "Purchase link"),
+    active: payload["active"],
+  };
 }
 
 function safeEqual(left: string, right: string): boolean {
@@ -289,6 +315,35 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       });
       return json({ ok: true }, 201, { "set-cookie": setSessionCookie(result.sessionToken) });
     }
+    const businessEnrollmentMatch = url.pathname.match(
+      /^\/api\/public\/clients\/([^/]+)\/enrollment$/,
+    );
+    if (businessEnrollmentMatch && request.method === "GET") {
+      const businessId = text(
+        decodeURIComponent(businessEnrollmentMatch[1] ?? ""),
+        "Client",
+        8,
+        120,
+      );
+      return json(await getBusinessEnrollment(businessId));
+    }
+    if (businessEnrollmentMatch && request.method === "POST") {
+      const businessId = text(
+        decodeURIComponent(businessEnrollmentMatch[1] ?? ""),
+        "Client",
+        8,
+        120,
+      );
+      const payload = await body(request);
+      const result = await joinBusinessRewards({
+        businessId,
+        name: text(payload["name"], "Name", 2, 120),
+        email: text(payload["email"], "Email", 5, 254).toLowerCase(),
+        password: text(payload["password"], "Password", 12, 200),
+        requestSubject: requestSubject(request),
+      });
+      return json({ ok: true }, 201, { "set-cookie": setSessionCookie(result.sessionToken) });
+    }
     const publicClientMatch = url.pathname.match(/^\/api\/public\/clients\/([^/]+)$/);
     if (publicClientMatch && request.method === "GET") {
       const businessId = text(decodeURIComponent(publicClientMatch[1] ?? ""), "Client", 8, 120);
@@ -432,6 +487,43 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       await archiveClientReward(user, businessId, rewardId);
       return json({ ok: true });
     }
+    const clientProductsMatch = url.pathname.match(/^\/api\/admin\/clients\/([^/]+)\/products$/);
+    if (clientProductsMatch && request.method === "GET") {
+      requirePlatformAdmin(user);
+      const businessId = text(decodeURIComponent(clientProductsMatch[1] ?? ""), "Client", 8, 120);
+      return json({ products: await listClientProducts(user, businessId) });
+    }
+    if (clientProductsMatch && request.method === "POST") {
+      requirePlatformAdmin(user);
+      const businessId = text(decodeURIComponent(clientProductsMatch[1] ?? ""), "Client", 8, 120);
+      return json(
+        { product: await createClientProduct(user, businessId, productInput(await body(request))) },
+        201,
+      );
+    }
+    const clientProductMatch = url.pathname.match(
+      /^\/api\/admin\/clients\/([^/]+)\/products\/([^/]+)$/,
+    );
+    if (clientProductMatch && request.method === "PUT") {
+      requirePlatformAdmin(user);
+      const businessId = text(decodeURIComponent(clientProductMatch[1] ?? ""), "Client", 8, 120);
+      const productId = text(decodeURIComponent(clientProductMatch[2] ?? ""), "Product", 8, 120);
+      return json({
+        product: await updateClientProduct(
+          user,
+          businessId,
+          productId,
+          productInput(await body(request)),
+        ),
+      });
+    }
+    if (clientProductMatch && request.method === "DELETE") {
+      requirePlatformAdmin(user);
+      const businessId = text(decodeURIComponent(clientProductMatch[1] ?? ""), "Client", 8, 120);
+      const productId = text(decodeURIComponent(clientProductMatch[2] ?? ""), "Product", 8, 120);
+      await archiveClientProduct(user, businessId, productId);
+      return json({ ok: true });
+    }
     if (url.pathname === "/api/admin/members" && request.method === "GET") {
       requireRole(user, ["owner", "staff"]);
       return json({ members: await listMembers(user) });
@@ -489,6 +581,28 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       requireRole(user, ["owner"]);
       const rewardId = text(decodeURIComponent(rewardMatch[1] ?? ""), "Reward", 8, 120);
       await archiveReward(user, rewardId);
+      return json({ ok: true });
+    }
+    if (url.pathname === "/api/admin/products" && request.method === "GET") {
+      requireRole(user, ["owner", "staff"]);
+      return json({ products: await listManagedProducts(user) });
+    }
+    if (url.pathname === "/api/admin/products" && request.method === "POST") {
+      requireRole(user, ["owner"]);
+      return json({ product: await createProduct(user, productInput(await body(request))) }, 201);
+    }
+    const productMatch = url.pathname.match(/^\/api\/admin\/products\/([^/]+)$/);
+    if (productMatch && request.method === "PUT") {
+      requireRole(user, ["owner"]);
+      const productId = text(decodeURIComponent(productMatch[1] ?? ""), "Product", 8, 120);
+      return json({
+        product: await updateProduct(user, productId, productInput(await body(request))),
+      });
+    }
+    if (productMatch && request.method === "DELETE") {
+      requireRole(user, ["owner"]);
+      const productId = text(decodeURIComponent(productMatch[1] ?? ""), "Product", 8, 120);
+      await archiveProduct(user, productId);
       return json({ ok: true });
     }
     if (url.pathname === "/api/admin/award" && request.method === "POST") {

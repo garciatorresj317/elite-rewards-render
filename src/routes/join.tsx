@@ -2,36 +2,46 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Check, Sparkles, Users } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
+import { BusinessBrand } from "@/components/BusinessBrand";
 import { useI18n } from "@/i18n";
-import { api } from "@/lib/api-client";
+import { api, type BusinessEnrollment } from "@/lib/api-client";
+
 export const Route = createFileRoute("/join")({
   head: () => ({ meta: [{ title: "Join rewards | Elite Rewards" }] }),
-  component: JoinReferral,
+  component: JoinRewards,
 });
-function JoinReferral() {
+
+function JoinRewards() {
   const navigate = useNavigate();
   const { t, errorMessage } = useI18n();
-  const [context, setContext] = useState<{ businessName: string; locationName: string } | null>(
-      null,
-    ),
-    [error, setError] = useState(""),
-    [busy, setBusy] = useState(true),
-    [submitting, setSubmitting] = useState(false),
-    [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "" });
-  const referralCode =
-    typeof window === "undefined" ? "" : (new URLSearchParams(location.search).get("ref") ?? "");
+  const [referralContext, setReferralContext] = useState<{
+    businessName: string;
+    locationName: string;
+  } | null>(null);
+  const [businessContext, setBusinessContext] = useState<BusinessEnrollment | null>(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "" });
+  const params =
+    typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(location.search);
+  const referralCode = params.get("ref") ?? "";
+  const businessId = params.get("business") ?? "";
+
   useEffect(() => {
-    if (!referralCode) {
-      setError(t("This referral link is incomplete."));
+    if (!referralCode && !businessId) {
+      setError(t("This Join Rewards link is incomplete."));
       setBusy(false);
       return;
     }
-    api
-      .referralEnrollment(referralCode)
-      .then(setContext)
-      .catch((cause) => setError(errorMessage(cause, "Referral unavailable")))
+    const request = referralCode
+      ? api.referralEnrollment(referralCode).then((result) => setReferralContext(result))
+      : api.businessEnrollment(businessId).then((result) => setBusinessContext(result));
+    request
+      .catch((cause) => setError(errorMessage(cause, "Enrollment unavailable")))
       .finally(() => setBusy(false));
-  }, [referralCode, t, errorMessage]);
+  }, [referralCode, businessId, t, errorMessage]);
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     setSubmitting(true);
@@ -41,12 +51,9 @@ function JoinReferral() {
         setError(t("Passwords do not match"));
         return;
       }
-      await api.joinReferral({
-        name: form.name,
-        email: form.email,
-        password: form.password,
-        referralCode,
-      });
+      const payload = { name: form.name, email: form.email, password: form.password };
+      if (referralCode) await api.joinReferral({ ...payload, referralCode });
+      else await api.joinBusiness(businessId, payload);
       await navigate({ to: "/wallet" });
     } catch (cause) {
       setError(errorMessage(cause, "Enrollment failed"));
@@ -54,10 +61,29 @@ function JoinReferral() {
       setSubmitting(false);
     }
   }
+
+  const businessName = businessContext?.businessName ?? referralContext?.businessName;
+  const locationName = businessContext?.locationName ?? referralContext?.locationName;
+  const branding = businessContext
+    ? {
+        business_name: businessContext.businessName,
+        location_name: businessContext.locationName,
+        logo_url: businessContext.logoUrl,
+        primary_color: businessContext.primaryColor,
+        secondary_color: businessContext.secondaryColor,
+      }
+    : null;
+  const style = businessContext
+    ? ({
+        "--client-primary": businessContext.primaryColor,
+        "--client-secondary": businessContext.secondaryColor,
+      } as React.CSSProperties)
+    : undefined;
+
   return (
-    <div className="auth-page">
+    <div className="auth-page business-join-page" style={style}>
       <header className="wallet-header container-mid">
-        <BrandMark />
+        {branding ? <BusinessBrand business={branding} /> : <BrandMark />}
         <a className="back-link" href="/login">
           {t("Already a member?")}
         </a>
@@ -67,29 +93,28 @@ function JoinReferral() {
           <Users />
         </span>
         <span className="section-kicker">
-          <Sparkles size={15} /> {t("Member referral")}
+          <Sparkles size={15} /> {t(referralCode ? "Member referral" : "Join Rewards")}
         </span>
-        <h1>
-          {t("Join {businessName}", { businessName: context?.businessName ?? "Elite Rewards" })}
-        </h1>
-        {busy && <p>{t("Validating your secure referral link…")}</p>}
+        <h1>{t("Join {businessName}", { businessName: businessName ?? "Elite Rewards" })}</h1>
+        {busy && <p>{t("Loading your rewards program…")}</p>}
         {error && (
           <div className="form-error" role="alert">
             {error}
           </div>
         )}
-        {context && (
+        {businessName && locationName && (
           <>
             <div className="activation-summary">
-              <strong>{context.businessName}</strong>
-              <span>{context.locationName}</span>
+              <strong>{businessName}</strong>
+              <span>{locationName}</span>
               <small>
-                <Check size={14} /> {t("Referred member enrollment")}
+                <Check size={14} />
+                {t(referralCode ? "Referred member enrollment" : "Secure member enrollment")}
               </small>
             </div>
             <p>
               {t(
-                "Create your private rewards wallet. Your account starts at zero points; referral bonuses are not enabled unless the business publishes a policy.",
+                "Create your private member wallet to view this business’s products, earn points, and redeem available rewards.",
               )}
             </p>
             <form onSubmit={submit}>

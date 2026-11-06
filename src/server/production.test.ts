@@ -63,6 +63,12 @@ describe("production rewards ledger", () => {
     await pool.query(
       await readFile(join(process.cwd(), "migrations", "006_editable_rewards.sql"), "utf8"),
     );
+    await pool.query(
+      await readFile(
+        join(process.cwd(), "migrations", "009_public_enrollment_and_products.sql"),
+        "utf8",
+      ),
+    );
     await pool.query("ALTER TABLE businesses ADD COLUMN logo_url text");
     await pool.query(
       "ALTER TABLE businesses ADD COLUMN primary_color text NOT NULL DEFAULT '#F6B900'",

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Gift, LogIn, ScanLine, Sparkles } from "lucide-react";
+import { ArrowRight, Gift, LogIn, PackageOpen, ScanLine, Sparkles, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BusinessBrand } from "@/components/BusinessBrand";
 import { useI18n } from "@/i18n";
@@ -46,6 +46,12 @@ function ClientExperience() {
             )}
           </p>
           <div className="client-public-actions">
+            <a
+              href={`/join?business=${encodeURIComponent(clientId)}`}
+              className="button button-primary"
+            >
+              <UserPlus size={18} /> {t("Join Rewards")}
+            </a>
             <Link to="/login" className="button button-primary">
               {t("Open member wallet")} <ArrowRight size={18} />
             </Link>
@@ -76,6 +82,44 @@ function ClientExperience() {
               </article>
             ))}
             {!data.rewards.length && <p>{t("No rewards are published right now.")}</p>}
+          </div>
+        </section>
+        <section className="client-public-products">
+          <div>
+            <span className="section-kicker">{t("Business products")}</span>
+            <h2>{t("Explore what this business offers")}</h2>
+          </div>
+          <div className="product-grid">
+            {data.products.map((product) => (
+              <article className="product-card" key={product.id}>
+                {product.imageUrl ? (
+                  <img src={product.imageUrl} alt="" loading="lazy" />
+                ) : (
+                  <span className="product-placeholder">
+                    <PackageOpen />
+                  </span>
+                )}
+                <div>
+                  {product.category && <small>{product.category}</small>}
+                  <h3>{product.name}</h3>
+                  <p>{product.description}</p>
+                  {product.priceCents > 0 && (
+                    <strong>
+                      {new Intl.NumberFormat(undefined, {
+                        style: "currency",
+                        currency: "USD",
+                      }).format(product.priceCents / 100)}
+                    </strong>
+                  )}
+                  {product.purchaseUrl && (
+                    <a href={product.purchaseUrl} target="_blank" rel="noreferrer">
+                      {t("View product")} <ArrowRight size={16} />
+                    </a>
+                  )}
+                </div>
+              </article>
+            ))}
+            {!data.products.length && <p>{t("No products are published right now.")}</p>}
           </div>
         </section>
       </main>

@@ -118,6 +118,123 @@ function memberCode(): string {
   return `ELITE-${randomBytes(10).toString("hex").toUpperCase()}`;
 }
 
+export async function getBusinessEnrollment(businessId: string): Promise<{
+  businessId: string;
+  businessName: string;
+  locationName: string;
+  logoUrl: string | null;
+  primaryColor: string;
+  secondaryColor: string;
+}> {
+  const result = await getPool().query<{
+    id: string;
+    name: string;
+    location_name: string;
+    logo_url: string | null;
+    primary_color: string;
+    secondary_color: string;
+    has_logo: boolean;
+  }>(
+    `SELECT b.id, b.name, l.name AS location_name, b.logo_url, b.primary_color,
+            b.secondary_color, (b.logo_data IS NOT NULL) AS has_logo
+       FROM businesses b
+       JOIN locations l ON l.business_id = b.id
+      WHERE b.id = $1
+        AND b.id <> (SELECT business_id FROM platform_state WHERE singleton = true)
+      ORDER BY l.created_at, l.id
+      LIMIT 1`,
+    [businessId],
+  );
+  const row = result.rows[0];
+  if (!row) throw Object.assign(new Error("This rewards program is unavailable"), { status: 404 });
+  return {
+    businessId: row.id,
+    businessName: row.name,
+    locationName: row.location_name,
+    logoUrl: row.has_logo ? `/api/public/clients/${encodeURIComponent(row.id)}/logo` : row.logo_url,
+    primaryColor: row.primary_color,
+    secondaryColor: row.secondary_color,
+  };
+}
+
+export async function joinBusinessRewards(input: {
+  businessId: string;
+  name: string;
+  email: string;
+  password: string;
+  requestSubject: string;
+}): Promise<{ sessionToken: string }> {
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    await enforceRateLimit(client, "business-enrollment.ip.hour", input.requestSubject, 5, "hour");
+    await enforceRateLimit(
+      client,
+      "business-enrollment.business.day",
+      input.businessId,
+      100,
+      "day",
+    );
+    await enforceRateLimit(
+      client,
+      "business-enrollment.email.day",
+      input.email.toLowerCase(),
+      3,
+      "day",
+    );
+    const program = await client.query<{ business_id: string; location_id: string }>(
+      `SELECT b.id AS business_id, l.id AS location_id
+         FROM businesses b
+         JOIN locations l ON l.business_id = b.id
+        WHERE b.id = $1
+          AND b.id <> (SELECT business_id FROM platform_state WHERE singleton = true)
+        ORDER BY l.created_at, l.id
+        LIMIT 1`,
+      [input.businessId],
+    );
+    const business = program.rows[0];
+    if (!business)
+      throw Object.assign(new Error("This rewards program is unavailable"), { status: 404 });
+    const existing = await client.query("SELECT 1 FROM users WHERE lower(email) = lower($1)", [
+      input.email,
+    ]);
+    if (existing.rowCount)
+      throw Object.assign(new Error("Enrollment could not be completed"), { status: 409 });
+    const memberId = newUserId();
+    const code = memberCode();
+    await client.query(
+      `INSERT INTO users(id,business_id,location_id,role,name,email,password_hash,member_code)
+       VALUES ($1,$2,$3,'member',$4,$5,$6,$7)`,
+      [
+        memberId,
+        business.business_id,
+        business.location_id,
+        input.name,
+        input.email,
+        await hashPassword(input.password),
+        code,
+      ],
+    );
+    await client.query(
+      "INSERT INTO member_balances(business_id,member_id,points) VALUES ($1,$2,0)",
+      [business.business_id, memberId],
+    );
+    await client.query(
+      `INSERT INTO audit_events(id,business_id,actor_user_id,action,target_type,target_id,metadata)
+       VALUES ($1,$2,$3,'member.self_enrolled','user',$3,$4)`,
+      [id("aud"), business.business_id, memberId, JSON.stringify({ source: "business_join_link" })],
+    );
+    const sessionToken = await createSession(client, memberId);
+    await client.query("COMMIT");
+    return { sessionToken };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export async function getVisualSettings(
   user: SessionUser,
   now: Date = new Date(),

@@ -80,6 +80,7 @@ describe("editable business rewards", () => {
       "001_production_rewards.sql",
       "002_platform_clients.sql",
       "006_editable_rewards.sql",
+      "009_public_enrollment_and_products.sql",
     ]) {
       await pool.query(await readFile(join(process.cwd(), "migrations", file), "utf8"));
     }
