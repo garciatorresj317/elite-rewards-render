@@ -29,6 +29,7 @@ describe("business Join Rewards enrollment", () => {
       "001_production_rewards.sql",
       "002_platform_clients.sql",
       "004_referrals_and_visual_themes.sql",
+      "005_automatic_holiday_themes.sql",
       "006_editable_rewards.sql",
       "010_client_suspension.sql",
     ]) {

@@ -3,6 +3,7 @@ import { Check, Sparkles, Users } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
 import { BusinessBrand } from "@/components/BusinessBrand";
+import { ExperienceBackdrop } from "@/components/ExperienceTheme";
 import { useI18n } from "@/i18n";
 import { api, type BusinessEnrollment } from "@/lib/api-client";
 
@@ -17,6 +18,7 @@ function JoinRewards() {
   const [referralContext, setReferralContext] = useState<{
     businessName: string;
     locationName: string;
+    visualSettings: BusinessEnrollment["visualSettings"];
   } | null>(null);
   const [businessContext, setBusinessContext] = useState<BusinessEnrollment | null>(null);
   const [error, setError] = useState("");
@@ -81,14 +83,21 @@ function JoinRewards() {
     : undefined;
 
   return (
-    <div className="auth-page business-join-page" style={style}>
-      <header className="wallet-header container-mid">
+    <div
+      className={`auth-page business-join-page theme-${businessContext?.visualSettings.themeKey ?? referralContext?.visualSettings.themeKey ?? "elite-signature"}`}
+      style={style}
+    >
+      <ExperienceBackdrop
+        settings={businessContext?.visualSettings ?? referralContext?.visualSettings ?? null}
+        audience="member"
+      />
+      <header className="wallet-header container-mid themed-surface-content">
         {branding ? <BusinessBrand business={branding} /> : <BrandMark />}
         <a className="back-link" href="/login">
           {t("Already a member?")}
         </a>
       </header>
-      <main className="auth-card referral-join-card">
+      <main className="auth-card referral-join-card themed-surface-content">
         <span className="modal-icon">
           <Users />
         </span>

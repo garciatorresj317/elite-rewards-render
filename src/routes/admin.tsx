@@ -171,6 +171,14 @@ function Admin() {
     secondaryColor: "#FFE27A",
   });
   const [logoUploading, setLogoUploading] = useState(false);
+  const [clientVisualSettings, setClientVisualSettings] = useState<VisualSettings | null>(null);
+  const [clientVisualDraft, setClientVisualDraft] = useState({
+    themeKey: "elite-signature" as ThemeKey,
+    occasionTitle: "",
+    occasionMessage: "",
+    automaticHolidayThemes: false,
+    timeZone: "UTC",
+  });
   const [clientStatusBusyId, setClientStatusBusyId] = useState<string | null>(null);
   const [activationPath, setActivationPath] = useState("");
   const [memberModal, setMemberModal] = useState(false);
@@ -345,14 +353,23 @@ function Admin() {
   const openClientEditor = async (client: ClientSummary) => {
     setError("");
     try {
-      const [result, rewards, products] = await Promise.all([
+      const [result, rewards, products, clientAppearance] = await Promise.all([
         api.clientBranding(client.id),
         api.clientRewards(client.id),
         api.clientProducts(client.id),
+        api.clientVisualSettings(client.id),
       ]);
       setClientEditor(client);
       setClientRewards(rewards.rewards);
       setClientProducts(products.products);
+      setClientVisualSettings(clientAppearance);
+      setClientVisualDraft({
+        themeKey: clientAppearance.configuredThemeKey,
+        occasionTitle: clientAppearance.configuredOccasionTitle,
+        occasionMessage: clientAppearance.configuredOccasionMessage,
+        automaticHolidayThemes: clientAppearance.automaticHolidayThemes,
+        timeZone: clientAppearance.timeZone,
+      });
       setClientProductEditingId(null);
       setClientProductDraft(emptyProductForm());
       setClientBranding({
@@ -407,6 +424,31 @@ function Admin() {
       setClientEditor(null);
     } catch (cause) {
       setError(tr("Client customization failed", "No se pudo personalizar el cliente"));
+    }
+  };
+  const saveClientAppearance = async () => {
+    if (!clientEditor) return;
+    setError("");
+    try {
+      const saved = await api.updateClientVisualSettings(clientEditor.id, clientVisualDraft);
+      setClientVisualSettings(saved);
+      setClientVisualDraft({
+        themeKey: saved.configuredThemeKey,
+        occasionTitle: saved.configuredOccasionTitle,
+        occasionMessage: saved.configuredOccasionMessage,
+        automaticHolidayThemes: saved.automaticHolidayThemes,
+        timeZone: saved.timeZone,
+      });
+      setNotice(
+        tr(
+          `${clientEditor.name} holiday theme settings were published.`,
+          `Se publicaron los ajustes de temas festivos de ${clientEditor.name}.`,
+        ),
+      );
+    } catch {
+      setError(
+        tr("Client appearance update failed", "No se pudo actualizar la apariencia del cliente"),
+      );
     }
   };
   const uploadClientLogo = async (file: File) => {
@@ -1370,7 +1412,7 @@ function Admin() {
                         <strong>
                           {tr(
                             `${visualSettings.automaticThemeName} is active today.`,
-                            `${visualSettings.automaticThemeName} está activo hoy.`,
+                            `${themeSpanish(visualSettings.themeKey).name} está activo hoy.`,
                           )}
                         </strong>
                         <span>
@@ -1481,7 +1523,7 @@ function Admin() {
                         checked={visualDraft.themeKey === theme.key}
                         onChange={() => setVisualDraft({ ...visualDraft, themeKey: theme.key })}
                       />
-                      <img src={theme.image} alt="" />
+                      <img src={theme.image} alt="" loading="lazy" width="320" height="180" />
                       <span>
                         <small>{tr(theme.category, themeSpanish(theme.key).category)}</small>
                         <strong>{tr(theme.name, themeSpanish(theme.key).name)}</strong>
@@ -1611,6 +1653,89 @@ function Admin() {
             >
               {tr("Publish client branding", "Publicar marca del cliente")}
             </button>
+            <section className="client-appearance-manager">
+              <div>
+                <span className="section-kicker">
+                  {tr("Client holiday experience", "Experiencia festiva del cliente")}
+                </span>
+                <h3>{tr("Automatic live themes", "Temas en vivo automáticos")}</h3>
+                <p>
+                  {tr(
+                    "Turn holiday themes on or off for this business. When enabled, the selected holiday appears across its dashboard, wallet, customer page, and Join Rewards experience.",
+                    "Activa o desactiva los temas festivos para este negocio. Cuando están activos, el día festivo aparece en su panel, billetera, página del cliente y experiencia Únete a Recompensas.",
+                  )}
+                </p>
+              </div>
+              <label className="automatic-theme-toggle">
+                <input
+                  type="checkbox"
+                  checked={clientVisualDraft.automaticHolidayThemes}
+                  onChange={(event) =>
+                    setClientVisualDraft({
+                      ...clientVisualDraft,
+                      automaticHolidayThemes: event.target.checked,
+                    })
+                  }
+                />
+                <span>
+                  {clientVisualDraft.automaticHolidayThemes
+                    ? tr("Automatic themes on", "Temas automáticos activos")
+                    : tr("Automatic themes off", "Temas automáticos desactivados")}
+                </span>
+              </label>
+              <label>
+                {tr("Business time zone", "Zona horaria del negocio")}
+                <select
+                  value={clientVisualDraft.timeZone}
+                  onChange={(event) =>
+                    setClientVisualDraft({ ...clientVisualDraft, timeZone: event.target.value })
+                  }
+                >
+                  <option value="UTC">UTC</option>
+                  <option value="America/New_York">{tr("Eastern Time", "Hora del Este")}</option>
+                  <option value="America/Chicago">{tr("Central Time", "Hora Central")}</option>
+                  <option value="America/Denver">
+                    {tr("Mountain Time", "Hora de la Montaña")}
+                  </option>
+                  <option value="America/Los_Angeles">
+                    {tr("Pacific Time", "Hora del Pacífico")}
+                  </option>
+                  <option value="America/Anchorage">{tr("Alaska Time", "Hora de Alaska")}</option>
+                  <option value="Pacific/Honolulu">{tr("Hawaii Time", "Hora de Hawái")}</option>
+                </select>
+              </label>
+              <div className="automatic-theme-status" role="status">
+                <strong>
+                  {clientVisualSettings?.automaticThemeActive
+                    ? tr(
+                        `${clientVisualSettings.automaticThemeName} is live now.`,
+                        `${themeSpanish(clientVisualSettings.themeKey).name} está activo ahora.`,
+                      )
+                    : clientVisualDraft.automaticHolidayThemes
+                      ? tr(
+                          "The automatic schedule is enabled.",
+                          "La programación automática está activa.",
+                        )
+                      : tr(
+                          "This business uses its manual theme.",
+                          "Este negocio usa su tema manual.",
+                        )}
+                </strong>
+                <span>
+                  {tr(
+                    "Manual appearance settings remain saved and return after each holiday.",
+                    "Los ajustes manuales permanecen guardados y vuelven después de cada día festivo.",
+                  )}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="admin-primary full"
+                onClick={() => void saveClientAppearance()}
+              >
+                {tr("Publish holiday settings", "Publicar ajustes festivos")}
+              </button>
+            </section>
             <section className="client-links">
               <div>
                 <span className="section-kicker">

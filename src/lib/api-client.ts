@@ -78,6 +78,13 @@ export const api = {
       `/api/admin/clients/${encodeURIComponent(businessId)}/branding`,
       { method: "PUT", body: JSON.stringify(payload) },
     ),
+  clientVisualSettings: (businessId: string) =>
+    request<VisualSettings>(`/api/admin/clients/${encodeURIComponent(businessId)}/visual-settings`),
+  updateClientVisualSettings: (businessId: string, payload: VisualSettingsUpdate) =>
+    request<VisualSettings>(
+      `/api/admin/clients/${encodeURIComponent(businessId)}/visual-settings`,
+      { method: "PUT", body: JSON.stringify(payload) },
+    ),
   uploadClientLogo: (businessId: string, file: File) =>
     uploadImage<{ branding: ClientBranding }>(
       `/api/admin/clients/${encodeURIComponent(businessId)}/logo`,
@@ -147,6 +154,7 @@ export const api = {
       locationName: string;
       ownerName: string;
       ownerEmail: string;
+      visualSettings: PublicVisualSettings;
     }>(`/api/client-invitations/status?token=${encodeURIComponent(token)}`),
   activateClient: (token: string, password: string) =>
     request<{ ok: boolean }>("/api/client-invitations/activate", {
@@ -202,6 +210,7 @@ export const api = {
       locationName: string;
       memberName: string;
       memberEmail: string;
+      visualSettings: PublicVisualSettings;
     }>(`/api/member-invitations/status?token=${encodeURIComponent(token)}`),
   activateMember: (token: string, password: string) =>
     request<{ ok: boolean }>("/api/member-invitations/activate", {
@@ -209,9 +218,11 @@ export const api = {
       body: JSON.stringify({ token, password }),
     }),
   referralEnrollment: (referralCode: string) =>
-    request<{ businessName: string; locationName: string }>(
-      `/api/referrals/enrollment?ref=${encodeURIComponent(referralCode)}`,
-    ),
+    request<{
+      businessName: string;
+      locationName: string;
+      visualSettings: PublicVisualSettings;
+    }>(`/api/referrals/enrollment?ref=${encodeURIComponent(referralCode)}`),
   joinReferral: (payload: {
     referralCode: string;
     name: string;
@@ -300,16 +311,19 @@ export type ThemeKey =
   | "spring-celebration"
   | "community-event";
 
-export type VisualSettings = {
+export type PublicVisualSettings = {
   themeKey: ThemeKey;
   occasionTitle: string;
   occasionMessage: string;
+  automaticThemeActive: boolean;
+};
+
+export type VisualSettings = PublicVisualSettings & {
   configuredThemeKey: ThemeKey;
   configuredOccasionTitle: string;
   configuredOccasionMessage: string;
   automaticHolidayThemes: boolean;
   timeZone: string;
-  automaticThemeActive: boolean;
   automaticThemeName: string | null;
   nextAutomaticTheme: { name: string; localDate: string; dateLabel: string } | null;
   updatedAt: string | null;
@@ -359,6 +373,7 @@ export type PublicClientExperience = {
   rewards: Array<{ id: string; name: string; description: string; points: number }>;
   products: PublicProduct[];
   joinPath: string;
+  visualSettings: PublicVisualSettings;
 };
 
 export type BusinessEnrollment = {
@@ -368,6 +383,7 @@ export type BusinessEnrollment = {
   logoUrl: string | null;
   primaryColor: string;
   secondaryColor: string;
+  visualSettings: PublicVisualSettings;
 };
 
 export type JoinBusinessPayload = {

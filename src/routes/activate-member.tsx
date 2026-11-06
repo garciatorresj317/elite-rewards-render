@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { UserRoundCheck } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
+import { ExperienceBackdrop } from "@/components/ExperienceTheme";
 import { useI18n } from "@/i18n";
 import { api } from "@/lib/api-client";
 export const Route = createFileRoute("/activate-member")({
@@ -50,14 +51,15 @@ function ActivateMember() {
     }
   };
   return (
-    <div className="auth-page">
-      <header className="auth-header">
+    <div className={`auth-page theme-${invitation?.visualSettings.themeKey ?? "elite-signature"}`}>
+      <ExperienceBackdrop settings={invitation?.visualSettings ?? null} audience="member" />
+      <header className="auth-header themed-surface-content">
         <BrandMark />
         <Link to="/" className="back-link">
           {t("Back to site")}
         </Link>
       </header>
-      <main className="auth-main">
+      <main className="auth-main themed-surface-content">
         <section className="auth-card">
           <span className="auth-icon">
             <UserRoundCheck />

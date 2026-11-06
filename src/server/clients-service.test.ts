@@ -82,6 +82,15 @@ describe("platform client management", () => {
       await readFile(join(process.cwd(), "migrations", "002_platform_clients.sql"), "utf8"),
     );
     await pool.query(
+      await readFile(
+        join(process.cwd(), "migrations", "004_referrals_and_visual_themes.sql"),
+        "utf8",
+      ),
+    );
+    await pool.query(
+      await readFile(join(process.cwd(), "migrations", "005_automatic_holiday_themes.sql"), "utf8"),
+    );
+    await pool.query(
       await readFile(join(process.cwd(), "migrations", "006_editable_rewards.sql"), "utf8"),
     );
     await pool.query(
@@ -229,6 +238,10 @@ describe("platform client management", () => {
     assert.equal(publicPage.business.business_name, "Big Smoke");
     assert.equal(publicPage.business.logo_url, saved.logoUrl);
     assert.equal(publicPage.rewards.length, 3);
+    assert.equal(publicPage.visualSettings.automaticThemeActive, false);
+    assert.equal("automaticHolidayThemes" in publicPage.visualSettings, false);
+    assert.equal("timeZone" in publicPage.visualSettings, false);
+    assert.equal("configuredThemeKey" in publicPage.visualSettings, false);
     await assert.rejects(
       () =>
         updateClientLogo(platformOwner, platformOwner.businessId, {

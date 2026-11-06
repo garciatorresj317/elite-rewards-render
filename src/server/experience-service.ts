@@ -13,20 +13,31 @@ export const themeKeys = [
   "community-event",
 ] as const;
 export type ThemeKey = (typeof themeKeys)[number];
-export type VisualSettings = {
+export type PublicVisualSettings = {
   themeKey: ThemeKey;
   occasionTitle: string;
   occasionMessage: string;
+  automaticThemeActive: boolean;
+};
+export type VisualSettings = PublicVisualSettings & {
   configuredThemeKey: ThemeKey;
   configuredOccasionTitle: string;
   configuredOccasionMessage: string;
   automaticHolidayThemes: boolean;
   timeZone: string;
-  automaticThemeActive: boolean;
   automaticThemeName: string | null;
   nextAutomaticTheme: { name: string; localDate: string; dateLabel: string } | null;
   updatedAt: string | null;
 };
+
+export function publicVisualSettings(settings: VisualSettings): PublicVisualSettings {
+  return {
+    themeKey: settings.themeKey,
+    occasionTitle: settings.occasionTitle,
+    occasionMessage: settings.occasionMessage,
+    automaticThemeActive: settings.automaticThemeActive,
+  };
+}
 
 type StoredVisualSettings = {
   themeKey: ThemeKey;
@@ -37,7 +48,7 @@ type StoredVisualSettings = {
   updatedAt: string | null;
 };
 
-function effectiveVisualSettings(
+export function effectiveVisualSettings(
   stored: StoredVisualSettings,
   now: Date = new Date(),
 ): VisualSettings {
@@ -110,6 +121,10 @@ function requireBusinessOwner(user: SessionUser): void {
   if (user.role !== "owner")
     throw Object.assign(new Error("Business owner access required"), { status: 403 });
 }
+function requirePlatformAdmin(user: SessionUser): void {
+  if (!user.platformAdmin)
+    throw Object.assign(new Error("Platform administrator access required"), { status: 403 });
+}
 function referralCode(memberId: string, businessId: string): string {
   const key = process.env["RATE_LIMIT_HMAC_KEY"] ?? "local-test-rate-limit-key";
   return createHmac("sha256", key).update(`referral:${businessId}:${memberId}`).digest("base64url");
@@ -125,6 +140,7 @@ export async function getBusinessEnrollment(businessId: string): Promise<{
   logoUrl: string | null;
   primaryColor: string;
   secondaryColor: string;
+  visualSettings: PublicVisualSettings;
 }> {
   const result = await getPool().query<{
     id: string;
@@ -155,6 +171,7 @@ export async function getBusinessEnrollment(businessId: string): Promise<{
     logoUrl: row.has_logo ? `/api/public/clients/${encodeURIComponent(row.id)}/logo` : row.logo_url,
     primaryColor: row.primary_color,
     secondaryColor: row.secondary_color,
+    visualSettings: publicVisualSettings(await getBusinessVisualSettings(row.id)),
   };
 }
 
@@ -274,6 +291,130 @@ export async function getVisualSettings(
   return effectiveVisualSettings(stored, now);
 }
 
+export async function getBusinessVisualSettings(
+  businessId: string,
+  now: Date = new Date(),
+): Promise<VisualSettings> {
+  const result = await getPool().query<{
+    theme_key: ThemeKey;
+    occasion_title: string;
+    occasion_message: string;
+    automatic_holiday_themes: boolean;
+    time_zone: string;
+    updated_at: Date;
+  }>(
+    `SELECT theme_key, occasion_title, occasion_message, automatic_holiday_themes, time_zone, updated_at
+       FROM business_visual_settings WHERE business_id = $1`,
+    [businessId],
+  );
+  const row = result.rows[0];
+  return effectiveVisualSettings(
+    row
+      ? {
+          themeKey: row.theme_key,
+          occasionTitle: row.occasion_title,
+          occasionMessage: row.occasion_message,
+          automaticHolidayThemes: row.automatic_holiday_themes,
+          timeZone: normalizeTimeZone(row.time_zone),
+          updatedAt: row.updated_at.toISOString(),
+        }
+      : {
+          themeKey: "elite-signature",
+          occasionTitle: "",
+          occasionMessage: "",
+          automaticHolidayThemes: false,
+          timeZone: normalizeTimeZone(undefined),
+          updatedAt: null,
+        },
+    now,
+  );
+}
+
+export async function getClientVisualSettings(
+  user: SessionUser,
+  businessId: string,
+): Promise<VisualSettings> {
+  requirePlatformAdmin(user);
+  const client = await getPool().query(
+    `SELECT 1 FROM businesses
+      WHERE id = $1 AND id <> (SELECT business_id FROM platform_state WHERE singleton = true)`,
+    [businessId],
+  );
+  if (!client.rowCount) throw Object.assign(new Error("Client not found"), { status: 404 });
+  return getBusinessVisualSettings(businessId);
+}
+
+export async function updateClientVisualSettings(
+  user: SessionUser,
+  businessId: string,
+  input: {
+    themeKey: ThemeKey;
+    occasionTitle: string;
+    occasionMessage: string;
+    automaticHolidayThemes: boolean;
+    timeZone: string;
+  },
+): Promise<VisualSettings> {
+  requirePlatformAdmin(user);
+  if (!themeKeys.includes(input.themeKey))
+    throw Object.assign(new Error("Theme is invalid"), { status: 400 });
+  const timeZone = normalizeTimeZone(input.timeZone);
+  if (timeZone !== input.timeZone)
+    throw Object.assign(new Error("Time zone is invalid"), { status: 400 });
+  const target = await getPool().query(
+    `SELECT 1 FROM businesses
+      WHERE id = $1 AND id <> (SELECT business_id FROM platform_state WHERE singleton = true)`,
+    [businessId],
+  );
+  if (!target.rowCount) throw Object.assign(new Error("Client not found"), { status: 404 });
+  const connection = await getPool().connect();
+  try {
+    await connection.query("BEGIN");
+    await connection.query(
+      `INSERT INTO business_visual_settings(business_id,theme_key,occasion_title,occasion_message,automatic_holiday_themes,time_zone,updated_by_user_id,updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,now())
+       ON CONFLICT (business_id) DO UPDATE SET
+         theme_key = EXCLUDED.theme_key,
+         occasion_title = EXCLUDED.occasion_title,
+         occasion_message = EXCLUDED.occasion_message,
+         automatic_holiday_themes = EXCLUDED.automatic_holiday_themes,
+         time_zone = EXCLUDED.time_zone,
+         updated_by_user_id = EXCLUDED.updated_by_user_id,
+         updated_at = now()`,
+      [
+        businessId,
+        input.themeKey,
+        input.occasionTitle,
+        input.occasionMessage,
+        input.automaticHolidayThemes,
+        timeZone,
+        user.id,
+      ],
+    );
+    await connection.query(
+      `INSERT INTO audit_events(id,business_id,actor_user_id,action,target_type,target_id,metadata)
+       VALUES ($1,$2,$3,'platform.client.visual_settings.updated','business',$2,$4)`,
+      [
+        id("aud"),
+        businessId,
+        user.id,
+        JSON.stringify({
+          themeKey: input.themeKey,
+          automaticHolidayThemes: input.automaticHolidayThemes,
+          timeZone,
+        }),
+      ],
+    );
+    await connection.query("COMMIT");
+  } catch (error) {
+    await connection.query("ROLLBACK");
+    throw error;
+  } finally {
+    connection.release();
+  }
+  return getBusinessVisualSettings(businessId);
+}
+
 export async function updateVisualSettings(
   user: SessionUser,
   input: {
@@ -290,58 +431,68 @@ export async function updateVisualSettings(
   const timeZone = normalizeTimeZone(input.timeZone);
   if (timeZone !== input.timeZone)
     throw Object.assign(new Error("Time zone is invalid"), { status: 400 });
-  const result = await getPool().query<{
-    theme_key: ThemeKey;
-    occasion_title: string;
-    occasion_message: string;
-    automatic_holiday_themes: boolean;
-    time_zone: string;
-    updated_at: Date;
-  }>(
-    `INSERT INTO business_visual_settings(business_id, theme_key, occasion_title, occasion_message, automatic_holiday_themes, time_zone, updated_by_user_id, updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,now())
-     ON CONFLICT (business_id) DO UPDATE SET
-       theme_key = EXCLUDED.theme_key,
-       occasion_title = EXCLUDED.occasion_title,
-       occasion_message = EXCLUDED.occasion_message,
-       automatic_holiday_themes = EXCLUDED.automatic_holiday_themes,
-       time_zone = EXCLUDED.time_zone,
-       updated_by_user_id = EXCLUDED.updated_by_user_id,
-       updated_at = now()
-     RETURNING theme_key, occasion_title, occasion_message, automatic_holiday_themes, time_zone, updated_at`,
-    [
-      user.businessId,
-      input.themeKey,
-      input.occasionTitle,
-      input.occasionMessage,
-      input.automaticHolidayThemes,
-      timeZone,
-      user.id,
-    ],
-  );
-  await getPool().query(
-    `INSERT INTO audit_events(id,business_id,actor_user_id,action,target_type,target_id,metadata)
-     VALUES ($1,$2,$3,'business.visual_settings.updated','business',$2,$4)`,
-    [
-      id("aud"),
-      user.businessId,
-      user.id,
-      JSON.stringify({
-        themeKey: input.themeKey,
-        automaticHolidayThemes: input.automaticHolidayThemes,
+  const connection = await getPool().connect();
+  try {
+    await connection.query("BEGIN");
+    const result = await connection.query<{
+      theme_key: ThemeKey;
+      occasion_title: string;
+      occasion_message: string;
+      automatic_holiday_themes: boolean;
+      time_zone: string;
+      updated_at: Date;
+    }>(
+      `INSERT INTO business_visual_settings(business_id, theme_key, occasion_title, occasion_message, automatic_holiday_themes, time_zone, updated_by_user_id, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,now())
+       ON CONFLICT (business_id) DO UPDATE SET
+         theme_key = EXCLUDED.theme_key,
+         occasion_title = EXCLUDED.occasion_title,
+         occasion_message = EXCLUDED.occasion_message,
+         automatic_holiday_themes = EXCLUDED.automatic_holiday_themes,
+         time_zone = EXCLUDED.time_zone,
+         updated_by_user_id = EXCLUDED.updated_by_user_id,
+         updated_at = now()
+       RETURNING theme_key, occasion_title, occasion_message, automatic_holiday_themes, time_zone, updated_at`,
+      [
+        user.businessId,
+        input.themeKey,
+        input.occasionTitle,
+        input.occasionMessage,
+        input.automaticHolidayThemes,
         timeZone,
-      }),
-    ],
-  );
-  const row = result.rows[0]!;
-  return effectiveVisualSettings({
-    themeKey: row.theme_key,
-    occasionTitle: row.occasion_title,
-    occasionMessage: row.occasion_message,
-    automaticHolidayThemes: row.automatic_holiday_themes,
-    timeZone: normalizeTimeZone(row.time_zone),
-    updatedAt: row.updated_at.toISOString(),
-  });
+        user.id,
+      ],
+    );
+    await connection.query(
+      `INSERT INTO audit_events(id,business_id,actor_user_id,action,target_type,target_id,metadata)
+       VALUES ($1,$2,$3,'business.visual_settings.updated','business',$2,$4)`,
+      [
+        id("aud"),
+        user.businessId,
+        user.id,
+        JSON.stringify({
+          themeKey: input.themeKey,
+          automaticHolidayThemes: input.automaticHolidayThemes,
+          timeZone,
+        }),
+      ],
+    );
+    await connection.query("COMMIT");
+    const row = result.rows[0]!;
+    return effectiveVisualSettings({
+      themeKey: row.theme_key,
+      occasionTitle: row.occasion_title,
+      occasionMessage: row.occasion_message,
+      automaticHolidayThemes: row.automatic_holiday_themes,
+      timeZone: normalizeTimeZone(row.time_zone),
+      updatedAt: row.updated_at.toISOString(),
+    });
+  } catch (error) {
+    await connection.query("ROLLBACK");
+    throw error;
+  } finally {
+    connection.release();
+  }
 }
 
 export async function getOrCreateReferralLink(user: SessionUser): Promise<{
@@ -379,9 +530,14 @@ export async function getOrCreateReferralLink(user: SessionUser): Promise<{
 export async function getReferralEnrollment(referralCodeValue: string): Promise<{
   businessName: string;
   locationName: string;
+  visualSettings: PublicVisualSettings;
 }> {
-  const result = await getPool().query<{ business_name: string; location_name: string }>(
-    `SELECT b.name AS business_name, l.name AS location_name
+  const result = await getPool().query<{
+    business_id: string;
+    business_name: string;
+    location_name: string;
+  }>(
+    `SELECT b.id AS business_id, b.name AS business_name, l.name AS location_name
        FROM member_referral_links rfl
        JOIN businesses b ON b.id = rfl.business_id
        JOIN locations l ON l.id = rfl.location_id
@@ -393,7 +549,11 @@ export async function getReferralEnrollment(referralCodeValue: string): Promise<
   const row = result.rows[0];
   if (!row)
     throw Object.assign(new Error("This referral link is invalid or inactive"), { status: 404 });
-  return { businessName: row.business_name, locationName: row.location_name };
+  return {
+    businessName: row.business_name,
+    locationName: row.location_name,
+    visualSettings: publicVisualSettings(await getBusinessVisualSettings(row.business_id)),
+  };
 }
 
 export async function joinWithReferral(input: {

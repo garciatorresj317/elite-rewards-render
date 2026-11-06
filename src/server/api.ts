@@ -43,12 +43,15 @@ import {
 } from "./reward-management-service.ts";
 import {
   getBusinessEnrollment,
+  getClientVisualSettings,
   getOrCreateReferralLink,
   getReferralEnrollment,
   getVisualSettings,
   joinBusinessRewards,
   joinWithReferral,
+  publicVisualSettings,
   themeKeys,
+  updateClientVisualSettings,
   updateVisualSettings,
 } from "./experience-service.ts";
 import {
@@ -401,7 +404,8 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
     }
     if (url.pathname === "/api/visual-settings" && request.method === "GET") {
       requireRole(user, ["owner", "staff", "member"]);
-      return json(await getVisualSettings(user));
+      const settings = await getVisualSettings(user);
+      return json(user.role === "member" ? publicVisualSettings(settings) : settings);
     }
     if (url.pathname === "/api/admin/visual-settings" && request.method === "PUT") {
       requireRole(user, ["owner"]);
@@ -460,6 +464,41 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
         secondaryColor: color(payload["secondaryColor"], "Secondary color"),
       });
       return json({ branding });
+    }
+    const clientVisualSettingsMatch = url.pathname.match(
+      /^\/api\/admin\/clients\/([^/]+)\/visual-settings$/,
+    );
+    if (clientVisualSettingsMatch && request.method === "GET") {
+      requirePlatformAdmin(user);
+      const businessId = text(
+        decodeURIComponent(clientVisualSettingsMatch[1] ?? ""),
+        "Client",
+        8,
+        120,
+      );
+      return json(await getClientVisualSettings(user, businessId));
+    }
+    if (clientVisualSettingsMatch && request.method === "PUT") {
+      requirePlatformAdmin(user);
+      const businessId = text(
+        decodeURIComponent(clientVisualSettingsMatch[1] ?? ""),
+        "Client",
+        8,
+        120,
+      );
+      const payload = await body(request);
+      const themeKey = text(payload["themeKey"], "Theme", 3, 40);
+      if (!themeKeys.includes(themeKey as (typeof themeKeys)[number]))
+        throw Object.assign(new Error("Theme is invalid"), { status: 400 });
+      return json(
+        await updateClientVisualSettings(user, businessId, {
+          themeKey: themeKey as (typeof themeKeys)[number],
+          occasionTitle: text(payload["occasionTitle"] ?? "", "Occasion title", 0, 80),
+          occasionMessage: text(payload["occasionMessage"] ?? "", "Occasion message", 0, 220),
+          automaticHolidayThemes: payload["automaticHolidayThemes"] === true,
+          timeZone: text(payload["timeZone"] ?? "UTC", "Time zone", 1, 100),
+        }),
+      );
     }
     const clientLogoMatch = url.pathname.match(/^\/api\/admin\/clients\/([^/]+)\/logo$/);
     if (clientLogoMatch && request.method === "PUT") {

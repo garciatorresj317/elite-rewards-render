@@ -1,6 +1,11 @@
 import { createHash, randomBytes } from "node:crypto";
 import { createSession, hashPassword, newUserId, type SessionUser } from "./auth.ts";
 import { getPool, id } from "./database.ts";
+import {
+  getBusinessVisualSettings,
+  publicVisualSettings,
+  type PublicVisualSettings,
+} from "./experience-service.ts";
 
 const invitationLifetimeHours = 72;
 
@@ -53,6 +58,7 @@ export type PublicClientExperience = {
     purchaseUrl: string | null;
   }>;
   joinPath: string;
+  visualSettings: PublicVisualSettings;
 };
 
 function clientPath(businessId: string): string {
@@ -82,14 +88,16 @@ export async function getClientInvitation(token: string): Promise<{
   locationName: string;
   ownerName: string;
   ownerEmail: string;
+  visualSettings: PublicVisualSettings;
 }> {
   const result = await getPool().query<{
+    business_id: string;
     business_name: string;
     location_name: string;
     owner_name: string;
     owner_email: string;
   }>(
-    `SELECT b.name AS business_name, l.name AS location_name, ci.owner_name, ci.owner_email
+    `SELECT b.id AS business_id, b.name AS business_name, l.name AS location_name, ci.owner_name, ci.owner_email
        FROM client_invitations ci
        JOIN businesses b ON b.id = ci.business_id
        JOIN locations l ON l.id = ci.location_id
@@ -105,6 +113,7 @@ export async function getClientInvitation(token: string): Promise<{
     locationName: invitation.location_name,
     ownerName: invitation.owner_name,
     ownerEmail: invitation.owner_email,
+    visualSettings: publicVisualSettings(await getBusinessVisualSettings(invitation.business_id)),
   };
 }
 
@@ -571,7 +580,7 @@ export async function getPublicClientExperience(
   );
   const row = business.rows[0];
   if (!row) throw Object.assign(new Error("Client not found"), { status: 404 });
-  const [rewards, products] = await Promise.all([
+  const [rewards, products, visualSettings] = await Promise.all([
     getPool().query<{
       id: string;
       name: string;
@@ -603,6 +612,7 @@ export async function getPublicClientExperience(
         ORDER BY category, name, created_at, id`,
       [businessId],
     ),
+    getBusinessVisualSettings(businessId),
   ]);
   return {
     business: {
@@ -631,5 +641,6 @@ export async function getPublicClientExperience(
       purchaseUrl: item.purchase_url,
     })),
     joinPath: joinPath(row.id),
+    visualSettings: publicVisualSettings(visualSettings),
   };
 }

@@ -1,6 +1,11 @@
 import { createHash, randomBytes } from "node:crypto";
 import { createSession, hashPassword, newUserId, type SessionUser } from "./auth.ts";
 import { getPool, id } from "./database.ts";
+import {
+  getBusinessVisualSettings,
+  publicVisualSettings,
+  type PublicVisualSettings,
+} from "./experience-service.ts";
 
 const invitationLifetimeHours = 72;
 
@@ -33,14 +38,16 @@ export async function getMemberInvitation(token: string): Promise<{
   locationName: string;
   memberName: string;
   memberEmail: string;
+  visualSettings: PublicVisualSettings;
 }> {
   const result = await getPool().query<{
+    business_id: string;
     business_name: string;
     location_name: string;
     member_name: string;
     member_email: string;
   }>(
-    `SELECT b.name AS business_name, l.name AS location_name, mi.member_name, mi.member_email
+    `SELECT b.id AS business_id, b.name AS business_name, l.name AS location_name, mi.member_name, mi.member_email
        FROM member_invitations mi
        JOIN businesses b ON b.id = mi.business_id
        JOIN locations l ON l.id = mi.location_id
@@ -56,6 +63,7 @@ export async function getMemberInvitation(token: string): Promise<{
     locationName: invitation.location_name,
     memberName: invitation.member_name,
     memberEmail: invitation.member_email,
+    visualSettings: publicVisualSettings(await getBusinessVisualSettings(invitation.business_id)),
   };
 }
 

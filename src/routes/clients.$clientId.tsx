@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Gift, LogIn, PackageOpen, ScanLine, Sparkles, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BusinessBrand } from "@/components/BusinessBrand";
+import { ExperienceBackdrop } from "@/components/ExperienceTheme";
 import { useI18n } from "@/i18n";
 import { api, type PublicClientExperience } from "@/lib/api-client";
 export const Route = createFileRoute("/clients/$clientId")({
@@ -26,14 +27,15 @@ function ClientExperience() {
     "--client-secondary": data.business.secondary_color,
   } as React.CSSProperties;
   return (
-    <div className="client-public-page" style={style}>
-      <header className="client-public-header container-mid">
+    <div className={`client-public-page theme-${data.visualSettings.themeKey}`} style={style}>
+      <ExperienceBackdrop settings={data.visualSettings} audience="member" />
+      <header className="client-public-header container-mid themed-surface-content">
         <BusinessBrand business={data.business} />
         <Link to="/login" className="button button-dark">
           <LogIn size={17} /> {t("Member sign in")}
         </Link>
       </header>
-      <main className="client-public-main container-mid">
+      <main className="client-public-main container-mid themed-surface-content">
         <section className="client-public-hero">
           <span className="eyebrow">
             <Sparkles size={14} /> {t("Loyalty rewards")}

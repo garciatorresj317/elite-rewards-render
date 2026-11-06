@@ -7,10 +7,13 @@ import type pg from "pg";
 import type { SessionUser } from "./auth.ts";
 import { closeDatabase, setDatabasePoolForTests } from "./database.ts";
 import {
+  getBusinessVisualSettings,
+  getClientVisualSettings,
   getOrCreateReferralLink,
   getReferralEnrollment,
   getVisualSettings,
   joinWithReferral,
+  updateClientVisualSettings,
   updateVisualSettings,
 } from "./experience-service.ts";
 
@@ -71,7 +74,10 @@ describe("referrals and visual experiences", () => {
       await pool.query(await readFile(join(process.cwd(), "migrations", file), "utf8"));
     }
     await pool.query(
-      "INSERT INTO businesses(id,name) VALUES ('biz_one','First Business'),('biz_two','Other Business')",
+      "INSERT INTO businesses(id,name) VALUES ('biz_platform','Elite Rewards'),('biz_one','First Business'),('biz_two','Other Business')",
+    );
+    await pool.query(
+      "INSERT INTO platform_state(singleton,business_id) VALUES (true,'biz_platform')",
     );
     await pool.query(
       "INSERT INTO locations(id,business_id,name) VALUES ('loc_one','biz_one','Main Store'),('loc_two','biz_two','Other Store')",
@@ -216,6 +222,39 @@ describe("referrals and visual experiences", () => {
     assert.equal(settings.themeKey, "elite-signature");
     assert.equal(settings.automaticThemeActive, false);
     assert.equal(saved.timeZone, "America/Los_Angeles");
+  });
+
+  it("lets only the platform administrator control a client holiday-theme toggle", async () => {
+    const platformOwner: SessionUser = { ...owner, platformAdmin: true };
+    const enabled = await updateClientVisualSettings(platformOwner, otherMember.businessId, {
+      themeKey: "community-event",
+      occasionTitle: "Community weekend",
+      occasionMessage: "Welcome to our neighborhood celebration.",
+      automaticHolidayThemes: true,
+      timeZone: "America/New_York",
+    });
+    assert.equal(enabled.automaticHolidayThemes, true);
+    assert.equal(
+      (await getClientVisualSettings(platformOwner, otherMember.businessId)).timeZone,
+      "America/New_York",
+    );
+    const remembrance = await getBusinessVisualSettings(
+      otherMember.businessId,
+      new Date("2026-09-11T16:00:00Z"),
+    );
+    assert.equal(remembrance.themeKey, "remembrance-911");
+    assert.equal(remembrance.automaticThemeActive, true);
+    await assert.rejects(
+      () =>
+        updateClientVisualSettings(owner, otherMember.businessId, {
+          themeKey: "elite-signature",
+          occasionTitle: "",
+          occasionMessage: "",
+          automaticHolidayThemes: false,
+          timeZone: "UTC",
+        }),
+      /Platform administrator access required/,
+    );
   });
 
   it("rejects unsupported business time zones", async () => {
