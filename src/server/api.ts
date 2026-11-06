@@ -20,6 +20,7 @@ import {
   getClientLogo,
   getPublicClientExperience,
   listClients,
+  setClientActive,
   updateClientBranding,
   updateClientLogo,
 } from "./clients-service.ts";
@@ -402,6 +403,15 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
         ownerEmail: text(payload["ownerEmail"], "Owner email", 5, 254).toLowerCase(),
       });
       return json(result, 201);
+    }
+    const clientStatusMatch = url.pathname.match(/^\/api\/admin\/clients\/([^/]+)\/status$/);
+    if (clientStatusMatch && request.method === "PUT") {
+      requirePlatformAdmin(user);
+      const businessId = text(decodeURIComponent(clientStatusMatch[1] ?? ""), "Client", 8, 120);
+      const payload = await body(request);
+      if (typeof payload["active"] !== "boolean")
+        throw Object.assign(new Error("Active status is required"), { status: 400 });
+      return json({ client: await setClientActive(user, businessId, payload["active"]) });
     }
     const clientBrandingMatch = url.pathname.match(/^\/api\/admin\/clients\/([^/]+)\/branding$/);
     if (clientBrandingMatch && request.method === "GET") {

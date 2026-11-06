@@ -64,9 +64,18 @@ export function clearSessionCookie(): string {
 
 export async function createSession(client: PoolClient, userId: string): Promise<string> {
   const token = randomBytes(32).toString("base64url");
+  const access = await client.query<{ access_version: string }>(
+    `SELECT b.access_version
+       FROM users u JOIN businesses b ON b.id = u.business_id
+      WHERE u.id = $1 AND u.active = true AND b.active = true`,
+    [userId],
+  );
+  if (!access.rows[0])
+    throw Object.assign(new Error("This rewards program is unavailable"), { status: 403 });
   await client.query(
-    "INSERT INTO sessions(token_hash, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')",
-    [tokenHash(token), userId],
+    `INSERT INTO sessions(token_hash, user_id, expires_at, business_access_version)
+     VALUES ($1, $2, now() + interval '7 days', $3)`,
+    [tokenHash(token), userId, access.rows[0].access_version],
   );
   return token;
 }
@@ -91,12 +100,12 @@ export async function getSessionUser(request: Request): Promise<SessionUser | nu
     platform_admin: boolean;
   }>(
     `SELECT u.id, u.business_id, u.location_id, u.role, u.name, u.email, u.member_code,
-            EXISTS (
-              SELECT 1 FROM platform_administrator pa
-               WHERE pa.singleton = true AND pa.user_id = u.id
-            ) AS platform_admin
+            (pa.user_id IS NOT NULL) AS platform_admin
        FROM sessions s JOIN users u ON u.id = s.user_id
-      WHERE s.token_hash = $1 AND s.expires_at > now() AND u.active = true`,
+       JOIN businesses b ON b.id = u.business_id
+       LEFT JOIN platform_administrator pa ON pa.singleton = true AND pa.user_id = u.id
+      WHERE s.token_hash = $1 AND s.expires_at > now() AND u.active = true AND b.active = true
+        AND s.business_access_version = b.access_version`,
     [tokenHash(token)],
   );
   const user = result.rows[0];
@@ -145,12 +154,11 @@ export async function authenticate(
       locked_until: Date | null;
     }>(
       `SELECT u.id, u.business_id, u.location_id, u.role, u.name, u.email, u.member_code,
-              EXISTS (
-                SELECT 1 FROM platform_administrator pa
-                 WHERE pa.singleton = true AND pa.user_id = u.id
-              ) AS platform_admin,
+              (pa.user_id IS NOT NULL) AS platform_admin,
               u.password_hash, u.failed_login_count, u.locked_until
-         FROM users u WHERE lower(u.email) = lower($1) AND u.active = true FOR UPDATE`,
+         FROM users u JOIN businesses b ON b.id = u.business_id
+         LEFT JOIN platform_administrator pa ON pa.singleton = true AND pa.user_id = u.id
+        WHERE lower(u.email) = lower($1) AND u.active = true AND b.active = true`,
       [email],
     );
     const candidate = result.rows[0];

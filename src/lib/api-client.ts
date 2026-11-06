@@ -64,6 +64,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  setClientActive: (businessId: string, active: boolean) =>
+    request<{ client: ClientSummary }>(
+      `/api/admin/clients/${encodeURIComponent(businessId)}/status`,
+      { method: "PUT", body: JSON.stringify({ active }) },
+    ),
   clientBranding: (businessId: string) =>
     request<{ branding: ClientBranding }>(
       `/api/admin/clients/${encodeURIComponent(businessId)}/branding`,
@@ -311,7 +316,7 @@ export type ClientSummary = {
   locationName: string;
   ownerName: string;
   ownerEmail: string;
-  status: "active" | "invited";
+  status: "active" | "invited" | "suspended";
   members: number;
   createdAt: string;
   logoUrl: string | null;

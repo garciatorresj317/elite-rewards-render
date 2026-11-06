@@ -30,6 +30,7 @@ describe("business Join Rewards enrollment", () => {
       "002_platform_clients.sql",
       "004_referrals_and_visual_themes.sql",
       "006_editable_rewards.sql",
+      "010_client_suspension.sql",
     ]) {
       await pool.query(await readFile(join(process.cwd(), "migrations", file), "utf8"));
     }
@@ -99,6 +100,30 @@ describe("business Join Rewards enrollment", () => {
           requestSubject: "198.51.100.3",
         }),
       /unavailable/,
+    );
+  });
+
+  it("blocks a suspended client's public page and self-enrollment without deleting the tenant", async () => {
+    await pool.query(
+      "UPDATE businesses SET active = false, suspended_at = now() WHERE id = 'biz_client'",
+    );
+    await assert.rejects(() => getBusinessEnrollment("biz_client"), /unavailable/);
+    await assert.rejects(
+      () =>
+        joinBusinessRewards({
+          businessId: "biz_client",
+          name: "Denied Member",
+          email: "suspended@example.com",
+          password: "secure-member-password",
+          requestSubject: "198.51.100.4",
+        }),
+      /unavailable/,
+    );
+    assert.equal(
+      Number(
+        (await pool.query("SELECT count(*) FROM businesses WHERE id = 'biz_client'")).rows[0].count,
+      ),
+      1,
     );
   });
 });

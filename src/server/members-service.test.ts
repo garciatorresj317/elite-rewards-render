@@ -54,6 +54,7 @@ describe("member enrollment", () => {
       "002_platform_clients.sql",
       "003_member_enrollment.sql",
       "004_referrals_and_visual_themes.sql",
+      "010_client_suspension.sql",
     ]) {
       await pool.query(await readFile(join(process.cwd(), "migrations", file), "utf8"));
     }
@@ -131,6 +132,23 @@ describe("member enrollment", () => {
           locationId: "loc_two",
         }),
       /Location not found/,
+    );
+  });
+
+  it("blocks pending member invitation activation while the client is suspended", async () => {
+    const result = await createMemberInvitation(owner, {
+      name: "Suspended Invite",
+      email: "suspended-invite@example.com",
+    });
+    const token = new URL(`https://elite.test${result.activationPath}`).searchParams.get("token");
+    assert.ok(token);
+    await pool.query(
+      "UPDATE businesses SET active = false, suspended_at = now() WHERE id = 'biz_one'",
+    );
+    await assert.rejects(() => getMemberInvitation(token), /invalid or expired/);
+    await assert.rejects(
+      () => activateMember(token, "member-secure-password"),
+      /invalid or expired/,
     );
   });
 });

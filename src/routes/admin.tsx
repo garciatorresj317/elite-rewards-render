@@ -80,6 +80,7 @@ function localizeStatus(status: string, tr: TranslatePair) {
   const labels: Record<string, [string, string]> = {
     active: ["Active", "Activo"],
     invited: ["Invited", "Invitado"],
+    suspended: ["Suspended", "Suspendido"],
     hidden: ["Hidden", "Oculta"],
     archived: ["Archived", "Archivada"],
   };
@@ -168,6 +169,7 @@ function Admin() {
     secondaryColor: "#FFE27A",
   });
   const [logoUploading, setLogoUploading] = useState(false);
+  const [clientStatusBusyId, setClientStatusBusyId] = useState<string | null>(null);
   const [activationPath, setActivationPath] = useState("");
   const [memberModal, setMemberModal] = useState(false);
   const [memberActivationPath, setMemberActivationPath] = useState("");
@@ -298,6 +300,42 @@ function Admin() {
       setClientForm({ businessName: "", locationName: "", ownerName: "", ownerEmail: "" });
     } catch (cause) {
       setError(tr("Client creation failed", "No se pudo crear el cliente"));
+    }
+  };
+  const toggleClientActive = async (client: ClientSummary) => {
+    const activate = client.status === "suspended";
+    const confirmed = window.confirm(
+      activate
+        ? tr(
+            `Activate ${client.name}? Its owners, staff, members, public page, and enrollment links will work again.`,
+            `¿Activar ${client.name}? Sus propietarios, personal, miembros, página pública y enlaces de inscripción volverán a funcionar.`,
+          )
+        : tr(
+            `Suspend ${client.name}? Access and enrollment will stop immediately, but all client data will be preserved.`,
+            `¿Suspender ${client.name}? El acceso y la inscripción se detendrán de inmediato, pero se conservarán todos los datos del cliente.`,
+          ),
+    );
+    if (!confirmed) return;
+    setError("");
+    try {
+      setClientStatusBusyId(client.id);
+      const result = await api.setClientActive(client.id, activate);
+      setClients((current) =>
+        current.map((item) => (item.id === result.client.id ? result.client : item)),
+      );
+      setNotice(
+        activate
+          ? tr(`${client.name} was activated.`, `Se activó ${client.name}.`)
+          : tr(`${client.name} was suspended.`, `Se suspendió ${client.name}.`),
+      );
+    } catch {
+      setError(
+        activate
+          ? tr("Client activation failed", "No se pudo activar el cliente")
+          : tr("Client suspension failed", "No se pudo suspender el cliente"),
+      );
+    } finally {
+      setClientStatusBusyId(null);
     }
   };
   const openClientEditor = async (client: ClientSummary) => {
@@ -941,6 +979,23 @@ function Admin() {
                         onClick={() => void openClientEditor(client)}
                       >
                         <Palette size={16} /> {tr("Customize client", "Personalizar cliente")}
+                      </button>
+                      <button
+                        className={`client-customize client-status-action ${client.status === "suspended" ? "activate" : "suspend"}`}
+                        onClick={() => void toggleClientActive(client)}
+                        disabled={clientStatusBusyId === client.id}
+                      >
+                        {clientStatusBusyId === client.id ? (
+                          tr("Updating…", "Actualizando…")
+                        ) : client.status === "suspended" ? (
+                          <>
+                            <Check size={16} /> {tr("Activate client", "Activar cliente")}
+                          </>
+                        ) : (
+                          <>
+                            <ShieldCheck size={16} /> {tr("Suspend client", "Suspender cliente")}
+                          </>
+                        )}
                       </button>
                     </div>
                   </article>

@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { after, before, describe, it } from "node:test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { DataType, newDb } from "pg-mem";
 import type pg from "pg";
-import type { SessionUser } from "./auth.ts";
+import { authenticate, getSessionUser, type SessionUser } from "./auth.ts";
 import {
   activateClient,
   createClient,
@@ -13,6 +14,7 @@ import {
   getClientLogo,
   getPublicClientExperience,
   listClients,
+  setClientActive,
   updateClientBranding,
   updateClientLogo,
 } from "./clients-service.ts";
@@ -81,6 +83,9 @@ describe("platform client management", () => {
         join(process.cwd(), "migrations", "009_public_enrollment_and_products.sql"),
         "utf8",
       ),
+    );
+    await pool.query(
+      await readFile(join(process.cwd(), "migrations", "010_client_suspension.sql"), "utf8"),
     );
     await pool.query("UPDATE users SET platform_admin = false WHERE id = 'usr_ordinary'");
     await pool.query("ALTER TABLE businesses ADD COLUMN logo_url text");
@@ -232,6 +237,69 @@ describe("platform client management", () => {
         }),
       /does not match/,
     );
+  });
+
+  it("lets only the platform administrator suspend and reactivate a client without deleting data", async () => {
+    const client = (await listClients(platformOwner)).find((item) => item.name === "Big Smoke");
+    assert.ok(client);
+    const login = await authenticate("client@example.com", "client-owner-secure-password");
+    assert.ok(login);
+    await pool.query(
+      "INSERT INTO sessions(token_hash,user_id,expires_at) SELECT 'client-session',id,now() + interval '7 days' FROM users WHERE business_id = $1 LIMIT 1",
+      [client.id],
+    );
+    await assert.rejects(
+      () => setClientActive(ordinaryOwner, client.id, false),
+      /Platform administrator access required/,
+    );
+    await assert.rejects(
+      () => setClientActive(platformOwner, platformOwner.businessId, false),
+      /Client not found/,
+    );
+    const suspended = await setClientActive(platformOwner, client.id, false);
+    assert.equal(suspended.status, "suspended");
+    assert.equal(await authenticate("client@example.com", "client-owner-secure-password"), null);
+    assert.equal(
+      await getSessionUser(
+        new Request("https://elite.test/api/auth/session", {
+          headers: { cookie: `elite_session=${login.token}` },
+        }),
+      ),
+      null,
+    );
+    const sessions = await pool.query<{ count: string }>(
+      "SELECT count(*) FROM sessions WHERE user_id IN (SELECT id FROM users WHERE business_id = $1)",
+      [client.id],
+    );
+    assert.equal(Number(sessions.rows[0]?.count), 0);
+    const rewards = await pool.query<{ count: string }>(
+      "SELECT count(*) FROM rewards WHERE business_id = $1",
+      [client.id],
+    );
+    assert.equal(Number(rewards.rows[0]?.count), 3);
+    await assert.rejects(() => getPublicClientExperience(client.id), /Client not found/);
+    const audit = await pool.query<{ action: string }>(
+      "SELECT action FROM audit_events WHERE business_id = $1 ORDER BY created_at DESC LIMIT 1",
+      [client.id],
+    );
+    assert.equal(audit.rows[0]?.action, "platform.client.suspended");
+    await pool.query(
+      `INSERT INTO sessions(token_hash,user_id,expires_at,business_access_version)
+       SELECT $1,id,now() + interval '7 days',1 FROM users WHERE business_id = $2 LIMIT 1`,
+      [createHash("sha256").update(login.token).digest("hex"), client.id],
+    );
+    const activated = await setClientActive(platformOwner, client.id, true);
+    assert.equal(activated.status, "active");
+    assert.equal(
+      await getSessionUser(
+        new Request("https://elite.test/api/auth/session", {
+          headers: { cookie: `elite_session=${login.token}` },
+        }),
+      ),
+      null,
+    );
+    assert.ok(await authenticate("client@example.com", "client-owner-secure-password"));
+    assert.equal((await getPublicClientExperience(client.id)).business.business_name, "Big Smoke");
   });
 
   it("rejects a duplicate pending owner email", async () => {

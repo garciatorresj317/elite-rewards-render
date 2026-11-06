@@ -32,6 +32,7 @@ Elite Rewards uses an explicit three-level operating model: one immutable platfo
 - Member-owned referral enrollment with tenant isolation, hashed stable links, persistent abuse limits, and zero-point wallet creation.
 - Permanent tenant-specific Join Rewards links for customer self-enrollment with zero-point wallet creation; the Elite platform tenant cannot be enrolled into.
 - Separate tenant-owned product catalogs managed by business owners or the sole platform administrator; published products appear on public client and authenticated member pages but never enter reward redemption or points inventory.
+- Platform-admin-only client suspension and reactivation from every Clients card, with durable status, audit events, immediate tenant-session revocation, preserved data, and fail-closed login, public-page, invitation, direct-enrollment, and referral access.
 - Per-business manual and automatic holiday themes, resolved server-side in the business time zone without overwriting manual settings.
 - Fifty-five passing unit/integration tests, including owner-only setup, customer self-enrollment, member/referral isolation, product tenant isolation, automatic holiday boundaries, origin rejection before database work, and production ledger behavior.
 

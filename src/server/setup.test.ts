@@ -35,6 +35,9 @@ describe("one-time production setup", () => {
     await pool.query(
       await readFile(join(process.cwd(), "migrations", "002_platform_clients.sql"), "utf8"),
     );
+    await pool.query(
+      await readFile(join(process.cwd(), "migrations", "010_client_suspension.sql"), "utf8"),
+    );
     process.env["SETUP_TOKEN"] = setupToken;
   });
 

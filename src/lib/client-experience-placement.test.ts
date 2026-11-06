@@ -16,4 +16,17 @@ describe("client customization placement", () => {
     assert.ok(automaticStart >= 0 && liveMessage > automaticStart && liveMessage < themeGrid);
     assert.equal((admin.match(/Optional live message/g) ?? []).length, 1);
   });
+
+  it("renders a bilingual suspend or activate control on every mapped client card", async () => {
+    const admin = await readFile(join(process.cwd(), "src", "routes", "admin.tsx"), "utf8");
+    const cards = admin.indexOf("clients.map((client) =>");
+    const action = admin.indexOf("client-status-action", cards);
+    const end = admin.indexOf("</article>", cards);
+    assert.ok(cards >= 0 && action > cards && action < end);
+    assert.match(admin, /Suspend client/);
+    assert.match(admin, /Suspender cliente/);
+    assert.match(admin, /Activate client/);
+    assert.match(admin, /Activar cliente/);
+    assert.match(admin, /suspended: \["Suspended", "Suspendido"\]/);
+  });
 });

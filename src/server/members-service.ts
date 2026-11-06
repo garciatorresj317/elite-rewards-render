@@ -44,7 +44,8 @@ export async function getMemberInvitation(token: string): Promise<{
        FROM member_invitations mi
        JOIN businesses b ON b.id = mi.business_id
        JOIN locations l ON l.id = mi.location_id
-      WHERE mi.token_hash = $1 AND mi.accepted_at IS NULL AND mi.expires_at > now()`,
+      WHERE mi.token_hash = $1 AND mi.accepted_at IS NULL AND mi.expires_at > now()
+        AND b.active = true`,
     [tokenHash(token)],
   );
   const invitation = result.rows[0];
@@ -72,9 +73,11 @@ export async function activateMember(
       member_name: string;
       member_email: string;
     }>(
-      `SELECT id, business_id, location_id, member_name, member_email
-         FROM member_invitations
-        WHERE token_hash = $1 AND accepted_at IS NULL AND expires_at > now()
+      `SELECT mi.id, mi.business_id, mi.location_id, mi.member_name, mi.member_email
+         FROM member_invitations mi
+         JOIN businesses b ON b.id = mi.business_id
+        WHERE mi.token_hash = $1 AND mi.accepted_at IS NULL AND mi.expires_at > now()
+          AND b.active = true
         FOR UPDATE`,
       [tokenHash(token)],
     );
@@ -175,6 +178,12 @@ export async function createMemberInvitation(
   const invitationToken = randomBytes(32).toString("base64url");
   try {
     await client.query("BEGIN");
+    const business = await client.query(
+      "SELECT 1 FROM businesses WHERE id = $1 AND active = true FOR UPDATE",
+      [user.businessId],
+    );
+    if (!business.rowCount)
+      throw Object.assign(new Error("This rewards program is unavailable"), { status: 404 });
     const locationId = input.locationId ?? user.locationId;
     if (!locationId)
       throw Object.assign(new Error("A location is required to enroll a member"), { status: 400 });

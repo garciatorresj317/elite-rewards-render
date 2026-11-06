@@ -140,6 +140,7 @@ export async function getBusinessEnrollment(businessId: string): Promise<{
        FROM businesses b
        JOIN locations l ON l.business_id = b.id
       WHERE b.id = $1
+        AND b.active = true
         AND b.id <> (SELECT business_id FROM platform_state WHERE singleton = true)
       ORDER BY l.created_at, l.id
       LIMIT 1`,
@@ -187,6 +188,7 @@ export async function joinBusinessRewards(input: {
          FROM businesses b
          JOIN locations l ON l.business_id = b.id
         WHERE b.id = $1
+          AND b.active = true
           AND b.id <> (SELECT business_id FROM platform_state WHERE singleton = true)
         ORDER BY l.created_at, l.id
         LIMIT 1`,
@@ -347,6 +349,12 @@ export async function getOrCreateReferralLink(user: SessionUser): Promise<{
   referralCount: number;
 }> {
   requireMember(user);
+  const business = await getPool().query(
+    "SELECT 1 FROM businesses WHERE id = $1 AND active = true",
+    [user.businessId],
+  );
+  if (!business.rowCount)
+    throw Object.assign(new Error("This rewards program is unavailable"), { status: 404 });
   if (!user.locationId)
     throw Object.assign(new Error("Member location is unavailable"), { status: 409 });
   const code = referralCode(user.id, user.businessId);
@@ -378,7 +386,8 @@ export async function getReferralEnrollment(referralCodeValue: string): Promise<
        JOIN businesses b ON b.id = rfl.business_id
        JOIN locations l ON l.id = rfl.location_id
        JOIN users u ON u.id = rfl.member_id
-      WHERE rfl.token_hash = $1 AND rfl.active = true AND u.active = true AND u.role = 'member'`,
+      WHERE rfl.token_hash = $1 AND rfl.active = true AND u.active = true
+        AND u.role = 'member' AND b.active = true`,
     [tokenHash(referralCodeValue)],
   );
   const row = result.rows[0];
@@ -409,7 +418,9 @@ export async function joinWithReferral(input: {
       `SELECT rfl.id, rfl.business_id, rfl.location_id, rfl.member_id
          FROM member_referral_links rfl
          JOIN users u ON u.id = rfl.member_id
-        WHERE rfl.token_hash = $1 AND rfl.active = true AND u.active = true AND u.role = 'member'
+         JOIN businesses b ON b.id = rfl.business_id
+        WHERE rfl.token_hash = $1 AND rfl.active = true AND u.active = true
+          AND u.role = 'member' AND b.active = true
         FOR UPDATE`,
       [tokenHash(input.referralCode)],
     );

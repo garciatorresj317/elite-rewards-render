@@ -66,6 +66,7 @@ describe("referrals and visual experiences", () => {
       "003_member_enrollment.sql",
       "004_referrals_and_visual_themes.sql",
       "005_automatic_holiday_themes.sql",
+      "010_client_suspension.sql",
     ]) {
       await pool.query(await readFile(join(process.cwd(), "migrations", file), "utf8"));
     }
@@ -133,6 +134,31 @@ describe("referrals and visual experiences", () => {
           requestSubject: "203.0.113.11",
         }),
       /could not be completed/,
+    );
+  });
+
+  it("disables referral enrollment while the client business is suspended", async () => {
+    const code = new URL(
+      `https://elite.test${(await getOrCreateReferralLink(otherMember)).sharePath}`,
+    ).searchParams.get("ref");
+    assert.ok(code);
+    await pool.query(
+      "UPDATE businesses SET active = false, suspended_at = now() WHERE id = 'biz_two'",
+    );
+    await assert.rejects(() => getReferralEnrollment(code), /invalid or inactive/);
+    await assert.rejects(
+      () =>
+        joinWithReferral({
+          referralCode: code,
+          name: "Denied Friend",
+          email: "denied-friend@example.com",
+          password: "secure-friend-password",
+          requestSubject: "203.0.113.12",
+        }),
+      /invalid or inactive/,
+    );
+    await pool.query(
+      "UPDATE businesses SET active = true, suspended_at = NULL, suspended_by_user_id = NULL WHERE id = 'biz_two'",
     );
   });
 

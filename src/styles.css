@@ -584,6 +584,7 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 .client-status { padding: 5px 9px; border-radius: 999px; text-transform: capitalize; font-size: 11px; font-weight: 800; }
 .client-status.active { color: #76ff8b; border: 1px solid rgba(35,220,67,.45); background: rgba(18,112,33,.24); }
 .client-status.invited { color: var(--gold-pale); border: 1px solid var(--gold-line); background: rgba(215,151,0,.13); }
+.client-status.suspended { color: #ff8f82; border: 1px solid rgba(255,93,74,.5); background: rgba(125,25,16,.28); }
 .client-modal { max-height: min(90vh, 760px); overflow-y: auto; }
 .activation-result { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--gold-line); border-radius: 12px; background: rgba(246,185,0,.06); }
 .activation-result strong { color: var(--gold-pale); font: 700 21px var(--serif); }
@@ -774,6 +775,8 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 /* Client verification, durable logo upload, and NFC destinations */
 .client-card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 16px; }
 .client-card-actions .client-customize { margin-top: 0; text-decoration: none; }
+.client-status-action.suspend { color: #ffb0a6; border-color: rgba(255,93,74,.48); background: rgba(125,25,16,.18); }
+.client-status-action.activate { color: #92ffa2; border-color: rgba(35,220,67,.48); background: rgba(18,112,33,.18); }
 .client-logo-upload { position: relative; display: grid; gap: 8px; }
 .client-logo-upload > span { min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 9px; border: 1px dashed var(--gold-line); border-radius: 10px; color: var(--gold-pale); background: rgba(246,185,0,.07); cursor: pointer; }
 .client-logo-upload input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }

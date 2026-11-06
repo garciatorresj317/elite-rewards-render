@@ -10,7 +10,7 @@ export type ClientSummary = {
   locationName: string;
   ownerName: string;
   ownerEmail: string;
-  status: "active" | "invited";
+  status: "active" | "invited" | "suspended";
   members: number;
   createdAt: string;
   logoUrl: string | null;
@@ -92,7 +92,8 @@ export async function getClientInvitation(token: string): Promise<{
        FROM client_invitations ci
        JOIN businesses b ON b.id = ci.business_id
        JOIN locations l ON l.id = ci.location_id
-      WHERE ci.token_hash = $1 AND ci.accepted_at IS NULL AND ci.expires_at > now()`,
+      WHERE ci.token_hash = $1 AND ci.accepted_at IS NULL AND ci.expires_at > now()
+        AND b.active = true`,
     [tokenHash(token)],
   );
   const invitation = result.rows[0];
@@ -120,9 +121,11 @@ export async function activateClient(
       owner_name: string;
       owner_email: string;
     }>(
-      `SELECT id, business_id, location_id, owner_name, owner_email
-         FROM client_invitations
-        WHERE token_hash = $1 AND accepted_at IS NULL AND expires_at > now()
+      `SELECT ci.id, ci.business_id, ci.location_id, ci.owner_name, ci.owner_email
+         FROM client_invitations ci
+         JOIN businesses b ON b.id = ci.business_id
+        WHERE ci.token_hash = $1 AND ci.accepted_at IS NULL AND ci.expires_at > now()
+          AND b.active = true
         FOR UPDATE`,
       [tokenHash(token)],
     );
@@ -174,8 +177,9 @@ export async function listClients(user: SessionUser): Promise<ClientSummary[]> {
     primary_color: string;
     secondary_color: string;
     has_logo: boolean;
+    active: boolean;
   }>(
-    `SELECT id, name, created_at, logo_url, primary_color, secondary_color,
+    `SELECT id, name, created_at, logo_url, primary_color, secondary_color, active,
             (logo_data IS NOT NULL) AS has_logo
        FROM businesses
       WHERE id <> (SELECT business_id FROM platform_state WHERE singleton = true)
@@ -209,7 +213,7 @@ export async function listClients(user: SessionUser): Promise<ClientSummary[]> {
       locationName: location.rows[0]?.name ?? "No location",
       ownerName: businessOwner?.name ?? pendingInvitation?.owner_name ?? "Owner pending",
       ownerEmail: businessOwner?.email ?? pendingInvitation?.owner_email ?? "",
-      status: businessOwner ? "active" : "invited",
+      status: business.active ? (businessOwner ? "active" : "invited") : "suspended",
       members: Number(members.rows[0]?.count ?? 0),
       createdAt: business.created_at.toISOString(),
       logoUrl: business.has_logo ? logoPath(business.id) : business.logo_url,
@@ -311,6 +315,71 @@ export async function createClient(
       },
       activationPath: `/activate-client?token=${encodeURIComponent(invitationToken)}`,
     };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function setClientActive(
+  user: SessionUser,
+  businessId: string,
+  active: boolean,
+): Promise<ClientSummary> {
+  requirePlatformAdmin(user);
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    const result = await client.query<{ active: boolean; access_version: string }>(
+      `SELECT active, access_version FROM businesses
+        WHERE id = $1
+          AND id <> (SELECT business_id FROM platform_state WHERE singleton = true)
+        FOR UPDATE`,
+      [businessId],
+    );
+    const current = result.rows[0];
+    if (!current) throw Object.assign(new Error("Client not found"), { status: 404 });
+    if (current.active !== active) {
+      await client.query(
+        `UPDATE businesses
+            SET active = $2,
+                suspended_at = CASE WHEN $2 THEN NULL ELSE now() END,
+                suspended_by_user_id = CASE WHEN $2 THEN NULL ELSE $3 END,
+                access_version = access_version + 1,
+                updated_at = now()
+          WHERE id = $1`,
+        [businessId, active, user.id],
+      );
+      const invalidated = await client.query(
+        `DELETE FROM sessions
+          WHERE user_id IN (SELECT id FROM users WHERE business_id = $1)`,
+        [businessId],
+      );
+      await client.query(
+        `INSERT INTO audit_events(id,business_id,actor_user_id,action,target_type,target_id,metadata)
+         VALUES ($1,$2,$3,$4,'business',$2,$5)`,
+        [
+          id("aud"),
+          businessId,
+          user.id,
+          active ? "platform.client.activated" : "platform.client.suspended",
+          JSON.stringify({
+            active,
+            previousAccessVersion: Number(current.access_version),
+            newAccessVersion: Number(current.access_version) + 1,
+            invalidatedSessions: invalidated.rowCount ?? 0,
+          }),
+        ],
+      );
+    }
+    await client.query("COMMIT");
+    const updated = (await listClients(user)).find(
+      (clientSummary) => clientSummary.id === businessId,
+    );
+    if (!updated) throw Object.assign(new Error("Client not found"), { status: 404 });
+    return updated;
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
@@ -493,6 +562,7 @@ export async function getPublicClientExperience(
        FROM businesses b
        LEFT JOIN locations l ON l.business_id = b.id
       WHERE b.id = $1
+        AND b.active = true
         AND b.id <> (SELECT business_id FROM platform_state WHERE singleton = true)
       ORDER BY l.created_at, l.id
       LIMIT 1`,
