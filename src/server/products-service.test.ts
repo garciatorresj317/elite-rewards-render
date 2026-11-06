@@ -10,10 +10,12 @@ import {
   archiveClientProduct,
   createClientProduct,
   createProduct,
+  getProductImage,
   listClientProducts,
   listManagedProducts,
   listPublicProducts,
   updateProduct,
+  updateProductImage,
 } from "./products-service.ts";
 
 const platformOwner: SessionUser = {
@@ -49,6 +51,7 @@ const draft = {
   description: "A business product for members.",
   category: "Featured",
   priceCents: 1599,
+  pointsCost: 750,
   imageUrl: "https://example.com/product.webp",
   purchaseUrl: "https://example.com/buy",
   active: true,
@@ -68,6 +71,12 @@ describe("tenant product catalogs", () => {
       returns: DataType.integer,
       implementation: (value: string) => value.length,
     });
+    memory.public.registerFunction({
+      name: "octet_length",
+      args: [DataType.bytea],
+      returns: DataType.integer,
+      implementation: (value: Buffer) => value.length,
+    });
     const adapter = memory.adapters.createPg();
     pool = new adapter.Pool() as unknown as pg.Pool;
     setDatabasePoolForTests(pool);
@@ -75,6 +84,8 @@ describe("tenant product catalogs", () => {
       "001_production_rewards.sql",
       "002_platform_clients.sql",
       "009_public_enrollment_and_products.sql",
+      "010_client_suspension.sql",
+      "011_product_images_and_points.sql",
     ]) {
       await pool.query(await readFile(join(process.cwd(), "migrations", file), "utf8"));
     }
@@ -110,6 +121,7 @@ describe("tenant product catalogs", () => {
   it("lets business owners publish products only to their tenant", async () => {
     const created = await createProduct(clientOwner, draft);
     assert.equal(created.name, draft.name);
+    assert.equal(created.pointsCost, 750);
     assert.equal((await listManagedProducts(clientOwner)).length, 1);
     assert.equal((await listManagedProducts(otherOwner)).length, 0);
     assert.equal((await listPublicProducts(clientOwner.businessId)).length, 1);
@@ -118,6 +130,24 @@ describe("tenant product catalogs", () => {
       name: "Updated Product",
     });
     assert.equal(updated.name, "Updated Product");
+    assert.equal((await listPublicProducts(clientOwner.businessId))[0]?.pointsCost, 750);
+    // Use an ASCII-only WebP signature because pg-mem's bytea adapter rewrites non-UTF-8
+    // bytes; real PostgreSQL preserves the uploaded Buffer exactly.
+    const webp = Buffer.from("RIFF0000WEBPVP8 ", "ascii");
+    const imageProduct = await updateProductImage(clientOwner, created.id, {
+      mime: "image/webp",
+      data: webp,
+    });
+    assert.equal(imageProduct.imageUrl, `/api/public/products/${created.id}/image`);
+    assert.deepEqual(await getProductImage(created.id), { mime: "image/webp", data: webp });
+    await assert.rejects(
+      () =>
+        updateProductImage(otherOwner, created.id, {
+          mime: "image/webp",
+          data: webp,
+        }),
+      /Product not found/,
+    );
     await assert.rejects(() => updateProduct(otherOwner, created.id, draft), /Product not found/);
   });
 

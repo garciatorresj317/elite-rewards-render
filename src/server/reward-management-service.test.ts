@@ -73,6 +73,12 @@ describe("editable business rewards", () => {
       returns: DataType.integer,
       implementation: (value: string) => value.length,
     });
+    memory.public.registerFunction({
+      name: "octet_length",
+      args: [DataType.bytea],
+      returns: DataType.integer,
+      implementation: (value: Buffer) => value.length,
+    });
     const adapter = memory.adapters.createPg();
     pool = new adapter.Pool() as unknown as pg.Pool;
     setDatabasePoolForTests(pool);
@@ -81,6 +87,7 @@ describe("editable business rewards", () => {
       "002_platform_clients.sql",
       "006_editable_rewards.sql",
       "009_public_enrollment_and_products.sql",
+      "011_product_images_and_points.sql",
     ]) {
       await pool.query(await readFile(join(process.cwd(), "migrations", file), "utf8"));
     }

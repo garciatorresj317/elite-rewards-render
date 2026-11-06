@@ -49,6 +49,12 @@ describe("production rewards ledger", () => {
       returns: DataType.integer,
       implementation: (value: string) => value.length,
     });
+    memory.public.registerFunction({
+      name: "octet_length",
+      args: [DataType.bytea],
+      returns: DataType.integer,
+      implementation: (value: Buffer) => value.length,
+    });
     const adapter = memory.adapters.createPg();
     const pool = new adapter.Pool() as unknown as pg.Pool;
     setDatabasePoolForTests(pool);
@@ -71,6 +77,12 @@ describe("production rewards ledger", () => {
     );
     await pool.query(
       await readFile(join(process.cwd(), "migrations", "010_client_suspension.sql"), "utf8"),
+    );
+    await pool.query(
+      await readFile(
+        join(process.cwd(), "migrations", "011_product_images_and_points.sql"),
+        "utf8",
+      ),
     );
     await pool.query("ALTER TABLE businesses ADD COLUMN logo_url text");
     await pool.query(

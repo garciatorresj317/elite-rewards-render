@@ -54,6 +54,12 @@ describe("platform client management", () => {
       returns: DataType.integer,
       implementation: (value: string) => value.length,
     });
+    memory.public.registerFunction({
+      name: "octet_length",
+      args: [DataType.bytea],
+      returns: DataType.integer,
+      implementation: (value: Buffer) => value.length,
+    });
     const adapter = memory.adapters.createPg();
     pool = new adapter.Pool() as unknown as pg.Pool;
     setDatabasePoolForTests(pool);
@@ -86,6 +92,12 @@ describe("platform client management", () => {
     );
     await pool.query(
       await readFile(join(process.cwd(), "migrations", "010_client_suspension.sql"), "utf8"),
+    );
+    await pool.query(
+      await readFile(
+        join(process.cwd(), "migrations", "011_product_images_and_points.sql"),
+        "utf8",
+      ),
     );
     await pool.query("UPDATE users SET platform_admin = false WHERE id = 'usr_ordinary'");
     await pool.query("ALTER TABLE businesses ADD COLUMN logo_url text");

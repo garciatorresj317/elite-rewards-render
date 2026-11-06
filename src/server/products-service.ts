@@ -6,6 +6,7 @@ export type ProductDraft = {
   description: string;
   category: string;
   priceCents: number;
+  pointsCost: number;
   imageUrl: string | null;
   purchaseUrl: string | null;
   active: boolean;
@@ -20,8 +21,23 @@ export type ManagedProduct = ProductDraft & {
 
 export type PublicProduct = Pick<
   ManagedProduct,
-  "id" | "name" | "description" | "category" | "priceCents" | "imageUrl" | "purchaseUrl"
+  | "id"
+  | "name"
+  | "description"
+  | "category"
+  | "priceCents"
+  | "pointsCost"
+  | "imageUrl"
+  | "purchaseUrl"
 >;
+
+export type ProductImageInput = {
+  mime: "image/png" | "image/jpeg" | "image/webp";
+  data: Buffer;
+};
+
+const productImagePath = (productId: string) =>
+  `/api/public/products/${encodeURIComponent(productId)}/image`;
 
 function requireBusinessOwner(user: SessionUser): void {
   if (user.role !== "owner")
@@ -39,7 +55,9 @@ function product(row: {
   description: string;
   category: string;
   price_cents: number;
+  points_cost: number | null;
   image_url: string | null;
+  has_image: boolean;
   purchase_url: string | null;
   active: boolean;
   archived_at: Date | null;
@@ -52,7 +70,8 @@ function product(row: {
     description: row.description,
     category: row.category,
     priceCents: Number(row.price_cents),
-    imageUrl: row.image_url,
+    pointsCost: row.points_cost === null ? 0 : Number(row.points_cost),
+    imageUrl: row.has_image ? productImagePath(row.id) : row.image_url,
     purchaseUrl: row.purchase_url,
     active: row.active,
     archivedAt: row.archived_at?.toISOString() ?? null,
@@ -61,7 +80,8 @@ function product(row: {
   };
 }
 
-const fields = `id,name,description,category,price_cents,image_url,purchase_url,active,archived_at,created_at,updated_at`;
+const fields = `id,name,description,category,price_cents,points_cost,image_url,purchase_url,
+  (image_data IS NOT NULL) AS has_image,active,archived_at,created_at,updated_at`;
 
 async function assertClientBusiness(businessId: string): Promise<void> {
   const result = await getPool().query(
@@ -106,9 +126,9 @@ async function createForBusiness(
   const productId = id("prd");
   const result = await getPool().query(
     `INSERT INTO business_products(
-       id,business_id,name,description,category,price_cents,image_url,purchase_url,active,
+       id,business_id,name,description,category,price_cents,points_cost,image_url,purchase_url,active,
        created_by_user_id,updated_by_user_id
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$10)
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$11)
      RETURNING ${fields}`,
     [
       productId,
@@ -117,6 +137,7 @@ async function createForBusiness(
       input.description,
       input.category,
       input.priceCents,
+      input.pointsCost,
       input.imageUrl,
       input.purchaseUrl,
       input.active,
@@ -157,8 +178,8 @@ async function updateForBusiness(
 ): Promise<ManagedProduct> {
   const result = await getPool().query(
     `UPDATE business_products
-        SET name=$4,description=$5,category=$6,price_cents=$7,image_url=$8,purchase_url=$9,
-            active=$10,updated_by_user_id=$3,updated_at=now()
+        SET name=$4,description=$5,category=$6,price_cents=$7,points_cost=$8,image_url=$9,purchase_url=$10,
+            active=$11,updated_by_user_id=$3,updated_at=now()
       WHERE id=$1 AND business_id=$2 AND archived_at IS NULL
       RETURNING ${fields}`,
     [
@@ -169,6 +190,7 @@ async function updateForBusiness(
       input.description,
       input.category,
       input.priceCents,
+      input.pointsCost,
       input.imageUrl,
       input.purchaseUrl,
       input.active,
@@ -238,6 +260,87 @@ export async function archiveClientProduct(
   return archiveForBusiness(user, businessId, productId);
 }
 
+function validateProductImage(input: ProductImageInput): void {
+  if (!input.data.length || input.data.length > 4_194_304)
+    throw Object.assign(new Error("Product image must be 4 MB or smaller"), { status: 400 });
+  const signatures: Record<ProductImageInput["mime"], (data: Buffer) => boolean> = {
+    "image/png": (data) => data.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex")),
+    "image/jpeg": (data) => data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff,
+    "image/webp": (data) =>
+      data.subarray(0, 4).toString("ascii") === "RIFF" &&
+      data.subarray(8, 12).toString("ascii") === "WEBP",
+  };
+  if (!signatures[input.mime](input.data))
+    throw Object.assign(new Error("Product image content does not match its image type"), {
+      status: 400,
+    });
+}
+
+async function updateImageForBusiness(
+  user: SessionUser,
+  businessId: string,
+  productId: string,
+  input: ProductImageInput,
+): Promise<ManagedProduct> {
+  validateProductImage(input);
+  const result = await getPool().query(
+    `UPDATE business_products
+        SET image_data=$4,image_mime=$5,image_url=NULL,updated_by_user_id=$3,updated_at=now()
+      WHERE id=$1 AND business_id=$2 AND archived_at IS NULL
+      RETURNING ${fields}`,
+    [productId, businessId, user.id, input.data, input.mime],
+  );
+  const row = result.rows[0];
+  if (!row) throw Object.assign(new Error("Product not found"), { status: 404 });
+  await getPool().query(
+    `INSERT INTO audit_events(id,business_id,actor_user_id,action,target_type,target_id,metadata)
+     VALUES ($1,$2,$3,'business.product.image.updated','business_product',$4,$5)`,
+    [
+      id("aud"),
+      businessId,
+      user.id,
+      productId,
+      JSON.stringify({ mime: input.mime, bytes: input.data.length }),
+    ],
+  );
+  return product(row);
+}
+
+export async function updateProductImage(
+  user: SessionUser,
+  productId: string,
+  input: ProductImageInput,
+): Promise<ManagedProduct> {
+  requireBusinessOwner(user);
+  return updateImageForBusiness(user, user.businessId, productId, input);
+}
+
+export async function updateClientProductImage(
+  user: SessionUser,
+  businessId: string,
+  productId: string,
+  input: ProductImageInput,
+): Promise<ManagedProduct> {
+  requirePlatformAdmin(user);
+  await assertClientBusiness(businessId);
+  return updateImageForBusiness(user, businessId, productId, input);
+}
+
+export async function getProductImage(
+  productId: string,
+): Promise<{ mime: string; data: Buffer } | null> {
+  const result = await getPool().query<{ image_mime: string | null; image_data: Buffer | null }>(
+    `SELECT p.image_mime,p.image_data
+       FROM business_products p
+       JOIN businesses b ON b.id=p.business_id
+      WHERE p.id=$1 AND p.active=true AND p.archived_at IS NULL AND b.active=true
+        AND b.id<>(SELECT business_id FROM platform_state WHERE singleton=true)`,
+    [productId],
+  );
+  const row = result.rows[0];
+  return row?.image_mime && row.image_data ? { mime: row.image_mime, data: row.image_data } : null;
+}
+
 export async function listPublicProducts(businessId: string): Promise<PublicProduct[]> {
   const result = await getPool().query(
     `SELECT ${fields} FROM business_products
@@ -253,6 +356,7 @@ export async function listPublicProducts(businessId: string): Promise<PublicProd
       description: item.description,
       category: item.category,
       priceCents: item.priceCents,
+      pointsCost: item.pointsCost,
       imageUrl: item.imageUrl,
       purchaseUrl: item.purchaseUrl,
     };

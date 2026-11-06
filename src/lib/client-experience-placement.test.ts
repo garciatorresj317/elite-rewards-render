@@ -29,4 +29,21 @@ describe("client customization placement", () => {
     assert.match(admin, /Activar cliente/);
     assert.match(admin, /suspended: \["Suspended", "Suspendido"\]/);
   });
+
+  it("keeps product image upload and points controls in both admin product workflows", async () => {
+    const [admin, clientPage, wallet] = await Promise.all([
+      readFile(join(process.cwd(), "src", "routes", "admin.tsx"), "utf8"),
+      readFile(join(process.cwd(), "src", "routes", "clients.$clientId.tsx"), "utf8"),
+      readFile(join(process.cwd(), "src", "routes", "wallet.tsx"), "utf8"),
+    ]);
+    assert.equal((admin.match(/<ProductEditorFields/g) ?? []).length, 2);
+    assert.match(admin, /Choose product image from files/);
+    assert.match(admin, /Elegir imagen del producto desde archivos/);
+    assert.match(admin, /accept="image\/png,image\/jpeg,image\/webp"/);
+    assert.match(admin, /value=\{draft\.pointsCost\}/);
+    assert.match(clientPage, /product\.pointsCost/);
+    assert.match(wallet, /product\.pointsCost/);
+    assert.match(clientPage, /alt=\{product\.name\}/);
+    assert.match(wallet, /alt=\{product\.name\}/);
+  });
 });

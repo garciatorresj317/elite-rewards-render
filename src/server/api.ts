@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import {
   authenticate,
   clearSessionCookie,
@@ -56,9 +56,12 @@ import {
   archiveProduct,
   createClientProduct,
   createProduct,
+  getProductImage,
   listClientProducts,
   listManagedProducts,
+  updateClientProductImage,
   updateClientProduct,
+  updateProductImage,
   updateProduct,
 } from "./products-service.ts";
 
@@ -71,19 +74,23 @@ function json(body: unknown, status = 200, headers: HeadersInit = {}): Response 
   return new Response(JSON.stringify(body), { status, headers: { ...jsonHeaders, ...headers } });
 }
 
-async function imageUpload(request: Request): Promise<{
+async function imageUpload(
+  request: Request,
+  label = "Logo",
+  maxBytes = 2_097_152,
+): Promise<{
   mime: "image/png" | "image/jpeg" | "image/webp";
   data: Buffer;
 }> {
   const mime = request.headers.get("content-type")?.split(";")[0]?.trim();
   if (mime !== "image/png" && mime !== "image/jpeg" && mime !== "image/webp")
-    throw Object.assign(new Error("Logo must be a PNG, JPEG, or WebP image"), { status: 415 });
+    throw Object.assign(new Error(`${label} must be a PNG, JPEG, or WebP image`), { status: 415 });
   const contentLength = Number(request.headers.get("content-length") ?? 0);
-  if (contentLength > 2_097_152)
-    throw Object.assign(new Error("Logo must be 2 MB or smaller"), { status: 413 });
+  if (contentLength > maxBytes)
+    throw Object.assign(new Error(`${label} is too large`), { status: 413 });
   const data = Buffer.from(await request.arrayBuffer());
-  if (!data.length || data.length > 2_097_152)
-    throw Object.assign(new Error("Logo must be 2 MB or smaller"), { status: 413 });
+  if (!data.length || data.length > maxBytes)
+    throw Object.assign(new Error(`${label} is too large`), { status: 413 });
   return { mime, data };
 }
 
@@ -141,6 +148,7 @@ function productInput(payload: Record<string, unknown>) {
     description: text(payload["description"] ?? "", "Description", 0, 1000),
     category: text(payload["category"] ?? "", "Category", 0, 80),
     priceCents: integer(payload["priceCents"], "Price", 0, 100_000_000),
+    pointsCost: integer(payload["pointsCost"], "Points", 1, 1_000_000),
     imageUrl: optionalHttpsUrl(payload["imageUrl"], "Product image"),
     purchaseUrl: optionalHttpsUrl(payload["purchaseUrl"], "Purchase link"),
     active: payload["active"],
@@ -363,6 +371,28 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
         },
       });
     }
+    const publicProductImageMatch = url.pathname.match(/^\/api\/public\/products\/([^/]+)\/image$/);
+    if (publicProductImageMatch && request.method === "GET") {
+      const productId = text(
+        decodeURIComponent(publicProductImageMatch[1] ?? ""),
+        "Product",
+        8,
+        120,
+      );
+      const image = await getProductImage(productId);
+      if (!image) return json({ error: "Product image not found" }, 404);
+      const etag = `"${createHash("sha256").update(image.data).digest("base64url")}"`;
+      if (request.headers.get("if-none-match") === etag)
+        return new Response(null, { status: 304, headers: { etag } });
+      return new Response(new Uint8Array(image.data), {
+        headers: {
+          "content-type": image.mime,
+          "cache-control": "public, max-age=3600, must-revalidate",
+          etag,
+          "x-content-type-options": "nosniff",
+        },
+      });
+    }
     const user = await getSessionUser(request);
     if (url.pathname === "/api/auth/session" && request.method === "GET") return json({ user });
     if (url.pathname === "/api/admin/dashboard" && request.method === "GET") {
@@ -534,6 +564,32 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       await archiveClientProduct(user, businessId, productId);
       return json({ ok: true });
     }
+    const clientProductImageMatch = url.pathname.match(
+      /^\/api\/admin\/clients\/([^/]+)\/products\/([^/]+)\/image$/,
+    );
+    if (clientProductImageMatch && request.method === "PUT") {
+      requirePlatformAdmin(user);
+      const businessId = text(
+        decodeURIComponent(clientProductImageMatch[1] ?? ""),
+        "Client",
+        8,
+        120,
+      );
+      const productId = text(
+        decodeURIComponent(clientProductImageMatch[2] ?? ""),
+        "Product",
+        8,
+        120,
+      );
+      return json({
+        product: await updateClientProductImage(
+          user,
+          businessId,
+          productId,
+          await imageUpload(request, "Product image", 4_194_304),
+        ),
+      });
+    }
     if (url.pathname === "/api/admin/members" && request.method === "GET") {
       requireRole(user, ["owner", "staff"]);
       return json({ members: await listMembers(user) });
@@ -614,6 +670,18 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       const productId = text(decodeURIComponent(productMatch[1] ?? ""), "Product", 8, 120);
       await archiveProduct(user, productId);
       return json({ ok: true });
+    }
+    const productImageMatch = url.pathname.match(/^\/api\/admin\/products\/([^/]+)\/image$/);
+    if (productImageMatch && request.method === "PUT") {
+      requireRole(user, ["owner"]);
+      const productId = text(decodeURIComponent(productImageMatch[1] ?? ""), "Product", 8, 120);
+      return json({
+        product: await updateProductImage(
+          user,
+          productId,
+          await imageUpload(request, "Product image", 4_194_304),
+        ),
+      });
     }
     if (url.pathname === "/api/admin/award" && request.method === "POST") {
       requireRole(user, ["owner", "staff"]);

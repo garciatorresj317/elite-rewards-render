@@ -125,6 +125,11 @@ export const api = {
       `/api/admin/clients/${encodeURIComponent(businessId)}/products/${encodeURIComponent(productId)}`,
       { method: "PUT", body: JSON.stringify(payload) },
     ),
+  uploadClientProductImage: (businessId: string, productId: string, file: File) =>
+    uploadImage<{ product: ManagedProduct }>(
+      `/api/admin/clients/${encodeURIComponent(businessId)}/products/${encodeURIComponent(productId)}/image`,
+      file,
+    ),
   archiveClientProduct: (businessId: string, productId: string) =>
     request<{ ok: boolean }>(
       `/api/admin/clients/${encodeURIComponent(businessId)}/products/${encodeURIComponent(productId)}`,
@@ -181,6 +186,11 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(payload),
     }),
+  uploadProductImage: (productId: string, file: File) =>
+    uploadImage<{ product: ManagedProduct }>(
+      `/api/admin/products/${encodeURIComponent(productId)}/image`,
+      file,
+    ),
   archiveProduct: (productId: string) =>
     request<{ ok: boolean }>(`/api/admin/products/${encodeURIComponent(productId)}`, {
       method: "DELETE",
@@ -397,6 +407,7 @@ export type ProductDraft = {
   description: string;
   category: string;
   priceCents: number;
+  pointsCost: number;
   imageUrl: string | null;
   purchaseUrl: string | null;
   active: boolean;

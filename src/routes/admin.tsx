@@ -150,10 +150,12 @@ function Admin() {
     description: "",
     category: "",
     priceCents: 0,
+    pointsCost: 100,
     imageUrl: null,
     purchaseUrl: null,
     active: true,
   });
+  const [clientProductImage, setClientProductImage] = useState<File | null>(null);
   const [clientRewardDraft, setClientRewardDraft] = useState<RewardDraft>({
     name: "",
     description: "",
@@ -182,10 +184,12 @@ function Admin() {
     description: "",
     category: "",
     priceCents: 0,
+    pointsCost: 100,
     imageUrl: null,
     purchaseUrl: null,
     active: true,
   });
+  const [productImage, setProductImage] = useState<File | null>(null);
   const [rewardModal, setRewardModal] = useState(false);
   const [editingRewardId, setEditingRewardId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -468,6 +472,7 @@ function Admin() {
     description: "",
     category: "",
     priceCents: 0,
+    pointsCost: 100,
     imageUrl: null,
     purchaseUrl: null,
     active: true,
@@ -477,11 +482,14 @@ function Admin() {
     if (!clientEditor) return;
     setError("");
     try {
-      if (clientProductEditingId)
-        await api.updateClientProduct(clientEditor.id, clientProductEditingId, clientProductDraft);
-      else await api.createClientProduct(clientEditor.id, clientProductDraft);
+      const saved = clientProductEditingId
+        ? await api.updateClientProduct(clientEditor.id, clientProductEditingId, clientProductDraft)
+        : await api.createClientProduct(clientEditor.id, clientProductDraft);
+      if (clientProductImage)
+        await api.uploadClientProductImage(clientEditor.id, saved.product.id, clientProductImage);
       setClientProducts((await api.clientProducts(clientEditor.id)).products);
       setClientProductEditingId(null);
+      setClientProductImage(null);
       setClientProductDraft(emptyProductForm());
       setNotice(
         tr("Client product catalog updated.", "Se actualizó el catálogo de productos del cliente."),
@@ -497,21 +505,25 @@ function Admin() {
       description: product.description,
       category: product.category,
       priceCents: product.priceCents,
+      pointsCost: product.pointsCost,
       imageUrl: product.imageUrl,
       purchaseUrl: product.purchaseUrl,
       active: product.active,
     });
+    setClientProductImage(null);
   };
   const archiveSelectedClientProduct = async () => {
     if (!clientEditor || !clientProductEditingId) return;
     await api.archiveClientProduct(clientEditor.id, clientProductEditingId);
     setClientProducts((await api.clientProducts(clientEditor.id)).products);
     setClientProductEditingId(null);
+    setClientProductImage(null);
     setClientProductDraft(emptyProductForm());
     setNotice(tr("Client product archived.", "Se archivó el producto del cliente."));
   };
   const openNewProduct = () => {
     setEditingProductId(null);
+    setProductImage(null);
     setProductForm(emptyProductForm());
     setProductModal(true);
   };
@@ -522,18 +534,22 @@ function Admin() {
       description: product.description,
       category: product.category,
       priceCents: product.priceCents,
+      pointsCost: product.pointsCost,
       imageUrl: product.imageUrl,
       purchaseUrl: product.purchaseUrl,
       active: product.active,
     });
+    setProductImage(null);
     setProductModal(true);
   };
   const submitProduct = async (event: FormEvent) => {
     event.preventDefault();
     setError("");
     try {
-      if (editingProductId) await api.updateProduct(editingProductId, productForm);
-      else await api.createProduct(productForm);
+      const saved = editingProductId
+        ? await api.updateProduct(editingProductId, productForm)
+        : await api.createProduct(productForm);
+      if (productImage) await api.uploadProductImage(saved.product.id, productImage);
       setProductModal(false);
       setNotice(
         tr(
@@ -1206,7 +1222,7 @@ function Admin() {
                     key={product.id}
                   >
                     {product.imageUrl ? (
-                      <img src={product.imageUrl} alt="" />
+                      <img src={product.imageUrl} alt={product.name} />
                     ) : (
                       <span className="product-placeholder">
                         <PackageOpen />
@@ -1222,6 +1238,13 @@ function Admin() {
                           currency: "USD",
                         }).format(product.priceCents / 100)}
                       </strong>
+                      {product.pointsCost > 0 ? (
+                        <span className="product-points">
+                          {formatNumber(product.pointsCost)} {tr("points", "puntos")}
+                        </span>
+                      ) : (
+                        <small>{tr("Points not set", "Puntos sin configurar")}</small>
+                      )}
                       <button
                         type="button"
                         onClick={() => openProduct(product)}
@@ -1677,10 +1700,9 @@ function Admin() {
                     <span>
                       <strong>{product.name}</strong>
                       <small>
-                        {new Intl.NumberFormat(localeCode, {
-                          style: "currency",
-                          currency: "USD",
-                        }).format(product.priceCents / 100)}
+                        {product.pointsCost > 0
+                          ? `${formatNumber(product.pointsCost)} ${tr("points", "puntos")}`
+                          : tr("Points not set", "Puntos sin configurar")}
                       </small>
                     </span>
                     <span className={`client-status ${product.active ? "active" : "invited"}`}>
@@ -1705,6 +1727,8 @@ function Admin() {
               <ProductEditorFields
                 draft={clientProductDraft}
                 setDraft={setClientProductDraft}
+                imageFile={clientProductImage}
+                setImageFile={setClientProductImage}
                 tr={tr}
                 onSubmit={saveClientProduct}
                 editing={Boolean(clientProductEditingId)}
@@ -2079,6 +2103,8 @@ function Admin() {
             <ProductEditorFields
               draft={productForm}
               setDraft={setProductForm}
+              imageFile={productImage}
+              setImageFile={setProductImage}
               tr={tr}
               onSubmit={submitProduct}
               editing={Boolean(editingProductId)}
@@ -2427,6 +2453,8 @@ function TransactionTable({
 function ProductEditorFields({
   draft,
   setDraft,
+  imageFile,
+  setImageFile,
   tr,
   onSubmit,
   editing,
@@ -2434,6 +2462,8 @@ function ProductEditorFields({
 }: {
   draft: ProductDraft;
   setDraft: (draft: ProductDraft) => void;
+  imageFile: File | null;
+  setImageFile: (file: File | null) => void;
   tr: TranslatePair;
   onSubmit: (event: FormEvent) => void | Promise<void>;
   editing: boolean;
@@ -2484,15 +2514,44 @@ function ProductEditorFields({
             }
           />
         </label>
+        <label>
+          {tr("Points", "Puntos")}
+          <input
+            required
+            type="number"
+            min="1"
+            max="1000000"
+            step="1"
+            value={draft.pointsCost}
+            onChange={(event) =>
+              setDraft({
+                ...draft,
+                pointsCost: Math.max(1, Math.round(Number(event.target.value))),
+              })
+            }
+          />
+        </label>
       </div>
-      <label>
-        {tr("Product image URL", "URL de imagen del producto")}
+      <label className="client-logo-upload product-image-upload">
+        {tr("Choose product image from files", "Elegir imagen del producto desde archivos")}
         <input
-          type="url"
-          placeholder="https://"
-          value={draft.imageUrl ?? ""}
-          onChange={(event) => setDraft({ ...draft, imageUrl: event.target.value || null })}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
         />
+        <small>
+          {imageFile
+            ? imageFile.name
+            : draft.imageUrl
+              ? tr(
+                  "Current image will remain unless replaced.",
+                  "La imagen actual permanecerá salvo que se reemplace.",
+                )
+              : tr("PNG, JPEG, or WebP up to 4 MB.", "PNG, JPEG o WebP de hasta 4 MB.")}
+        </small>
+        {draft.imageUrl && !imageFile && (
+          <img className="product-image-preview" src={draft.imageUrl} alt={draft.name} />
+        )}
       </label>
       <label>
         {tr("Purchase or details URL", "URL de compra o detalles")}

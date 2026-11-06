@@ -48,6 +48,7 @@ export type PublicClientExperience = {
     description: string;
     category: string;
     priceCents: number;
+    pointsCost: number;
     imageUrl: string | null;
     purchaseUrl: string | null;
   }>;
@@ -590,10 +591,13 @@ export async function getPublicClientExperience(
       description: string;
       category: string;
       price_cents: number;
+      points_cost: number | null;
       image_url: string | null;
+      has_image: boolean;
       purchase_url: string | null;
     }>(
-      `SELECT id,name,description,category,price_cents,image_url,purchase_url
+      `SELECT id,name,description,category,price_cents,points_cost,image_url,purchase_url,
+              (image_data IS NOT NULL) AS has_image
          FROM business_products
         WHERE business_id = $1 AND active = true AND archived_at IS NULL
         ORDER BY category, name, created_at, id`,
@@ -620,7 +624,10 @@ export async function getPublicClientExperience(
       description: item.description,
       category: item.category,
       priceCents: Number(item.price_cents),
-      imageUrl: item.image_url,
+      pointsCost: item.points_cost === null ? 0 : Number(item.points_cost),
+      imageUrl: item.has_image
+        ? `/api/public/products/${encodeURIComponent(item.id)}/image`
+        : item.image_url,
       purchaseUrl: item.purchase_url,
     })),
     joinPath: joinPath(row.id),

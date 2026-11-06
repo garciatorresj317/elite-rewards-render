@@ -203,7 +203,7 @@ function Wallet() {
           {data.products.map((product) => (
             <article className="product-card" key={product.id}>
               {product.imageUrl ? (
-                <img src={product.imageUrl} alt="" loading="lazy" />
+                <img src={product.imageUrl} alt={product.name} loading="lazy" />
               ) : (
                 <span className="product-placeholder">
                   <PackageOpen />
@@ -220,6 +220,11 @@ function Wallet() {
                       currency: "USD",
                     }).format(product.priceCents / 100)}
                   </strong>
+                )}
+                {product.pointsCost > 0 && (
+                  <span className="product-points">
+                    {formatNumber(product.pointsCost)} {t("points")}
+                  </span>
                 )}
                 {product.purchaseUrl && (
                   <a href={product.purchaseUrl} target="_blank" rel="noreferrer">
