@@ -12,7 +12,7 @@ describe("Appearance navigation placement", () => {
 
     for (const file of routeFiles) {
       const source = await readFile(join(routesDirectory, file), "utf8");
-      if (/label:\s*["']Appearance["']/.test(source)) routesWithAppearanceTab.push(file);
+      if (/(?:label|id|en):\s*["']Appearance["']/.test(source)) routesWithAppearanceTab.push(file);
     }
 
     assert.deepEqual(routesWithAppearanceTab, ["admin.tsx"]);

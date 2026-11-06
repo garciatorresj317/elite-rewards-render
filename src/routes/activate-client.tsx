@@ -2,42 +2,40 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { LockKeyhole } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
+import { useI18n } from "@/i18n";
 import { api } from "@/lib/api-client";
-
 export const Route = createFileRoute("/activate-client")({
   head: () => ({ meta: [{ title: "Activate client account | Elite Rewards" }] }),
   component: ActivateClient,
 });
-
 function ActivateClient() {
   const navigate = useNavigate();
+  const { t, errorMessage } = useI18n();
   const [invitation, setInvitation] = useState<Awaited<
-    ReturnType<typeof api.clientInvitation>
-  > | null>(null);
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+      ReturnType<typeof api.clientInvitation>
+    > | null>(null),
+    [password, setPassword] = useState(""),
+    [confirmPassword, setConfirmPassword] = useState(""),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(false);
   const token =
     typeof window === "undefined"
       ? ""
       : (new URLSearchParams(window.location.search).get("token") ?? "");
-
   useEffect(() => {
     if (!token) {
-      setError("This client invitation is missing its secure token.");
+      setError(t("This client invitation is missing its secure token."));
       return;
     }
     void api
       .clientInvitation(token)
       .then(setInvitation)
-      .catch((cause: Error) => setError(cause.message));
-  }, [token]);
-
+      .catch((cause) => setError(errorMessage(cause, "Activation failed")));
+  }, [token, t, errorMessage]);
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("Passwords do not match"));
       return;
     }
     setBusy(true);
@@ -46,18 +44,17 @@ function ActivateClient() {
       await api.activateClient(token, password);
       await navigate({ to: "/admin" });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Activation failed");
+      setError(errorMessage(cause, "Activation failed"));
     } finally {
       setBusy(false);
     }
   };
-
   return (
     <div className="auth-page">
       <header className="auth-header">
         <BrandMark />
         <Link to="/" className="back-link">
-          Back to site
+          {t("Back to site")}
         </Link>
       </header>
       <main className="auth-main">
@@ -65,8 +62,8 @@ function ActivateClient() {
           <span className="auth-icon">
             <LockKeyhole />
           </span>
-          <span className="section-kicker">Client activation</span>
-          <h1>Activate your rewards program</h1>
+          <span className="section-kicker">{t("Client activation")}</span>
+          <h1>{t("Activate your rewards program")}</h1>
           {error && (
             <div className="form-error" role="alert">
               {error}
@@ -82,7 +79,7 @@ function ActivateClient() {
                 </small>
               </div>
               <label>
-                Create owner password
+                {t("Create owner password")}
                 <input
                   required
                   type="password"
@@ -94,7 +91,7 @@ function ActivateClient() {
                 />
               </label>
               <label>
-                Confirm password
+                {t("Confirm password")}
                 <input
                   required
                   type="password"
@@ -106,7 +103,7 @@ function ActivateClient() {
                 />
               </label>
               <button className="admin-primary full" disabled={busy}>
-                {busy ? "Activating…" : "Activate owner account"}
+                {busy ? t("Activating…") : t("Activate owner account")}
               </button>
             </form>
           )}

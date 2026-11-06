@@ -10,16 +10,18 @@ import {
 import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { I18nProvider, LanguageSwitcher, useI18n } from "../i18n";
 
 function NotFoundComponent() {
+  const { t } = useI18n();
   return (
     <div className="error-screen">
       <div>
         <span>404</span>
-        <h1>That page wandered off.</h1>
-        <p>The reward you are looking for may have moved.</p>
+        <h1>{t("That page wandered off.")}</h1>
+        <p>{t("The reward you are looking for may have moved.")}</p>
         <Link to="/" className="button button-dark">
-          Return home
+          {t("Return home")}
         </Link>
       </div>
     </div>
@@ -27,6 +29,7 @@ function NotFoundComponent() {
 }
 function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
   const router = useRouter();
+  const { t } = useI18n();
   useEffect(() => {
     const reportableError = error instanceof Error ? error : new Error(String(error));
     reportLovableError(reportableError, { boundary: "tanstack_root_error_component" });
@@ -34,8 +37,8 @@ function ErrorComponent({ error, reset }: { error: unknown; reset: () => void })
   return (
     <div className="error-screen">
       <div>
-        <span>Something went wrong</span>
-        <h1>This page did not load.</h1>
+        <span>{t("Something went wrong")}</span>
+        <h1>{t("This page did not load.")}</h1>
         <button
           className="button button-dark"
           onClick={() => {
@@ -43,7 +46,7 @@ function ErrorComponent({ error, reset }: { error: unknown; reset: () => void })
             reset();
           }}
         >
-          Try again
+          {t("Try again")}
         </button>
       </div>
     </div>
@@ -92,8 +95,11 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
-    <QueryClientProvider client={queryClient}>
-      <Outlet />
-    </QueryClientProvider>
+    <I18nProvider>
+      <LanguageSwitcher />
+      <QueryClientProvider client={queryClient}>
+        <Outlet />
+      </QueryClientProvider>
+    </I18nProvider>
   );
 }

@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
+import { useI18n } from "@/i18n";
 
 const title = "Elite Rewards | Loyalty that feels personal";
 const description =
@@ -27,191 +28,194 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
-const features = [
-  {
-    icon: QrCode,
-    title: "Join in seconds",
-    copy: "One scan. No app download. Members start earning before they leave the counter.",
-  },
-  {
-    icon: Gift,
-    title: "Rewards they want",
-    copy: "Build flexible offers around visits, points, birthdays, or your best-selling items.",
-  },
-  {
-    icon: BarChart3,
-    title: "Know what works",
-    copy: "See member growth, repeat visits, redemptions, and eligible sales in one clear view.",
-  },
-];
-
 function Home() {
+  const { t, formatNumber, formatDateTime } = useI18n();
+  const features = [
+    {
+      icon: QrCode,
+      title: t("Join in seconds"),
+      copy: t("One scan. No app download. Members start earning before they leave the counter."),
+    },
+    {
+      icon: Gift,
+      title: t("Rewards they want"),
+      copy: t(
+        "Build flexible offers around visits, points, birthdays, or your best-selling items.",
+      ),
+    },
+    {
+      icon: BarChart3,
+      title: t("Know what works"),
+      copy: t(
+        "See member growth, repeat visits, redemptions, and eligible sales in one clear view.",
+      ),
+    },
+  ];
   return (
     <div className="marketing-shell">
       <header className="site-header container-wide">
         <BrandMark />
-        <nav aria-label="Primary navigation">
-          <a href="#how">How it works</a>
-          <a href="#features">Features</a>
-          <a href="#access">Access</a>
+        <nav aria-label={t("Primary navigation")}>
+          <a href="#how">{t("How it works")}</a>
+          <a href="#features">{t("Features")}</a>
+          <a href="#access">{t("Access")}</a>
         </nav>
         <div className="header-actions">
           <Link to="/login" className="text-link">
-            Member sign in
+            {t("Member sign in")}
           </Link>
           <Link to="/login" className="button button-dark">
-            Business sign in
+            {t("Business sign in")}
           </Link>
         </div>
       </header>
-
       <main>
         <section className="hero container-wide">
           <div className="hero-copy">
             <span className="eyebrow">
-              <Sparkles size={14} /> Loyalty, made human
+              <Sparkles size={14} /> {t("Loyalty, made human")}
             </span>
             <h1>
-              Turn a first visit into a <em>favorite habit.</em>
+              {t("Turn a first visit into a")} <em>{t("favorite habit.")}</em>
             </h1>
             <p>
-              Elite Rewards gives growing businesses a simple way to recognize their best customers,
-              reward real loyalty, and bring people back.
+              {t(
+                "Elite Rewards gives growing businesses a simple way to recognize their best customers, reward real loyalty, and bring people back.",
+              )}
             </p>
             <div className="hero-actions">
               <Link to="/login" className="button button-primary">
-                Open Elite Rewards <ArrowRight size={18} />
+                {t("Open Elite Rewards")} <ArrowRight size={18} />
               </Link>
               <Link to="/login" className="button button-ghost">
-                Member sign in
+                {t("Member sign in")}
               </Link>
             </div>
             <div className="hero-proof">
               <span>
-                <Check size={16} /> No app required
+                <Check size={16} /> {t("No app required")}
               </span>
               <span>
-                <Check size={16} /> Secure member access
+                <Check size={16} /> {t("Secure member access")}
               </span>
               <span>
-                <Check size={16} /> Server-backed rewards ledger
+                <Check size={16} /> {t("Server-backed rewards ledger")}
               </span>
             </div>
           </div>
-          <div className="hero-visual" aria-label="Elite Rewards member wallet preview">
+          <div className="hero-visual" aria-label={t("Elite Rewards member wallet preview")}>
             <div className="orbit orbit-one" />
             <div className="orbit orbit-two" />
             <div className="wallet-preview">
               <div className="wallet-top">
                 <BrandMark compact />
-                <span className="status-pill">Member</span>
+                <span className="status-pill">{t("Member")}</span>
               </div>
-              <p>Good afternoon, Maya</p>
+              <p>{t("Good afternoon, Maya")}</p>
               <h2>
-                1,240 <small>points</small>
+                {formatNumber(1240)} <small>{t("points")}</small>
               </h2>
               <div className="progress-track">
                 <span style={{ width: "78%" }} />
               </div>
               <div className="progress-caption">
-                <span>160 points to go</span>
-                <strong>$15 reward</strong>
+                <span>{t("160 points to go")}</span>
+                <strong>{t("$15 reward")}</strong>
               </div>
               <div className="reward-ticket">
                 <span className="ticket-icon">
                   <Gift />
                 </span>
                 <span>
-                  <small>Ready to use</small>
-                  <strong>$5 off your next visit</strong>
+                  <small>{t("Ready to use")}</small>
+                  <strong>{t("$5 off your next visit")}</strong>
                 </span>
-                <button>Use reward</button>
+                <button>{t("Use reward")}</button>
               </div>
               <div className="mini-stats">
                 <span>
                   <strong>8</strong>
-                  <small>visits</small>
+                  <small>{t("visits")}</small>
                 </span>
                 <span>
                   <strong>3</strong>
-                  <small>rewards</small>
+                  <small>{t("rewards")}</small>
                 </span>
                 <span>
-                  <strong>Nov 18</strong>
-                  <small>member since</small>
+                  <strong>
+                    {formatDateTime(new Date(2025, 10, 18), { month: "short", day: "numeric" })}
+                  </strong>
+                  <small>{t("member since")}</small>
                 </span>
               </div>
             </div>
             <div className="floating-note note-one">
               <Users size={18} />
               <span>
-                <strong>+126</strong> new members
+                <strong>+126</strong> {t("new members")}
               </span>
             </div>
             <div className="floating-note note-two">
               <HeartHandshake size={18} />
               <span>
-                <strong>72%</strong> return rate
+                <strong>72%</strong> {t("return rate")}
               </span>
             </div>
           </div>
         </section>
-
         <section className="trust-strip">
-          <p>Built for the businesses people return to</p>
+          <p>{t("Built for the businesses people return to")}</p>
           <div>
-            <span>CAFÉS</span>
-            <span>BOUTIQUES</span>
-            <span>SALONS</span>
-            <span>STUDIOS</span>
-            <span>LOCAL RETAIL</span>
+            <span>{t("CAFÉS")}</span>
+            <span>{t("BOUTIQUES")}</span>
+            <span>{t("SALONS")}</span>
+            <span>{t("STUDIOS")}</span>
+            <span>{t("LOCAL RETAIL")}</span>
           </div>
         </section>
-
         <section id="how" className="section container-wide intro-section">
           <div>
-            <span className="section-kicker">Simple by design</span>
-            <h2>Reward loyalty without adding more work.</h2>
+            <span className="section-kicker">{t("Simple by design")}</span>
+            <h2>{t("Reward loyalty without adding more work.")}</h2>
           </div>
           <p>
-            From sign-up to redemption, every part of Elite Rewards is designed to feel effortless
-            for your team and your customers.
+            {t(
+              "From sign-up to redemption, every part of Elite Rewards is designed to feel effortless for your team and your customers.",
+            )}
           </p>
         </section>
-
         <section id="features" className="feature-grid container-wide">
-          {features.map(({ icon: Icon, title, copy }, index) => (
-            <article key={title}>
+          {features.map(({ icon: Icon, title: featureTitle, copy }, index) => (
+            <article key={featureTitle}>
               <span className="feature-number">0{index + 1}</span>
               <span className="feature-icon">
                 <Icon />
               </span>
-              <h3>{title}</h3>
+              <h3>{featureTitle}</h3>
               <p>{copy}</p>
             </article>
           ))}
         </section>
-
         <section id="access" className="cta-panel container-wide">
           <div>
             <span className="eyebrow light">
-              <Sparkles size={14} /> A better reason to return
+              <Sparkles size={14} /> {t("A better reason to return")}
             </span>
-            <h2>Make every customer feel like a regular.</h2>
+            <h2>{t("Make every customer feel like a regular.")}</h2>
             <p>
-              Sign in to manage members, post eligible purchases, and redeem rewards from the
-              authoritative Elite Rewards ledger.
+              {t(
+                "Sign in to manage members, post eligible purchases, and redeem rewards from the authoritative Elite Rewards ledger.",
+              )}
             </p>
           </div>
           <Link to="/login" className="button button-light">
-            Sign in to Elite Rewards <ArrowRight size={18} />
+            {t("Sign in to Elite Rewards")} <ArrowRight size={18} />
           </Link>
         </section>
       </main>
-
       <footer className="site-footer container-wide">
         <BrandMark compact />
-        <p>Thoughtful loyalty tools for growing businesses.</p>
+        <p>{t("Thoughtful loyalty tools for growing businesses.")}</p>
         <span>© 2026 Elite Rewards</span>
       </footer>
     </div>

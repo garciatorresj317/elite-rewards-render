@@ -1,7 +1,7 @@
 import { Store } from "lucide-react";
 import type { CSSProperties } from "react";
+import { useI18n } from "@/i18n";
 import type { BusinessContext } from "@/lib/api-client";
-
 export function BusinessBrand({
   business,
   compact = false,
@@ -9,6 +9,7 @@ export function BusinessBrand({
   business: BusinessContext;
   compact?: boolean;
 }) {
+  const { t } = useI18n();
   const style = {
     "--client-primary": business.primary_color,
     "--client-secondary": business.secondary_color,
@@ -16,7 +17,10 @@ export function BusinessBrand({
   return (
     <div className={`business-brand ${compact ? "compact" : ""}`} style={style}>
       {business.logo_url ? (
-        <img src={business.logo_url} alt={`${business.business_name} logo`} />
+        <img
+          src={business.logo_url}
+          alt={t("{businessName} logo", { businessName: business.business_name })}
+        />
       ) : (
         <span>
           <Store />
@@ -24,7 +28,7 @@ export function BusinessBrand({
       )}
       <div>
         <strong>{business.business_name}</strong>
-        <small>Powered by Elite Rewards</small>
+        <small>{t("Powered by Elite Rewards")}</small>
       </div>
     </div>
   );

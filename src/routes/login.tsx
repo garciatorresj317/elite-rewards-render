@@ -2,20 +2,21 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, LockKeyhole, Sparkles } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
+import { useI18n } from "@/i18n";
 import { api } from "@/lib/api-client";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Sign in | Elite Rewards" }] }),
   component: Login,
 });
-
 function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [setupRequired, setSetupRequired] = useState(false);
+  const { t, errorMessage } = useI18n();
+  const [email, setEmail] = useState(""),
+    [password, setPassword] = useState(""),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(false),
+    [setupRequired, setSetupRequired] = useState(false);
   useEffect(() => {
     void Promise.all([api.session(), api.setupStatus()])
       .then(([session, setup]) => {
@@ -23,8 +24,8 @@ function Login() {
         if (session.user)
           void navigate({ to: session.user.role === "member" ? "/wallet" : "/admin" });
       })
-      .catch((cause: Error) => setError(cause.message));
-  }, [navigate]);
+      .catch((cause) => setError(errorMessage(cause, "Sign in failed")));
+  }, [navigate, errorMessage]);
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setBusy(true);
@@ -33,7 +34,7 @@ function Login() {
       const result = await api.login(email, password);
       await navigate({ to: result.user.role === "member" ? "/wallet" : "/admin" });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Sign in failed");
+      setError(errorMessage(cause, "Sign in failed"));
     } finally {
       setBusy(false);
     }
@@ -43,7 +44,7 @@ function Login() {
       <header className="wallet-header container-mid">
         <BrandMark />
         <Link to="/" className="back-link">
-          <ArrowLeft size={17} /> Back to site
+          <ArrowLeft size={17} /> {t("Back to site")}
         </Link>
       </header>
       <main className="auth-card">
@@ -51,11 +52,13 @@ function Login() {
           <LockKeyhole />
         </span>
         <span className="section-kicker">
-          <Sparkles size={14} /> Secure access
+          <Sparkles size={14} /> {t("Secure access")}
         </span>
-        <h1>Sign in to Elite Rewards</h1>
+        <h1>{t("Sign in to Elite Rewards")}</h1>
         <p>
-          Use your business or member account. Rewards balances are stored in the production ledger.
+          {t(
+            "Use your business or member account. Rewards balances are stored in the production ledger.",
+          )}
         </p>
         {error && (
           <div className="form-error" role="alert">
@@ -64,7 +67,7 @@ function Login() {
         )}
         <form onSubmit={submit}>
           <label>
-            Email
+            {t("Email")}
             <input
               type="email"
               autoComplete="email"
@@ -74,7 +77,7 @@ function Login() {
             />
           </label>
           <label>
-            Password
+            {t("Password")}
             <input
               type="password"
               autoComplete="current-password"
@@ -85,13 +88,14 @@ function Login() {
             />
           </label>
           <button className="admin-primary full" disabled={busy}>
-            {busy ? "Signing in…" : "Sign in"}
+            {busy ? t("Signing in…") : t("Sign in")}
           </button>
         </form>
         {setupRequired && (
           <p className="auth-note">
-            Initial setup is required. Open the private setup page and use the deployment setup
-            token.
+            {t(
+              "Initial setup is required. Open the private setup page and use the deployment setup token.",
+            )}
           </p>
         )}
       </main>

@@ -28,6 +28,7 @@ import { CSSProperties, FormEvent, useCallback, useEffect, useMemo, useState } f
 import { BrandMark } from "@/components/BrandMark";
 import { BusinessBrand } from "@/components/BusinessBrand";
 import { ExperienceBackdrop } from "@/components/ExperienceTheme";
+import { useI18n } from "@/i18n";
 import { themeCatalog } from "@/lib/theme-catalog";
 import {
   api,
@@ -47,21 +48,90 @@ export const Route = createFileRoute("/admin")({
   component: Admin,
 });
 const sections = [
-  { label: "Dashboard", icon: LayoutDashboard, platformOnly: false },
-  { label: "Clients", icon: Building2, platformOnly: true },
-  { label: "Members", icon: Users, platformOnly: false },
-  { label: "Transactions", icon: ReceiptText, platformOnly: false },
-  { label: "Rewards", icon: Trophy, platformOnly: false },
-  { label: "Appearance", icon: Palette, platformOnly: false },
-];
+  { id: "Dashboard", en: "Dashboard", es: "Panel", icon: LayoutDashboard, platformOnly: false },
+  { id: "Clients", en: "Clients", es: "Clientes", icon: Building2, platformOnly: true },
+  { id: "Members", en: "Members", es: "Miembros", icon: Users, platformOnly: false },
+  {
+    id: "Transactions",
+    en: "Transactions",
+    es: "Transacciones",
+    icon: ReceiptText,
+    platformOnly: false,
+  },
+  { id: "Rewards", en: "Rewards", es: "Recompensas", icon: Trophy, platformOnly: false },
+  {
+    id: "Appearance",
+    en: "Appearance",
+    es: "Apariencia",
+    icon: Palette,
+    platformOnly: false,
+  },
+] as const;
+
+type SectionId = (typeof sections)[number]["id"];
+
+type TranslatePair = (english: string, spanish: string) => string;
+
+function localizeStatus(status: string, tr: TranslatePair) {
+  const labels: Record<string, [string, string]> = {
+    active: ["Active", "Activo"],
+    invited: ["Invited", "Invitado"],
+    hidden: ["Hidden", "Oculta"],
+    archived: ["Archived", "Archivada"],
+  };
+  const label = labels[status];
+  return label ? tr(label[0], label[1]) : status;
+}
+
+function themeSpanish(key: ThemeKey) {
+  const translations: Record<ThemeKey, { name: string; category: string; description: string }> = {
+    "elite-signature": {
+      name: "Firma Elite",
+      category: "Siempre disponible",
+      description: "La experiencia base negra y dorada de Elite Rewards.",
+    },
+    "mlk-day": {
+      name: "Día de Martin Luther King Jr.",
+      category: "Conmemoración",
+      description: "Un tema digno centrado en la unidad, la esperanza y el progreso.",
+    },
+    "remembrance-911": {
+      name: "Conmemoración del 11 de septiembre",
+      category: "Conmemoración",
+      description: "Un homenaje sobrio y respetuoso con dos luces conmemorativas.",
+    },
+    "winter-holiday": {
+      name: "Festividad de invierno",
+      category: "Festividad",
+      description: "Una celebración invernal inclusiva en verde perenne y dorado.",
+    },
+    "spring-celebration": {
+      name: "Celebración de primavera",
+      category: "Festividad",
+      description: "Un fondo de temporada refinado con flores marfil y luz dorada.",
+    },
+    "community-event": {
+      name: "Evento comunitario",
+      category: "Evento",
+      description: "Una escena flexible para eventos locales y fechas especiales.",
+    },
+  };
+  return translations[key];
+}
 
 function Admin() {
   const navigate = useNavigate();
+  const { locale, formatDateTime, formatNumber } = useI18n();
+  const tr = useCallback(
+    (english: string, spanish: string) => (locale === "es" ? spanish : english),
+    [locale],
+  );
+  const localeCode = locale === "es" ? "es-US" : "en-US";
   const [user, setUser] = useState<SessionUser | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
   const [clients, setClients] = useState<ClientSummary[]>([]);
   const [members, setMembers] = useState<MemberSummary[]>([]);
-  const [active, setActive] = useState("Dashboard");
+  const [active, setActive] = useState<SectionId>("Dashboard");
   const [mobile, setMobile] = useState(false);
   const [modal, setModal] = useState(false);
   const [clientModal, setClientModal] = useState(false);
@@ -105,7 +175,7 @@ function Admin() {
     memberId: "",
     amount: "",
     points: "",
-    note: "Eligible purchase",
+    note: locale === "es" ? "Compra elegible" : "Eligible purchase",
   });
   const [clientForm, setClientForm] = useState({
     businessName: "",
@@ -156,14 +226,17 @@ function Admin() {
       if (!award.memberId && firstMember)
         setAward((current) => ({ ...current, memberId: firstMember.id }));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Dashboard failed to load");
+      setError(tr("Dashboard failed to load", "No se pudo cargar el panel"));
     } finally {
       setBusy(false);
     }
-  }, [award.memberId, navigate]);
+  }, [award.memberId, navigate, tr]);
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => {
+    document.title = tr("Business dashboard | Elite Rewards", "Panel del negocio | Elite Rewards");
+  }, [tr]);
   const submitAward = async (event: FormEvent) => {
     event.preventDefault();
     setError("");
@@ -175,10 +248,15 @@ function Admin() {
         note: award.note,
       });
       setModal(false);
-      setNotice("Points were added to the production ledger.");
+      setNotice(
+        tr(
+          "Points were added to the production ledger.",
+          "Los puntos se agregaron al registro de producción.",
+        ),
+      );
       await load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Award failed");
+      setError(tr("Award failed", "No se pudo otorgar los puntos"));
     }
   };
   const submitClient = async (event: FormEvent) => {
@@ -188,10 +266,10 @@ function Admin() {
       const result = await api.createClient(clientForm);
       setClients((current) => [...current, result.client]);
       setActivationPath(result.activationPath);
-      setNotice(`${result.client.name} was added.`);
+      setNotice(tr(`${result.client.name} was added.`, `Se agregó ${result.client.name}.`));
       setClientForm({ businessName: "", locationName: "", ownerName: "", ownerEmail: "" });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Client creation failed");
+      setError(tr("Client creation failed", "No se pudo crear el cliente"));
     }
   };
   const openClientEditor = async (client: ClientSummary) => {
@@ -219,7 +297,12 @@ function Admin() {
         inventoryRemaining: null,
       });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Client customization failed to load");
+      setError(
+        tr(
+          "Client customization failed to load",
+          "No se pudo cargar la personalización del cliente",
+        ),
+      );
     }
   };
   const saveClientBranding = async () => {
@@ -241,21 +324,26 @@ function Admin() {
             : client,
         ),
       );
-      setNotice(`${result.branding.name} branding was published.`);
+      setNotice(
+        tr(
+          `${result.branding.name} branding was published.`,
+          `Se publicó la marca de ${result.branding.name}.`,
+        ),
+      );
       setClientEditor(null);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Client customization failed");
+      setError(tr("Client customization failed", "No se pudo personalizar el cliente"));
     }
   };
   const uploadClientLogo = async (file: File) => {
     if (!clientEditor) return;
     setError("");
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
-      setError("Choose a PNG, JPEG, or WebP logo.");
+      setError(tr("Choose a PNG, JPEG, or WebP logo.", "Elige un logotipo PNG, JPEG o WebP."));
       return;
     }
     if (file.size > 2_097_152) {
-      setError("Logo must be 2 MB or smaller.");
+      setError(tr("Logo must be 2 MB or smaller.", "El logotipo debe medir 2 MB o menos."));
       return;
     }
     try {
@@ -267,9 +355,14 @@ function Admin() {
           client.id === clientEditor.id ? { ...client, logoUrl: result.branding.logoUrl } : client,
         ),
       );
-      setNotice(`${clientEditor.name} logo was uploaded.`);
+      setNotice(
+        tr(
+          `${clientEditor.name} logo was uploaded.`,
+          `Se cargó el logotipo de ${clientEditor.name}.`,
+        ),
+      );
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Logo upload failed");
+      setError(tr("Logo upload failed", "No se pudo cargar el logotipo"));
     } finally {
       setLogoUploading(false);
     }
@@ -277,9 +370,14 @@ function Admin() {
   const copyClientLink = async (path: string, label: string) => {
     try {
       await navigator.clipboard.writeText(`${window.location.origin}${path}`);
-      setNotice(`${label} link copied.`);
+      setNotice(tr(`${label} link copied.`, `Se copió el enlace de ${label}.`));
     } catch {
-      setError("The link could not be copied. Open it and copy the browser address instead.");
+      setError(
+        tr(
+          "The link could not be copied. Open it and copy the browser address instead.",
+          "No se pudo copiar el enlace. Ábrelo y copia la dirección del navegador.",
+        ),
+      );
     }
   };
   const submitMember = async (event: FormEvent) => {
@@ -289,10 +387,10 @@ function Admin() {
       const result = await api.createMember(memberForm);
       setMembers((current) => [result.member, ...current]);
       setMemberActivationPath(result.activationPath);
-      setNotice(`${result.member.name} was enrolled.`);
+      setNotice(tr(`${result.member.name} was enrolled.`, `Se inscribió a ${result.member.name}.`));
       setMemberForm({ name: "", email: "" });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Member enrollment failed");
+      setError(tr("Member enrollment failed", "No se pudo inscribir al miembro"));
     }
   };
   const emptyRewardForm = (): RewardDraft => ({
@@ -314,9 +412,15 @@ function Admin() {
       setClientRewards((await api.clientRewards(clientEditor.id)).rewards);
       setClientRewardEditingId(null);
       setClientRewardDraft(emptyRewardForm());
-      setNotice(wasEditing ? "Client reward updated." : "Client reward created.");
+      setNotice(
+        wasEditing
+          ? tr("Client reward updated.", "Se actualizó la recompensa del cliente.")
+          : tr("Client reward created.", "Se creó la recompensa del cliente."),
+      );
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Client reward update failed");
+      setError(
+        tr("Client reward update failed", "No se pudo actualizar la recompensa del cliente"),
+      );
     }
   };
   const editClientReward = (reward: ManagedReward) => {
@@ -335,7 +439,7 @@ function Admin() {
     setClientRewards((await api.clientRewards(clientEditor.id)).rewards);
     setClientRewardEditingId(null);
     setClientRewardDraft(emptyRewardForm());
-    setNotice("Client reward archived.");
+    setNotice(tr("Client reward archived.", "Se archivó la recompensa del cliente."));
   };
   const openNewReward = () => {
     setEditingRewardId(null);
@@ -360,23 +464,35 @@ function Admin() {
       if (editingRewardId) await api.updateReward(editingRewardId, rewardForm);
       else await api.createReward(rewardForm);
       setRewardModal(false);
-      setNotice(editingRewardId ? "Reward offer updated." : "Reward offer created.");
+      setNotice(
+        editingRewardId
+          ? tr("Reward offer updated.", "Se actualizó la oferta de recompensa.")
+          : tr("Reward offer created.", "Se creó la oferta de recompensa."),
+      );
       await load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Reward update failed");
+      setError(tr("Reward update failed", "No se pudo actualizar la recompensa"));
     }
   };
   const archiveCurrentReward = async () => {
-    if (!editingRewardId || !window.confirm("Archive this reward? Members will no longer see it."))
+    if (
+      !editingRewardId ||
+      !window.confirm(
+        tr(
+          "Archive this reward? Members will no longer see it.",
+          "¿Archivar esta recompensa? Los miembros dejarán de verla.",
+        ),
+      )
+    )
       return;
     setError("");
     try {
       await api.archiveReward(editingRewardId);
       setRewardModal(false);
-      setNotice("Reward offer archived.");
+      setNotice(tr("Reward offer archived.", "Se archivó la oferta de recompensa."));
       await load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Reward archive failed");
+      setError(tr("Reward archive failed", "No se pudo archivar la recompensa"));
     }
   };
   const logout = async () => {
@@ -389,9 +505,14 @@ function Admin() {
     try {
       const result = await api.updateVisualSettings(visualDraft);
       setVisualSettings(result);
-      setNotice("Business pages and dashboards were updated.");
+      setNotice(
+        tr(
+          "Business pages and dashboards were updated.",
+          "Se actualizaron las páginas y los paneles del negocio.",
+        ),
+      );
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Appearance update failed");
+      setError(tr("Appearance update failed", "No se pudo actualizar la apariencia"));
     }
   };
   const visible = useMemo(() => {
@@ -404,8 +525,11 @@ function Admin() {
           .some((value) => String(value).toLowerCase().includes(term)),
     );
   }, [data, search]);
-  if (busy) return <Loading label="Loading secure dashboard…" />;
-  if (!data || !user) return <Loading label={error || "Dashboard is unavailable."} />;
+  if (busy) return <Loading label={tr("Loading secure dashboard…", "Cargando el panel seguro…")} />;
+  if (!data || !user)
+    return (
+      <Loading label={error || tr("Dashboard is unavailable.", "El panel no está disponible.")} />
+    );
   return (
     <div className={`admin-shell theme-${visualSettings?.themeKey ?? "elite-signature"}`}>
       <ExperienceBackdrop settings={visualSettings} audience="admin" />
@@ -422,7 +546,11 @@ function Admin() {
           ) : (
             <BusinessBrand business={data.business} compact />
           )}
-          <button onClick={() => setMobile(false)} className="mobile-close" aria-label="Close menu">
+          <button
+            onClick={() => setMobile(false)}
+            className="mobile-close"
+            aria-label={tr("Close menu", "Cerrar menú")}
+          >
             <X />
           </button>
         </div>
@@ -431,48 +559,52 @@ function Admin() {
             <Store />
           </span>
           <div>
-            <small>Current location</small>
+            <small>{tr("Current location", "Ubicación actual")}</small>
             <strong>{data.business.location_name}</strong>
           </div>
         </div>
         <nav>
           {sections
             .filter((section) => !section.platformOnly || user.platformAdmin)
-            .map(({ label, icon: Icon }) => (
+            .map(({ id, en, es, icon: Icon }) => (
               <button
-                className={active === label ? "active" : ""}
-                key={label}
+                className={active === id ? "active" : ""}
+                key={id}
                 onClick={() => {
-                  setActive(label);
+                  setActive(id);
                   setMobile(false);
                 }}
               >
                 <Icon />
-                {label}
+                {tr(en, es)}
               </button>
             ))}
         </nav>
         <div className="sidebar-footer">
           <button onClick={logout}>
-            <LogOut /> Sign out
+            <LogOut /> {tr("Sign out", "Cerrar sesión")}
           </button>
         </div>
       </aside>
       <div className="admin-main">
         <header className="admin-header">
-          <button className="menu-trigger" onClick={() => setMobile(true)} aria-label="Open menu">
+          <button
+            className="menu-trigger"
+            onClick={() => setMobile(true)}
+            aria-label={tr("Open menu", "Abrir menú")}
+          >
             <Menu />
           </button>
           <div>
             <span className="admin-eyebrow">{data.business.business_name}</span>
-            <h1>{active}</h1>
+            <h1>{sections.find((section) => section.id === active)?.[locale] ?? active}</h1>
           </div>
           <div className="admin-header-actions">
             <label className="search-box">
               <Search />
               <input
-                aria-label="Search transactions"
-                placeholder="Search activity…"
+                aria-label={tr("Search transactions", "Buscar transacciones")}
+                placeholder={tr("Search activity…", "Buscar actividad…")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -481,7 +613,13 @@ function Admin() {
               <span>{initials(user.name)}</span>
               <div>
                 <strong>{user.name}</strong>
-                <small>{user.role}</small>
+                <small>
+                  {user.role === "owner"
+                    ? tr("owner", "propietario")
+                    : user.role === "staff"
+                      ? tr("staff", "personal")
+                      : user.role}
+                </small>
               </div>
             </div>
           </div>
@@ -496,10 +634,20 @@ function Admin() {
             <>
               <section className="dashboard-welcome">
                 <div>
-                  <span className="demo-badge">Live production ledger</span>
-                  <h2>Rewards activity you can trust.</h2>
+                  <span className="demo-badge">
+                    {tr("Live production ledger", "Registro de producción en vivo")}
+                  </span>
+                  <h2>
+                    {tr(
+                      "Rewards activity you can trust.",
+                      "Actividad de recompensas en la que puedes confiar.",
+                    )}
+                  </h2>
                   <p>
-                    Balances and transactions are stored server-side for{" "}
+                    {tr(
+                      "Balances and transactions are stored server-side for",
+                      "Los saldos y las transacciones se guardan en el servidor para",
+                    )}{" "}
                     {data.business.business_name}.
                   </p>
                 </div>
@@ -507,48 +655,77 @@ function Admin() {
                   className="admin-primary"
                   onClick={() => setModal(true)}
                   disabled={!data.members.length}
-                  title={!data.members.length ? "Add a member before awarding points" : undefined}
+                  title={
+                    !data.members.length
+                      ? tr(
+                          "Add a member before awarding points",
+                          "Agrega un miembro antes de otorgar puntos",
+                        )
+                      : undefined
+                  }
                 >
-                  <Plus /> {data.members.length ? "Award points" : "No members yet"}
+                  <Plus />{" "}
+                  {data.members.length
+                    ? tr("Award points", "Otorgar puntos")
+                    : tr("No members yet", "Aún no hay miembros")}
                 </button>
               </section>
               <section className="metrics-grid">
                 <Metric
                   icon={Users}
-                  label="Total members"
-                  value={data.metrics.members.toLocaleString()}
+                  label={tr("Total members", "Total de miembros")}
+                  value={formatNumber(data.metrics.members)}
+                  tr={tr}
                 />
                 <Metric
                   icon={Award}
-                  label="Points awarded"
-                  value={data.metrics.pointsAwarded.toLocaleString()}
+                  label={tr("Points awarded", "Puntos otorgados")}
+                  value={formatNumber(data.metrics.pointsAwarded)}
+                  tr={tr}
                 />
                 <Metric
                   icon={Gift}
-                  label="Rewards redeemed"
-                  value={data.metrics.rewardsRedeemed.toLocaleString()}
+                  label={tr("Rewards redeemed", "Recompensas canjeadas")}
+                  value={formatNumber(data.metrics.rewardsRedeemed)}
+                  tr={tr}
                 />
                 <Metric
                   icon={CircleDollarSign}
-                  label="Eligible sales"
-                  value={`$${(data.metrics.eligibleSalesCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+                  label={tr("Eligible sales", "Ventas elegibles")}
+                  value={new Intl.NumberFormat(localeCode, {
+                    style: "currency",
+                    currency: "USD",
+                  }).format(data.metrics.eligibleSalesCents / 100)}
+                  tr={tr}
                 />
               </section>
-              <TransactionTable transactions={visible} />
+              <TransactionTable
+                transactions={visible}
+                tr={tr}
+                formatDateTime={formatDateTime}
+                formatNumber={formatNumber}
+                localeCode={localeCode}
+              />
               <section className="panel health-panel">
                 <div>
                   <span className="health-icon">
                     <ShieldCheck />
                   </span>
                   <p>
-                    <strong>Production ledger active</strong>
+                    <strong>
+                      {tr("Production ledger active", "Registro de producción activo")}
+                    </strong>
                     <small>
-                      Authentication, authorization, PostgreSQL persistence, and idempotent
-                      mutations are connected.
+                      {tr(
+                        "Authentication, authorization, PostgreSQL persistence, and idempotent mutations are connected.",
+                        "La autenticación, la autorización, la persistencia de PostgreSQL y las mutaciones idempotentes están conectadas.",
+                      )}
                     </small>
                   </p>
                 </div>
-                <span className="uptime">Database connected</span>
+                <span className="uptime">
+                  {tr("Database connected", "Base de datos conectada")}
+                </span>
               </section>
             </>
           )}
@@ -560,8 +737,13 @@ function Admin() {
                     <Building2 />
                   </span>
                   <div>
-                    <h3>Business clients</h3>
-                    <small>Create and track each rewards program from one place.</small>
+                    <h3>{tr("Business clients", "Clientes comerciales")}</h3>
+                    <small>
+                      {tr(
+                        "Create and track each rewards program from one place.",
+                        "Crea y supervisa cada programa de recompensas desde un solo lugar.",
+                      )}
+                    </small>
                   </div>
                 </div>
                 <button
@@ -571,7 +753,7 @@ function Admin() {
                     setActivationPath("");
                   }}
                 >
-                  <Plus /> Add client
+                  <Plus /> {tr("Add client", "Agregar cliente")}
                 </button>
               </div>
               <div className="client-grid">
@@ -590,22 +772,24 @@ function Admin() {
                           {initials(client.name)}
                         </span>
                       )}
-                      <span className={`client-status ${client.status}`}>{client.status}</span>
+                      <span className={`client-status ${client.status}`}>
+                        {localizeStatus(client.status, tr)}
+                      </span>
                     </div>
                     <h3>{client.name}</h3>
                     <p>{client.locationName}</p>
                     <dl>
                       <div>
-                        <dt>Owner</dt>
+                        <dt>{tr("Owner", "Propietario")}</dt>
                         <dd>{client.ownerName}</dd>
                       </div>
                       <div>
-                        <dt>Email</dt>
+                        <dt>{tr("Email", "Correo electrónico")}</dt>
                         <dd>{client.ownerEmail}</dd>
                       </div>
                       <div>
-                        <dt>Members</dt>
-                        <dd>{client.members.toLocaleString()}</dd>
+                        <dt>{tr("Members", "Miembros")}</dt>
+                        <dd>{formatNumber(client.members)}</dd>
                       </div>
                     </dl>
                     <div className="client-card-actions">
@@ -615,13 +799,14 @@ function Admin() {
                         target="_blank"
                         rel="noreferrer"
                       >
-                        <ExternalLink size={16} /> Open client page
+                        <ExternalLink size={16} />{" "}
+                        {tr("Open client page", "Abrir página del cliente")}
                       </a>
                       <button
                         className="client-customize"
                         onClick={() => void openClientEditor(client)}
                       >
-                        <Palette size={16} /> Customize client
+                        <Palette size={16} /> {tr("Customize client", "Personalizar cliente")}
                       </button>
                     </div>
                   </article>
@@ -637,8 +822,13 @@ function Admin() {
                     <Users />
                   </span>
                   <div>
-                    <h3>Members</h3>
-                    <small>Enroll customers and track wallet activation.</small>
+                    <h3>{tr("Members", "Miembros")}</h3>
+                    <small>
+                      {tr(
+                        "Enroll customers and track wallet activation.",
+                        "Inscribe clientes y supervisa la activación de sus billeteras.",
+                      )}
+                    </small>
                   </div>
                 </div>
                 <button
@@ -648,7 +838,7 @@ function Admin() {
                     setMemberActivationPath("");
                   }}
                 >
-                  <UserPlus /> Enroll member
+                  <UserPlus /> {tr("Enroll member", "Inscribir miembro")}
                 </button>
               </div>
               <div className="member-list">
@@ -667,21 +857,34 @@ function Admin() {
                     <span>
                       <strong>{member.name}</strong>
                       <small>
-                        {member.email} · {member.points.toLocaleString()} points
+                        {member.email} · {formatNumber(member.points)} {tr("points", "puntos")}
                       </small>
                     </span>
-                    <span className={`client-status ${member.status}`}>{member.status}</span>
+                    <span className={`client-status ${member.status}`}>
+                      {localizeStatus(member.status, tr)}
+                    </span>
                   </button>
                 ))}
                 {!members.length && (
                   <p className="empty-table">
-                    No members yet. Use Enroll member to create the first secure wallet invitation.
+                    {tr(
+                      "No members yet. Use Enroll member to create the first secure wallet invitation.",
+                      "Aún no hay miembros. Usa Inscribir miembro para crear la primera invitación segura a una billetera.",
+                    )}
                   </p>
                 )}
               </div>
             </section>
           )}
-          {active === "Transactions" && <TransactionTable transactions={visible} />}
+          {active === "Transactions" && (
+            <TransactionTable
+              transactions={visible}
+              tr={tr}
+              formatDateTime={formatDateTime}
+              formatNumber={formatNumber}
+              localeCode={localeCode}
+            />
+          )}
           {active === "Rewards" && (
             <section className="reward-management">
               <div className="panel reward-management-heading">
@@ -690,11 +893,20 @@ function Admin() {
                     <Trophy />
                   </span>
                   <div>
-                    <span className="section-kicker">Business reward catalog</span>
-                    <h2>Choose exactly what members can earn.</h2>
+                    <span className="section-kicker">
+                      {tr("Business reward catalog", "Catálogo de recompensas del negocio")}
+                    </span>
+                    <h2>
+                      {tr(
+                        "Choose exactly what members can earn.",
+                        "Elige exactamente lo que pueden ganar los miembros.",
+                      )}
+                    </h2>
                     <p>
-                      Set the offer, points cost, availability, and optional quantity. Wallets
-                      update from the live catalog automatically.
+                      {tr(
+                        "Set the offer, points cost, availability, and optional quantity. Wallets update from the live catalog automatically.",
+                        "Configura la oferta, el costo en puntos, la disponibilidad y una cantidad opcional. Las billeteras se actualizan automáticamente desde el catálogo en vivo.",
+                      )}
                     </p>
                   </div>
                 </div>
@@ -703,7 +915,10 @@ function Admin() {
                   onClick={openNewReward}
                   disabled={user.role !== "owner"}
                 >
-                  <Plus /> {user.role === "owner" ? "Create reward" : "Owner access required"}
+                  <Plus />{" "}
+                  {user.role === "owner"
+                    ? tr("Create reward", "Crear recompensa")
+                    : tr("Owner access required", "Se requiere acceso de propietario")}
                 </button>
               </div>
               <div className="reward-grid">
@@ -715,18 +930,26 @@ function Admin() {
                     <span className="reward-card-icon">
                       <Gift />
                     </span>
-                    <span className="reward-cost">{reward.points.toLocaleString()} pts</span>
+                    <span className="reward-cost">
+                      {formatNumber(reward.points)} {tr("pts", "pts")}
+                    </span>
                     <h3>{reward.name}</h3>
-                    <p>{reward.description || "No description added."}</p>
+                    <p>
+                      {reward.description ||
+                        tr("No description added.", "No se agregó una descripción.")}
+                    </p>
                     <div className="reward-meta">
                       <span className={`client-status ${reward.active ? "active" : "invited"}`}>
-                        {reward.archivedAt ? "archived" : reward.active ? "active" : "hidden"}
+                        {localizeStatus(
+                          reward.archivedAt ? "archived" : reward.active ? "active" : "hidden",
+                          tr,
+                        )}
                       </span>
                       <small>
                         {reward.inventoryRemaining === null
-                          ? "Unlimited"
-                          : `${reward.inventoryRemaining} remaining`}{" "}
-                        · {reward.redemptionCount} redeemed
+                          ? tr("Unlimited", "Sin límite")
+                          : `${formatNumber(reward.inventoryRemaining)} ${tr("remaining", "restantes")}`}{" "}
+                        · {formatNumber(reward.redemptionCount)} {tr("redeemed", "canjeadas")}
                       </small>
                     </div>
                     <button
@@ -734,13 +957,22 @@ function Admin() {
                       onClick={() => openReward(reward)}
                       disabled={Boolean(reward.archivedAt)}
                     >
-                      <span>{reward.archivedAt ? "Archived" : "Edit reward"}</span>
+                      <span>
+                        {reward.archivedAt
+                          ? tr("Archived", "Archivada")
+                          : tr("Edit reward", "Editar recompensa")}
+                      </span>
                       <Pencil size={17} />
                     </button>
                   </article>
                 ))}
                 {!managedRewards.length && (
-                  <p className="empty-table">No rewards yet. Create the first offer for members.</p>
+                  <p className="empty-table">
+                    {tr(
+                      "No rewards yet. Create the first offer for members.",
+                      "Aún no hay recompensas. Crea la primera oferta para los miembros.",
+                    )}
+                  </p>
                 )}
               </div>
             </section>
@@ -752,11 +984,17 @@ function Admin() {
                   <Palette />
                 </span>
                 <div>
-                  <span className="section-kicker">Business customization</span>
-                  <h2>Live backgrounds & event themes</h2>
+                  <span className="section-kicker">
+                    {tr("Business customization", "Personalización del negocio")}
+                  </span>
+                  <h2>
+                    {tr("Live backgrounds & event themes", "Fondos en vivo y temas de eventos")}
+                  </h2>
                   <p>
-                    Select a high-resolution animated visual for this business’s admin dashboard and
-                    member wallets. Motion automatically reduces when a visitor requests it.
+                    {tr(
+                      "Select a high-resolution animated visual for this business’s admin dashboard and member wallets. Motion automatically reduces when a visitor requests it.",
+                      "Selecciona una imagen animada de alta resolución para el panel administrativo y las billeteras de miembros de este negocio. El movimiento se reduce automáticamente cuando un visitante lo solicita.",
+                    )}
                   </p>
                 </div>
               </div>
@@ -767,11 +1005,15 @@ function Admin() {
                       <CalendarClock />
                     </span>
                     <div>
-                      <span className="section-kicker">Automatic schedule</span>
-                      <h3>Switch themes on holidays</h3>
+                      <span className="section-kicker">
+                        {tr("Automatic schedule", "Programación automática")}
+                      </span>
+                      <h3>{tr("Switch themes on holidays", "Cambiar temas en días festivos")}</h3>
                       <p>
-                        When enabled, Elite Rewards temporarily publishes the matching holiday theme
-                        on its scheduled date, then restores your selected theme automatically.
+                        {tr(
+                          "When enabled, Elite Rewards temporarily publishes the matching holiday theme on its scheduled date, then restores your selected theme automatically.",
+                          "Cuando está activado, Elite Rewards publica temporalmente el tema festivo correspondiente en la fecha programada y luego restaura automáticamente el tema seleccionado.",
+                        )}
                       </p>
                     </div>
                   </div>
@@ -790,12 +1032,15 @@ function Admin() {
                     <span aria-hidden="true" />
                     <strong>
                       {visualDraft.automaticHolidayThemes
-                        ? "Automatic holiday themes on"
-                        : "Automatic holiday themes off"}
+                        ? tr("Automatic holiday themes on", "Temas festivos automáticos activados")
+                        : tr(
+                            "Automatic holiday themes off",
+                            "Temas festivos automáticos desactivados",
+                          )}
                     </strong>
                   </label>
                   <label className="timezone-field">
-                    Business time zone
+                    {tr("Business time zone", "Zona horaria del negocio")}
                     <select
                       value={visualDraft.timeZone}
                       onChange={(event) =>
@@ -804,92 +1049,142 @@ function Admin() {
                       disabled={user.role !== "owner"}
                     >
                       <option value="UTC">UTC</option>
-                      <option value="America/New_York">Eastern Time</option>
-                      <option value="America/Chicago">Central Time</option>
-                      <option value="America/Denver">Mountain Time</option>
-                      <option value="America/Los_Angeles">Pacific Time</option>
-                      <option value="America/Anchorage">Alaska Time</option>
-                      <option value="Pacific/Honolulu">Hawaii Time</option>
+                      <option value="America/New_York">
+                        {tr("Eastern Time", "Hora del Este")}
+                      </option>
+                      <option value="America/Chicago">{tr("Central Time", "Hora Central")}</option>
+                      <option value="America/Denver">
+                        {tr("Mountain Time", "Hora de la Montaña")}
+                      </option>
+                      <option value="America/Los_Angeles">
+                        {tr("Pacific Time", "Hora del Pacífico")}
+                      </option>
+                      <option value="America/Anchorage">
+                        {tr("Alaska Time", "Hora de Alaska")}
+                      </option>
+                      <option value="Pacific/Honolulu">{tr("Hawaii Time", "Hora de Hawái")}</option>
                     </select>
                   </label>
                   <div className="automatic-theme-status" role="status">
                     {!visualSettings?.automaticHolidayThemes ? (
                       <>
-                        <strong>Automatic switching is currently off.</strong>
+                        <strong>
+                          {tr(
+                            "Automatic switching is currently off.",
+                            "El cambio automático está desactivado.",
+                          )}
+                        </strong>
                         <span>
-                          Enable the toggle and publish the appearance to start the schedule.
+                          {tr(
+                            "Enable the toggle and publish the appearance to start the schedule.",
+                            "Activa el interruptor y publica la apariencia para iniciar la programación.",
+                          )}
                         </span>
                       </>
                     ) : visualSettings.automaticThemeActive ? (
                       <>
-                        <strong>{visualSettings.automaticThemeName} is active today.</strong>
-                        <span>Your manual theme remains saved and will return afterward.</span>
+                        <strong>
+                          {tr(
+                            `${visualSettings.automaticThemeName} is active today.`,
+                            `${visualSettings.automaticThemeName} está activo hoy.`,
+                          )}
+                        </strong>
+                        <span>
+                          {tr(
+                            "Your manual theme remains saved and will return afterward.",
+                            "Tu tema manual permanece guardado y volverá después.",
+                          )}
+                        </span>
                       </>
                     ) : visualSettings.nextAutomaticTheme ? (
                       <>
                         <strong>
-                          Next: {visualSettings.nextAutomaticTheme.name} on{" "}
-                          {visualSettings.nextAutomaticTheme.localDate}
+                          {tr("Next", "Próximo")}: {visualSettings.nextAutomaticTheme.name}{" "}
+                          {tr("on", "el")} {visualSettings.nextAutomaticTheme.localDate}
                         </strong>
                         <span>{visualSettings.nextAutomaticTheme.dateLabel}</span>
                       </>
                     ) : null}
                   </div>
-                  <ul className="automatic-theme-schedule" aria-label="Automatic holiday schedule">
+                  <ul
+                    className="automatic-theme-schedule"
+                    aria-label={tr(
+                      "Automatic holiday schedule",
+                      "Programación automática de días festivos",
+                    )}
+                  >
                     <li>
-                      <strong>MLK Day</strong>
-                      <span>Third Monday in January</span>
+                      <strong>{tr("MLK Day", "Día de Martin Luther King Jr.")}</strong>
+                      <span>{tr("Third Monday in January", "Tercer lunes de enero")}</span>
                     </li>
                     <li>
-                      <strong>Spring Celebration</strong>
-                      <span>Easter Sunday</span>
+                      <strong>{tr("Spring Celebration", "Celebración de primavera")}</strong>
+                      <span>{tr("Easter Sunday", "Domingo de Pascua")}</span>
                     </li>
                     <li>
-                      <strong>September 11 Remembrance</strong>
-                      <span>September 11</span>
+                      <strong>
+                        {tr("September 11 Remembrance", "Conmemoración del 11 de septiembre")}
+                      </strong>
+                      <span>{tr("September 11", "11 de septiembre")}</span>
                     </li>
                     <li>
-                      <strong>Winter Holiday</strong>
-                      <span>December 24–26</span>
+                      <strong>{tr("Winter Holiday", "Festividad de invierno")}</strong>
+                      <span>{tr("December 24–26", "24–26 de diciembre")}</span>
                     </li>
                   </ul>
                   <div className="automatic-live-message">
                     <div>
-                      <span className="section-kicker">Optional live message</span>
-                      <h3>Holiday or event announcement</h3>
+                      <span className="section-kicker">
+                        {tr("Optional live message", "Mensaje en vivo opcional")}
+                      </span>
+                      <h3>{tr("Holiday or event announcement", "Anuncio festivo o de evento")}</h3>
                       <p>
-                        Add a respectful observance, store event, or seasonal message. Leave both
-                        fields empty for wallpaper only.
+                        {tr(
+                          "Add a respectful observance, store event, or seasonal message. Leave both fields empty for wallpaper only.",
+                          "Agrega una conmemoración respetuosa, un evento de la tienda o un mensaje de temporada. Deja ambos campos vacíos para mostrar solo el fondo.",
+                        )}
                       </p>
                     </div>
                     <label>
-                      Headline
+                      {tr("Headline", "Título")}
                       <input
                         maxLength={80}
                         value={visualDraft.occasionTitle}
                         onChange={(event) =>
                           setVisualDraft({ ...visualDraft, occasionTitle: event.target.value })
                         }
-                        placeholder="Example: Honoring Dr. Martin Luther King Jr."
+                        placeholder={tr(
+                          "Example: Honoring Dr. Martin Luther King Jr.",
+                          "Ejemplo: En honor al Dr. Martin Luther King Jr.",
+                        )}
                       />
                     </label>
                     <label>
-                      Message
+                      {tr("Message", "Mensaje")}
                       <textarea
                         maxLength={220}
                         value={visualDraft.occasionMessage}
                         onChange={(event) =>
                           setVisualDraft({ ...visualDraft, occasionMessage: event.target.value })
                         }
-                        placeholder="Add a short message for members and staff."
+                        placeholder={tr(
+                          "Add a short message for members and staff.",
+                          "Agrega un mensaje breve para los miembros y el personal.",
+                        )}
                       />
                     </label>
                     <button className="admin-primary" disabled={user.role !== "owner"}>
-                      {user.role === "owner" ? "Publish appearance" : "Owner access required"}
+                      {user.role === "owner"
+                        ? tr("Publish appearance", "Publicar apariencia")
+                        : tr("Owner access required", "Se requiere acceso de propietario")}
                     </button>
                   </div>
                 </section>
-                <div className="theme-grid" role="radiogroup" aria-label="Business page theme">
+                <div
+                  className="theme-grid"
+                  role="radiogroup"
+                  aria-label={tr("Business page theme", "Tema de la página del negocio")}
+                >
                   {themeCatalog.map((theme) => (
                     <label
                       className={`theme-card ${visualDraft.themeKey === theme.key ? "selected" : ""}`}
@@ -904,9 +1199,9 @@ function Admin() {
                       />
                       <img src={theme.image} alt="" />
                       <span>
-                        <small>{theme.category}</small>
-                        <strong>{theme.name}</strong>
-                        <em>{theme.description}</em>
+                        <small>{tr(theme.category, themeSpanish(theme.key).category)}</small>
+                        <strong>{tr(theme.name, themeSpanish(theme.key).name)}</strong>
+                        <em>{tr(theme.description, themeSpanish(theme.key).description)}</em>
                       </span>
                     </label>
                   ))}
@@ -929,18 +1224,24 @@ function Admin() {
               type="button"
               className="modal-close"
               onClick={() => setClientEditor(null)}
-              aria-label="Close"
+              aria-label={tr("Close", "Cerrar")}
             >
               <X />
             </button>
             <span className="modal-icon">
               <Palette />
             </span>
-            <span className="section-kicker">Elite platform control</span>
-            <h2 id="customize-client-title">Customize {clientEditor.name}</h2>
+            <span className="section-kicker">
+              {tr("Elite platform control", "Control de la plataforma Elite")}
+            </span>
+            <h2 id="customize-client-title">
+              {tr("Customize", "Personalizar")} {clientEditor.name}
+            </h2>
             <p>
-              Publish the identity used by this client’s business dashboard and member wallets.
-              Rewards remain managed in that client’s isolated catalog.
+              {tr(
+                "Publish the identity used by this client’s business dashboard and member wallets. Rewards remain managed in that client’s isolated catalog.",
+                "Publica la identidad que utiliza el panel del negocio y las billeteras de miembros de este cliente. Las recompensas siguen administrándose en el catálogo aislado del cliente.",
+              )}
             </p>
             <div className="client-brand-preview" style={clientBrandStyle(clientBranding)}>
               {clientBranding.logoUrl ? (
@@ -952,7 +1253,7 @@ function Admin() {
               <small>{clientBranding.locationName || clientEditor.locationName}</small>
             </div>
             <label>
-              Business name
+              {tr("Business name", "Nombre del negocio")}
               <input
                 required
                 minLength={2}
@@ -964,7 +1265,7 @@ function Admin() {
               />
             </label>
             <label>
-              Primary location
+              {tr("Primary location", "Ubicación principal")}
               <input
                 required
                 minLength={2}
@@ -976,9 +1277,10 @@ function Admin() {
               />
             </label>
             <label className="client-logo-upload">
-              Company logo
+              {tr("Company logo", "Logotipo de la empresa")}
               <span>
-                <Upload size={18} /> Choose logo from files
+                <Upload size={18} />{" "}
+                {tr("Choose logo from files", "Elegir logotipo de los archivos")}
               </span>
               <input
                 type="file"
@@ -991,12 +1293,14 @@ function Admin() {
                 }}
               />
               <small>
-                {logoUploading ? "Uploading logo…" : "PNG, JPEG, or WebP · maximum 2 MB"}
+                {logoUploading
+                  ? tr("Uploading logo…", "Cargando logotipo…")
+                  : tr("PNG, JPEG, or WebP · maximum 2 MB", "PNG, JPEG o WebP · máximo 2 MB")}
               </small>
             </label>
             <div className="client-color-fields">
               <label>
-                Primary color
+                {tr("Primary color", "Color principal")}
                 <input
                   type="color"
                   value={clientBranding.primaryColor}
@@ -1006,7 +1310,7 @@ function Admin() {
                 />
               </label>
               <label>
-                Accent color
+                {tr("Accent color", "Color de acento")}
                 <input
                   type="color"
                   value={clientBranding.secondaryColor}
@@ -1021,15 +1325,19 @@ function Admin() {
               className="admin-primary full"
               onClick={() => void saveClientBranding()}
             >
-              Publish client branding
+              {tr("Publish client branding", "Publicar marca del cliente")}
             </button>
             <section className="client-links">
               <div>
-                <span className="section-kicker">Client page & NFC</span>
-                <h3>Customer-facing destination</h3>
+                <span className="section-kicker">
+                  {tr("Client page & NFC", "Página del cliente y NFC")}
+                </span>
+                <h3>{tr("Customer-facing destination", "Destino para clientes")}</h3>
                 <p>
-                  Open this page to verify branding and rewards. Program the same URL into this
-                  client’s NFC cards.
+                  {tr(
+                    "Open this page to verify branding and rewards. Program the same URL into this client’s NFC cards.",
+                    "Abre esta página para verificar la marca y las recompensas. Programa la misma URL en las tarjetas NFC de este cliente.",
+                  )}
                 </p>
               </div>
               <a
@@ -1038,21 +1346,25 @@ function Admin() {
                 target="_blank"
                 rel="noreferrer"
               >
-                <ExternalLink size={16} /> Open client page
+                <ExternalLink size={16} /> {tr("Open client page", "Abrir página del cliente")}
               </a>
               <button
                 type="button"
                 className="client-customize"
-                onClick={() => void copyClientLink(clientEditor.nfcPath, "NFC card")}
+                onClick={() =>
+                  void copyClientLink(clientEditor.nfcPath, tr("NFC card", "tarjeta NFC"))
+                }
               >
-                <Copy size={16} /> Copy NFC card link
+                <Copy size={16} /> {tr("Copy NFC card link", "Copiar enlace de la tarjeta NFC")}
               </button>
               <code>{clientEditor.nfcPath}</code>
             </section>
             <div className="client-reward-manager">
               <div>
-                <span className="section-kicker">Client rewards</span>
-                <h3>Customer-facing offer catalog</h3>
+                <span className="section-kicker">
+                  {tr("Client rewards", "Recompensas del cliente")}
+                </span>
+                <h3>{tr("Customer-facing offer catalog", "Catálogo de ofertas para clientes")}</h3>
               </div>
               <div className="client-reward-list">
                 {clientRewards.map((reward) => (
@@ -1064,10 +1376,15 @@ function Admin() {
                   >
                     <span>
                       <strong>{reward.name}</strong>
-                      <small>{reward.points.toLocaleString()} points</small>
+                      <small>
+                        {formatNumber(reward.points)} {tr("points", "puntos")}
+                      </small>
                     </span>
                     <span className={`client-status ${reward.active ? "active" : "invited"}`}>
-                      {reward.archivedAt ? "archived" : reward.active ? "active" : "hidden"}
+                      {localizeStatus(
+                        reward.archivedAt ? "archived" : reward.active ? "active" : "hidden",
+                        tr,
+                      )}
                     </span>
                   </button>
                 ))}
@@ -1081,12 +1398,12 @@ function Admin() {
                     setClientRewardDraft(emptyRewardForm());
                   }}
                 >
-                  <Plus size={16} /> New client reward
+                  <Plus size={16} /> {tr("New client reward", "Nueva recompensa del cliente")}
                 </button>
               </div>
               <form className="client-reward-form" onSubmit={saveClientReward}>
                 <label>
-                  Reward name
+                  {tr("Reward name", "Nombre de la recompensa")}
                   <input
                     required
                     minLength={2}
@@ -1098,7 +1415,7 @@ function Admin() {
                   />
                 </label>
                 <label>
-                  Description
+                  {tr("Description", "Descripción")}
                   <textarea
                     maxLength={500}
                     value={clientRewardDraft.description}
@@ -1112,7 +1429,7 @@ function Admin() {
                 </label>
                 <div className="client-color-fields">
                   <label>
-                    Points
+                    {tr("Points", "Puntos")}
                     <input
                       type="number"
                       min="1"
@@ -1127,12 +1444,12 @@ function Admin() {
                     />
                   </label>
                   <label>
-                    Inventory
+                    {tr("Inventory", "Inventario")}
                     <input
                       type="number"
                       min="0"
                       max="1000000"
-                      placeholder="Unlimited"
+                      placeholder={tr("Unlimited", "Sin límite")}
                       value={clientRewardDraft.inventoryRemaining ?? ""}
                       onChange={(event) =>
                         setClientRewardDraft({
@@ -1153,7 +1470,12 @@ function Admin() {
                     }
                   />
                   <span>
-                    <strong>Visible to this client’s members</strong>
+                    <strong>
+                      {tr(
+                        "Visible to this client’s members",
+                        "Visible para los miembros de este cliente",
+                      )}
+                    </strong>
                   </span>
                 </label>
                 <div className="reward-editor-actions">
@@ -1163,11 +1485,13 @@ function Admin() {
                       className="danger-button"
                       onClick={() => void archiveSelectedClientReward()}
                     >
-                      Archive
+                      {tr("Archive", "Archivar")}
                     </button>
                   )}
                   <button className="admin-primary">
-                    {clientRewardEditingId ? "Save client reward" : "Create client reward"}
+                    {clientRewardEditingId
+                      ? tr("Save client reward", "Guardar recompensa del cliente")
+                      : tr("Create client reward", "Crear recompensa del cliente")}
                   </button>
                 </div>
               </form>
@@ -1189,20 +1513,34 @@ function Admin() {
               type="button"
               className="modal-close"
               onClick={() => setClientModal(false)}
-              aria-label="Close"
+              aria-label={tr("Close", "Cerrar")}
             >
               <X />
             </button>
             <span className="modal-icon">
               <Building2 />
             </span>
-            <span className="section-kicker">Platform client</span>
-            <h2 id="add-client-title">Add a business client</h2>
-            <p>Create an isolated rewards program and a secure owner activation invitation.</p>
+            <span className="section-kicker">
+              {tr("Platform client", "Cliente de la plataforma")}
+            </span>
+            <h2 id="add-client-title">
+              {tr("Add a business client", "Agregar un cliente comercial")}
+            </h2>
+            <p>
+              {tr(
+                "Create an isolated rewards program and a secure owner activation invitation.",
+                "Crea un programa de recompensas aislado y una invitación segura de activación para el propietario.",
+              )}
+            </p>
             {activationPath ? (
               <div className="activation-result" role="status">
-                <strong>Client created</strong>
-                <p>Copy this private activation link and send it to the client owner:</p>
+                <strong>{tr("Client created", "Cliente creado")}</strong>
+                <p>
+                  {tr(
+                    "Copy this private activation link and send it to the client owner:",
+                    "Copia este enlace privado de activación y envíalo al propietario del cliente:",
+                  )}
+                </p>
                 <code>{`${window.location.origin}${activationPath}`}</code>
                 <button
                   type="button"
@@ -1211,13 +1549,13 @@ function Admin() {
                     void navigator.clipboard.writeText(`${window.location.origin}${activationPath}`)
                   }
                 >
-                  Copy activation link
+                  {tr("Copy activation link", "Copiar enlace de activación")}
                 </button>
               </div>
             ) : (
               <>
                 <label>
-                  Business name
+                  {tr("Business name", "Nombre del negocio")}
                   <input
                     required
                     minLength={2}
@@ -1229,7 +1567,7 @@ function Admin() {
                   />
                 </label>
                 <label>
-                  First location
+                  {tr("First location", "Primera ubicación")}
                   <input
                     required
                     minLength={2}
@@ -1241,7 +1579,7 @@ function Admin() {
                   />
                 </label>
                 <label>
-                  Client owner name
+                  {tr("Client owner name", "Nombre del propietario del cliente")}
                   <input
                     required
                     minLength={2}
@@ -1253,7 +1591,7 @@ function Admin() {
                   />
                 </label>
                 <label>
-                  Client owner email
+                  {tr("Client owner email", "Correo del propietario del cliente")}
                   <input
                     required
                     type="email"
@@ -1264,7 +1602,9 @@ function Admin() {
                     }
                   />
                 </label>
-                <button className="admin-primary full">Create client</button>
+                <button className="admin-primary full">
+                  {tr("Create client", "Crear cliente")}
+                </button>
               </>
             )}
           </form>
@@ -1284,20 +1624,34 @@ function Admin() {
               type="button"
               className="modal-close"
               onClick={() => setMemberModal(false)}
-              aria-label="Close"
+              aria-label={tr("Close", "Cerrar")}
             >
               <X />
             </button>
             <span className="modal-icon">
               <UserPlus />
             </span>
-            <span className="section-kicker">Member enrollment</span>
-            <h2 id="enroll-member-title">Enroll a rewards member</h2>
-            <p>Create a secure, single-use wallet activation invitation.</p>
+            <span className="section-kicker">
+              {tr("Member enrollment", "Inscripción de miembros")}
+            </span>
+            <h2 id="enroll-member-title">
+              {tr("Enroll a rewards member", "Inscribir a un miembro de recompensas")}
+            </h2>
+            <p>
+              {tr(
+                "Create a secure, single-use wallet activation invitation.",
+                "Crea una invitación segura y de un solo uso para activar la billetera.",
+              )}
+            </p>
             {memberActivationPath ? (
               <div className="activation-result" role="status">
-                <strong>Member enrolled</strong>
-                <p>Copy this private activation link and send it to the member:</p>
+                <strong>{tr("Member enrolled", "Miembro inscrito")}</strong>
+                <p>
+                  {tr(
+                    "Copy this private activation link and send it to the member:",
+                    "Copia este enlace privado de activación y envíalo al miembro:",
+                  )}
+                </p>
                 <code>{`${window.location.origin}${memberActivationPath}`}</code>
                 <button
                   type="button"
@@ -1308,13 +1662,13 @@ function Admin() {
                     )
                   }
                 >
-                  Copy activation link
+                  {tr("Copy activation link", "Copiar enlace de activación")}
                 </button>
               </div>
             ) : (
               <>
                 <label>
-                  Member name
+                  {tr("Member name", "Nombre del miembro")}
                   <input
                     required
                     minLength={2}
@@ -1325,7 +1679,7 @@ function Admin() {
                   />
                 </label>
                 <label>
-                  Member email
+                  {tr("Member email", "Correo del miembro")}
                   <input
                     required
                     type="email"
@@ -1337,7 +1691,9 @@ function Admin() {
                     }
                   />
                 </label>
-                <button className="admin-primary full">Create member invitation</button>
+                <button className="admin-primary full">
+                  {tr("Create member invitation", "Crear invitación de miembro")}
+                </button>
               </>
             )}
           </form>
@@ -1357,41 +1713,55 @@ function Admin() {
               type="button"
               className="modal-close"
               onClick={() => setRewardModal(false)}
-              aria-label="Close"
+              aria-label={tr("Close", "Cerrar")}
             >
               <X />
             </button>
             <span className="modal-icon">
               <Gift />
             </span>
-            <span className="section-kicker">Business reward offer</span>
-            <h2 id="reward-editor-title">{editingRewardId ? "Edit reward" : "Create a reward"}</h2>
-            <p>Changes publish to this business’s member wallets only.</p>
+            <span className="section-kicker">
+              {tr("Business reward offer", "Oferta de recompensa del negocio")}
+            </span>
+            <h2 id="reward-editor-title">
+              {editingRewardId
+                ? tr("Edit reward", "Editar recompensa")
+                : tr("Create a reward", "Crear una recompensa")}
+            </h2>
+            <p>
+              {tr(
+                "Changes publish to this business’s member wallets only.",
+                "Los cambios se publican únicamente en las billeteras de los miembros de este negocio.",
+              )}
+            </p>
             <label>
-              Reward name
+              {tr("Reward name", "Nombre de la recompensa")}
               <input
                 required
                 minLength={2}
                 maxLength={120}
                 value={rewardForm.name}
                 onChange={(event) => setRewardForm({ ...rewardForm, name: event.target.value })}
-                placeholder="Example: Free specialty drink"
+                placeholder={tr("Example: Free specialty drink", "Ejemplo: Bebida especial gratis")}
               />
             </label>
             <label>
-              Description
+              {tr("Description", "Descripción")}
               <textarea
                 maxLength={500}
                 value={rewardForm.description}
                 onChange={(event) =>
                   setRewardForm({ ...rewardForm, description: event.target.value })
                 }
-                placeholder="Explain what the member receives and any important eligibility details."
+                placeholder={tr(
+                  "Explain what the member receives and any important eligibility details.",
+                  "Explica lo que recibe el miembro y cualquier requisito importante.",
+                )}
               />
             </label>
             <div className="reward-editor-grid">
               <label>
-                Points cost
+                {tr("Points cost", "Costo en puntos")}
                 <input
                   required
                   type="number"
@@ -1405,7 +1775,7 @@ function Admin() {
                 />
               </label>
               <label>
-                Quantity available
+                {tr("Quantity available", "Cantidad disponible")}
                 <input
                   type="number"
                   min="0"
@@ -1419,7 +1789,7 @@ function Admin() {
                         event.target.value === "" ? null : Number(event.target.value),
                     })
                   }
-                  placeholder="Unlimited"
+                  placeholder={tr("Unlimited", "Sin límite")}
                 />
               </label>
             </div>
@@ -1430,18 +1800,25 @@ function Admin() {
                 onChange={(event) => setRewardForm({ ...rewardForm, active: event.target.checked })}
               />
               <span>
-                <strong>Visible to members</strong>
-                <small>Turn this off to save the offer without publishing it.</small>
+                <strong>{tr("Visible to members", "Visible para los miembros")}</strong>
+                <small>
+                  {tr(
+                    "Turn this off to save the offer without publishing it.",
+                    "Desactiva esto para guardar la oferta sin publicarla.",
+                  )}
+                </small>
               </span>
             </label>
             <div className="reward-editor-actions">
               {editingRewardId && (
                 <button type="button" className="danger-button" onClick={archiveCurrentReward}>
-                  Archive reward
+                  {tr("Archive reward", "Archivar recompensa")}
                 </button>
               )}
               <button className="admin-primary">
-                {editingRewardId ? "Save changes" : "Create reward"}
+                {editingRewardId
+                  ? tr("Save changes", "Guardar cambios")
+                  : tr("Create reward", "Crear recompensa")}
               </button>
             </div>
           </form>
@@ -1460,18 +1837,25 @@ function Admin() {
               type="button"
               className="modal-close"
               onClick={() => setModal(false)}
-              aria-label="Close"
+              aria-label={tr("Close", "Cerrar")}
             >
               <X />
             </button>
             <span className="modal-icon">
               <Award />
             </span>
-            <span className="section-kicker">Production award</span>
-            <h2>Reward a member</h2>
-            <p>This writes an immutable entry to the rewards ledger.</p>
+            <span className="section-kicker">
+              {tr("Production award", "Otorgamiento de producción")}
+            </span>
+            <h2>{tr("Reward a member", "Premiar a un miembro")}</h2>
+            <p>
+              {tr(
+                "This writes an immutable entry to the rewards ledger.",
+                "Esto escribe una entrada inmutable en el registro de recompensas.",
+              )}
+            </p>
             <label>
-              Member
+              {tr("Member", "Miembro")}
               <select
                 required
                 value={award.memberId}
@@ -1479,13 +1863,13 @@ function Admin() {
               >
                 {data.members.map((member) => (
                   <option key={member.id} value={member.id}>
-                    {member.name} — {member.points} points
+                    {member.name} — {formatNumber(member.points)} {tr("points", "puntos")}
                   </option>
                 ))}
               </select>
             </label>
             <label>
-              Purchase amount
+              {tr("Purchase amount", "Monto de compra")}
               <input
                 type="number"
                 min="0"
@@ -1496,7 +1880,7 @@ function Admin() {
               />
             </label>
             <label>
-              Points
+              {tr("Points", "Puntos")}
               <input
                 type="number"
                 min="1"
@@ -1507,14 +1891,14 @@ function Admin() {
               />
             </label>
             <label>
-              Reason
+              {tr("Reason", "Motivo")}
               <input
                 maxLength={300}
                 value={award.note}
                 onChange={(e) => setAward({ ...award, note: e.target.value })}
               />
             </label>
-            <button className="admin-primary full">Post award</button>
+            <button className="admin-primary full">{tr("Post award", "Publicar puntos")}</button>
           </form>
         </div>
       )}
@@ -1554,10 +1938,12 @@ function Metric({
   icon: Icon,
   label,
   value,
+  tr,
 }: {
   icon: typeof Users;
   label: string;
   value: string;
+  tr: TranslatePair;
 }) {
   return (
     <article className="metric-card">
@@ -1568,13 +1954,25 @@ function Metric({
         <small>{label}</small>
         <strong>{value}</strong>
         <p>
-          <span>Live</span> production data
+          <span>{tr("Live", "En vivo")}</span> {tr("production data", "datos de producción")}
         </p>
       </div>
     </article>
   );
 }
-function TransactionTable({ transactions }: { transactions: DashboardData["transactions"] }) {
+function TransactionTable({
+  transactions,
+  tr,
+  formatDateTime,
+  formatNumber,
+  localeCode,
+}: {
+  transactions: DashboardData["transactions"];
+  tr: TranslatePair;
+  formatDateTime: (value: string | number | Date, options?: Intl.DateTimeFormatOptions) => string;
+  formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string;
+  localeCode: string;
+}) {
   return (
     <section className="panel transaction-panel">
       <div className="panel-title">
@@ -1582,17 +1980,17 @@ function TransactionTable({ transactions }: { transactions: DashboardData["trans
           <span>
             <ReceiptText />
           </span>
-          <h3>Transactions</h3>
+          <h3>{tr("Transactions", "Transacciones")}</h3>
         </div>
       </div>
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Member</th>
-              <th>Purchase</th>
-              <th>Points</th>
-              <th>Status</th>
+              <th>{tr("Member", "Miembro")}</th>
+              <th>{tr("Purchase", "Compra")}</th>
+              <th>{tr("Points", "Puntos")}</th>
+              <th>{tr("Status", "Estado")}</th>
             </tr>
           </thead>
           <tbody>
@@ -1602,17 +2000,24 @@ function TransactionTable({ transactions }: { transactions: DashboardData["trans
                   <span className="member-avatar">{initials(t.member)}</span>
                   <span>
                     <strong>{t.member}</strong>
-                    <small>{t.rewardName ?? new Date(t.time).toLocaleString()}</small>
+                    <small>{t.rewardName ?? formatDateTime(t.time)}</small>
                   </span>
                 </td>
-                <td>{t.amount ? `$${t.amount.toFixed(2)}` : "Reward"}</td>
+                <td>
+                  {t.amount
+                    ? new Intl.NumberFormat(localeCode, {
+                        style: "currency",
+                        currency: "USD",
+                      }).format(t.amount)
+                    : tr("Reward", "Recompensa")}
+                </td>
                 <td className={t.type === "earned" ? "positive" : "redeemed"}>
                   {t.type === "earned" ? "+" : "−"}
-                  {t.points}
+                  {formatNumber(t.points)}
                 </td>
                 <td>
                   <span className={`table-status ${t.type}`}>
-                    {t.type === "earned" ? "Awarded" : "Redeemed"}
+                    {t.type === "earned" ? tr("Awarded", "Otorgados") : tr("Redeemed", "Canjeados")}
                   </span>
                 </td>
               </tr>
@@ -1620,7 +2025,7 @@ function TransactionTable({ transactions }: { transactions: DashboardData["trans
             {!transactions.length && (
               <tr>
                 <td colSpan={4} className="empty-table">
-                  No transactions yet.
+                  {tr("No transactions yet.", "Aún no hay transacciones.")}
                 </td>
               </tr>
             )}

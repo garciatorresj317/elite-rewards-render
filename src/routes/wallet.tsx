@@ -11,19 +11,19 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import type { ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { BrandMark } from "@/components/BrandMark";
 import { BusinessBrand } from "@/components/BusinessBrand";
 import { ExperienceBackdrop } from "@/components/ExperienceTheme";
+import { useI18n } from "@/i18n";
 import { api, type VisualSettings, type WalletData } from "@/lib/api-client";
-
 export const Route = createFileRoute("/wallet")({
   head: () => ({ meta: [{ title: "My wallet | Elite Rewards" }] }),
   component: Wallet,
 });
 function Wallet() {
   const navigate = useNavigate();
+  const { t, formatNumber, formatDateTime, errorMessage } = useI18n();
   const [data, setData] = useState<WalletData | null>(null),
     [busy, setBusy] = useState(true),
     [notice, setNotice] = useState(""),
@@ -43,11 +43,11 @@ function Wallet() {
       setData(wallet);
       setSettings(visualSettings);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Wallet failed to load");
+      setError(errorMessage(cause, "Wallet failed to load"));
     } finally {
       setBusy(false);
     }
-  }, [navigate]);
+  }, [navigate, errorMessage]);
   useEffect(() => {
     void load();
   }, [load]);
@@ -55,10 +55,10 @@ function Wallet() {
     setError("");
     try {
       const result = await api.redeem(rewardId);
-      setNotice(`${name} redeemed. Code: ${result.code}`);
+      setNotice(t("{rewardName} redeemed. Code: {code}", { rewardName: name, code: result.code }));
       await load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Redemption failed");
+      setError(errorMessage(cause, "Redemption failed"));
     }
   };
   const logout = async () => {
@@ -69,16 +69,16 @@ function Wallet() {
     try {
       setReferral(await api.referral());
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Referral link unavailable");
+      setError(errorMessage(cause, "Referral link unavailable"));
     }
   };
-  if (busy) return <Status label="Loading secure wallet…" />;
-  if (!data) return <Status label={error || "Wallet unavailable."} />;
+  if (busy) return <Status label={t("Loading secure wallet…")} />;
+  if (!data) return <Status label={error || t("Wallet unavailable.")} />;
   const futureRewardPoints = data.rewards
     .map((reward) => reward.points)
     .filter((points) => points > data.points);
-  const readyReward = data.rewards.some((reward) => reward.points <= data.points);
-  const next = futureRewardPoints.length ? Math.min(...futureRewardPoints) : null;
+  const readyReward = data.rewards.some((reward) => reward.points <= data.points),
+    next = futureRewardPoints.length ? Math.min(...futureRewardPoints) : null;
   return (
     <div className={`wallet-page theme-${settings?.themeKey ?? "elite-signature"}`}>
       <ExperienceBackdrop settings={settings} audience="member" />
@@ -91,7 +91,7 @@ function Wallet() {
       <header className="wallet-header container-mid">
         <BusinessBrand business={data.context} />
         <button className="back-link plain-button" onClick={logout}>
-          <LogOut size={17} /> Sign out
+          <LogOut size={17} /> {t("Sign out")}
         </button>
       </header>
       <main className="container-mid wallet-layout">
@@ -106,14 +106,14 @@ function Wallet() {
               <Sparkles size={14} /> {data.context?.business_name}
             </span>
             <h1>
-              Welcome back, <em>{data.member.name.split(" ")[0]}.</em>
+              {t("Welcome back,")} <em>{data.member.name.split(" ")[0]}.</em>
             </h1>
-            <p>Your balance is authoritative and updates from the live rewards ledger.</p>
+            <p>{t("Your balance is authoritative and updates from the live rewards ledger.")}</p>
           </div>
           <div className="points-orb">
-            <small>Available balance</small>
-            <strong>{data.points.toLocaleString()}</strong>
-            <span>points</span>
+            <small>{t("Available balance")}</small>
+            <strong>{formatNumber(data.points)}</strong>
+            <span>{t("points")}</span>
           </div>
         </section>
         <section className="next-reward-card">
@@ -122,17 +122,19 @@ function Wallet() {
               <Gift />
             </span>
             <div>
-              <small>{data.rewards.length ? "Next milestone" : "Reward catalog"}</small>
+              <small>{t(data.rewards.length ? "Next milestone" : "Reward catalog")}</small>
               <h2>
                 {!data.rewards.length
-                  ? "New rewards are coming soon."
+                  ? t("New rewards are coming soon.")
                   : readyReward
-                    ? "A reward is ready."
-                    : `${(next ?? data.points) - data.points} points until your next reward`}
+                    ? t("A reward is ready.")
+                    : t("{count} points until your next reward", {
+                        count: (next ?? data.points) - data.points,
+                      })}
               </h2>
             </div>
           </div>
-          {data.rewards.length && (
+          {data.rewards.length > 0 && (
             <>
               <div className="reward-progress">
                 <span
@@ -143,18 +145,20 @@ function Wallet() {
               </div>
               <div className="reward-scale">
                 <span>0</span>
-                <span>{readyReward ? "Reward ready" : `${next?.toLocaleString()} points`}</span>
+                <span>
+                  {readyReward ? t("Reward ready") : t("{count} points", { count: next ?? 0 })}
+                </span>
               </div>
             </>
           )}
         </section>
         <div className="wallet-section-title">
           <div>
-            <span className="section-kicker">Choose your perk</span>
-            <h2>Rewards for you</h2>
+            <span className="section-kicker">{t("Choose your perk")}</span>
+            <h2>{t("Rewards for you")}</h2>
           </div>
           <button className="text-button" onClick={() => setHistoryOpen(true)}>
-            <History size={17} /> Reward history
+            <History size={17} /> {t("Reward history")}
           </button>
         </div>
         <section className="reward-grid">
@@ -168,11 +172,13 @@ function Wallet() {
                 <span className="reward-card-icon">
                   <Gift />
                 </span>
-                <span className="reward-cost">{reward.points} pts</span>
+                <span className="reward-cost">
+                  {formatNumber(reward.points)} {t("pts")}
+                </span>
                 <h3>{reward.name}</h3>
                 <p>{reward.description}</p>
                 <button disabled={disabled} onClick={() => void redeem(reward.id, reward.name)}>
-                  {disabled ? "Keep earning" : "Redeem"}
+                  {t(disabled ? "Keep earning" : "Redeem")}
                   <ChevronRight size={17} />
                 </button>
               </article>
@@ -180,7 +186,7 @@ function Wallet() {
           })}
           {!data.rewards.length && (
             <p className="empty-table">
-              This business has not published an available reward yet. Check back soon.
+              {t("This business has not published an available reward yet. Check back soon.")}
             </p>
           )}
         </section>
@@ -190,11 +196,11 @@ function Wallet() {
               <QrCode />
             </span>
             <div>
-              <h3>Earn on your next visit</h3>
-              <p>Show your unique member code at checkout.</p>
+              <h3>{t("Earn on your next visit")}</h3>
+              <p>{t("Show your unique member code at checkout.")}</p>
             </div>
           </div>
-          <button onClick={() => setCodeOpen(true)}>Show member code</button>
+          <button onClick={() => setCodeOpen(true)}>{t("Show member code")}</button>
         </section>
         <section className="referral-panel panel">
           <div>
@@ -202,11 +208,12 @@ function Wallet() {
               <Share2 />
             </span>
             <div>
-              <span className="section-kicker">Invite friends & family</span>
-              <h3>Share your rewards link</h3>
+              <span className="section-kicker">{t("Invite friends & family")}</span>
+              <h3>{t("Share your rewards link")}</h3>
               <p>
-                Friends can use your secure link to create a wallet for{" "}
-                {data.context?.business_name}.
+                {t("Friends can use your secure link to create a wallet for {businessName}.", {
+                  businessName: data.context?.business_name ?? "Elite Rewards",
+                })}
               </p>
             </div>
           </div>
@@ -220,14 +227,12 @@ function Wallet() {
                   )
                 }
               >
-                <Copy size={17} /> Copy link
+                <Copy size={17} /> {t("Copy link")}
               </button>
-              <small>
-                {referral.referralCount} joined referral{referral.referralCount === 1 ? "" : "s"}
-              </small>
+              <small>{t("{count} joined referral", { count: referral.referralCount })}</small>
             </div>
           ) : (
-            <button onClick={() => void loadReferral()}>Create my referral link</button>
+            <button onClick={() => void loadReferral()}>{t("Create my referral link")}</button>
           )}
         </section>
         {data.redemptions.length > 0 && (
@@ -237,7 +242,7 @@ function Wallet() {
                 <span>
                   <Gift />
                 </span>
-                <h3>Active reward codes</h3>
+                <h3>{t("Active reward codes")}</h3>
               </div>
             </div>
             <ul className="history-list">
@@ -247,7 +252,7 @@ function Wallet() {
                   <li key={x.id}>
                     <span>
                       <strong>{x.name}</strong>
-                      <small>{new Date(x.created_at).toLocaleString()}</small>
+                      <small>{formatDateTime(x.created_at)}</small>
                     </span>
                     <b>{x.code}</b>
                   </li>
@@ -257,31 +262,35 @@ function Wallet() {
         )}
       </main>
       {historyOpen && (
-        <Modal title="Reward history" close={() => setHistoryOpen(false)}>
+        <Modal title={t("Reward history")} close={() => setHistoryOpen(false)}>
           <ul className="history-list">
             {data.ledger.length ? (
               data.ledger.map((item) => (
                 <li key={item.id}>
                   <span>
                     <strong>{item.reward_name ?? item.note}</strong>
-                    <small>{new Date(item.created_at).toLocaleString()}</small>
+                    <small>{formatDateTime(item.created_at)}</small>
                   </span>
                   <b>
                     {item.pointsDelta > 0 ? "+" : ""}
-                    {item.pointsDelta} pts
+                    {formatNumber(item.pointsDelta)} {t("pts")}
                   </b>
                 </li>
               ))
             ) : (
-              <li>No activity yet.</li>
+              <li>{t("No activity yet.")}</li>
             )}
           </ul>
         </Modal>
       )}
       {codeOpen && (
-        <Modal title="Member code" close={() => setCodeOpen(false)}>
+        <Modal title={t("Member code")} close={() => setCodeOpen(false)}>
           <div className="member-code">{data.member.memberCode}</div>
-          <p>Only show this code to authorized staff at {data.context?.location_name}.</p>
+          <p>
+            {t("Only show this code to authorized staff at {locationName}.", {
+              locationName: data.context?.location_name ?? "",
+            })}
+          </p>
         </Modal>
       )}
     </div>
@@ -296,6 +305,7 @@ function Modal({
   close: () => void;
   children: ReactNode;
 }) {
+  const { t } = useI18n();
   return (
     <div className="modal-backdrop" onMouseDown={close}>
       <div
@@ -304,13 +314,13 @@ function Modal({
         aria-modal="true"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <button className="modal-close" onClick={close} aria-label="Close">
+        <button className="modal-close" onClick={close} aria-label={t("Close")}>
           <X />
         </button>
         <span className="modal-icon">
           <History />
         </span>
-        <span className="section-kicker">Live account</span>
+        <span className="section-kicker">{t("Live account")}</span>
         <h2>{title}</h2>
         {children}
       </div>
@@ -318,13 +328,14 @@ function Modal({
   );
 }
 function Status({ label }: { label: string }) {
+  const { t } = useI18n();
   return (
     <div className="error-screen">
       <div>
         <BrandMark />
         <h1>{label}</h1>
         <a className="button button-dark" href="/login">
-          Go to sign in
+          {t("Go to sign in")}
         </a>
       </div>
     </div>

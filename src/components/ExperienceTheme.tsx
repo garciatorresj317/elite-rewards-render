@@ -1,6 +1,6 @@
+import { useI18n } from "@/i18n";
 import type { VisualSettings } from "@/lib/api-client";
 import { themeCatalog } from "@/lib/theme-catalog";
-
 export function ExperienceBackdrop({
   settings,
   audience,
@@ -8,6 +8,7 @@ export function ExperienceBackdrop({
   settings: VisualSettings | null;
   audience: "admin" | "member";
 }) {
+  const { t } = useI18n();
   if (!settings) return null;
   const theme = themeCatalog.find((item) => item.key === settings.themeKey) ?? themeCatalog[0]!;
   return (
@@ -20,9 +21,9 @@ export function ExperienceBackdrop({
       {(settings.occasionTitle || settings.occasionMessage) && (
         <section
           className={`occasion-banner occasion-${settings.themeKey}`}
-          aria-label="Special message"
+          aria-label={t("Special message")}
         >
-          <span>{theme.category}</span>
+          <span>{t(theme.category)}</span>
           {settings.occasionTitle && <strong>{settings.occasionTitle}</strong>}
           {settings.occasionMessage && <p>{settings.occasionMessage}</p>}
         </section>

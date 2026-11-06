@@ -2,42 +2,40 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { UserRoundCheck } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
+import { useI18n } from "@/i18n";
 import { api } from "@/lib/api-client";
-
 export const Route = createFileRoute("/activate-member")({
   head: () => ({ meta: [{ title: "Activate member account | Elite Rewards" }] }),
   component: ActivateMember,
 });
-
 function ActivateMember() {
   const navigate = useNavigate();
+  const { t, errorMessage } = useI18n();
   const [invitation, setInvitation] = useState<Awaited<
-    ReturnType<typeof api.memberInvitation>
-  > | null>(null);
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+      ReturnType<typeof api.memberInvitation>
+    > | null>(null),
+    [password, setPassword] = useState(""),
+    [confirmPassword, setConfirmPassword] = useState(""),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(false);
   const token =
     typeof window === "undefined"
       ? ""
       : (new URLSearchParams(window.location.search).get("token") ?? "");
-
   useEffect(() => {
     if (!token) {
-      setError("This member invitation is missing its secure token.");
+      setError(t("This member invitation is missing its secure token."));
       return;
     }
     void api
       .memberInvitation(token)
       .then(setInvitation)
-      .catch((cause: Error) => setError(cause.message));
-  }, [token]);
-
+      .catch((cause) => setError(errorMessage(cause, "Activation failed")));
+  }, [token, t, errorMessage]);
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("Passwords do not match"));
       return;
     }
     setBusy(true);
@@ -46,18 +44,17 @@ function ActivateMember() {
       await api.activateMember(token, password);
       await navigate({ to: "/wallet" });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Activation failed");
+      setError(errorMessage(cause, "Activation failed"));
     } finally {
       setBusy(false);
     }
   };
-
   return (
     <div className="auth-page">
       <header className="auth-header">
         <BrandMark />
         <Link to="/" className="back-link">
-          Back to site
+          {t("Back to site")}
         </Link>
       </header>
       <main className="auth-main">
@@ -65,8 +62,8 @@ function ActivateMember() {
           <span className="auth-icon">
             <UserRoundCheck />
           </span>
-          <span className="section-kicker">Member activation</span>
-          <h1>Activate your Elite Rewards wallet</h1>
+          <span className="section-kicker">{t("Member activation")}</span>
+          <h1>{t("Activate your Elite Rewards wallet")}</h1>
           {error && (
             <div className="form-error" role="alert">
               {error}
@@ -82,7 +79,7 @@ function ActivateMember() {
                 <small>{invitation.memberEmail}</small>
               </div>
               <label>
-                Create member password
+                {t("Create member password")}
                 <input
                   required
                   type="password"
@@ -94,7 +91,7 @@ function ActivateMember() {
                 />
               </label>
               <label>
-                Confirm password
+                {t("Confirm password")}
                 <input
                   required
                   type="password"
@@ -106,7 +103,7 @@ function ActivateMember() {
                 />
               </label>
               <button className="admin-primary full" disabled={busy}>
-                {busy ? "Activating…" : "Activate member wallet"}
+                {busy ? t("Activating…") : t("Activate member wallet")}
               </button>
             </form>
           )}
