@@ -76,6 +76,12 @@ describe("password visibility and join experience", () => {
     assert.match(route, /join-future-grid/);
     assert.equal((route.match(/className="join-orbit/g) ?? []).length, 2);
     assert.match(route, /referralContext\?\.logoUrl/);
+    assert.doesNotMatch(route, /className="modal-icon"/);
+    assert.doesNotMatch(route, /className="section-kicker"/);
+    assert.doesNotMatch(route, /Sparkles|Users/);
+    assert.match(styles, /body:has\(\.business-join-page\) \.language-switcher[\s\S]*?bottom:/);
+    assert.match(styles, /width: min\(78vw, 1100px\)/);
+    assert.match(styles, /width: 112vw/);
     assert.match(styles, /@keyframes join-logo-breathe/);
     assert.match(styles, /@keyframes join-grid-flow/);
     assert.match(styles, /prefers-reduced-motion: reduce/);

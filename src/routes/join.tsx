@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Check, Sparkles, Users } from "lucide-react";
+import { Check } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
 import { BusinessBrand } from "@/components/BusinessBrand";
@@ -117,12 +117,6 @@ function JoinRewards() {
         </a>
       </header>
       <main className="auth-card referral-join-card themed-surface-content">
-        <span className="modal-icon">
-          <Users />
-        </span>
-        <span className="section-kicker">
-          <Sparkles size={15} /> {t(referralCode ? "Member referral" : "Join Rewards")}
-        </span>
         <h1>{t("Join {businessName}", { businessName: businessName ?? "Elite Rewards" })}</h1>
         {busy && <p>{t("Loading your rewards program…")}</p>}
         {error && (
