@@ -932,10 +932,10 @@ body:has(.business-join-page) .language-switcher {
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
 }
 .join-business-watermark {
-  position: fixed; z-index: 0; inset: 112px 0 0; display: grid; place-items: center; pointer-events: none;
-  opacity: .13; filter: grayscale(.15) saturate(.75) drop-shadow(0 0 90px color-mix(in srgb, var(--client-primary, var(--gold)) 48%, transparent));
+  position: fixed; z-index: 0; inset: 0; display: grid; place-items: center; pointer-events: none;
+  opacity: .1; filter: grayscale(.15) saturate(.75) drop-shadow(0 0 90px color-mix(in srgb, var(--client-primary, var(--gold)) 48%, transparent));
 }
-.join-business-watermark img { width: min(78vw, 1100px); max-height: 80vh; object-fit: contain; transform: scale(1.04); animation: join-logo-breathe 10s ease-in-out infinite alternate; }
+.join-business-watermark img { width: 100vw; height: 100vh; object-fit: cover; transform: scale(1.04); animation: join-logo-breathe 10s ease-in-out infinite alternate; }
 .join-future-grid {
   position: fixed; z-index: 0; inset: 52% -20% -42%; pointer-events: none;
   background-image:
@@ -977,8 +977,6 @@ body:has(.business-join-page) .language-switcher {
 @media (max-width: 620px) {
   .business-join-page .wallet-header { min-height: 136px; align-items: flex-start; padding-top: 20px; }
   .business-join-page .referral-join-card { margin-top: 26px; }
-  .join-business-watermark { inset: 136px 0 0; }
-  .join-business-watermark img { width: 112vw; max-width: none; max-height: 64vh; }
   .join-orbit-one { width: 130vw; left: -84vw; }
   .join-orbit-two { width: 98vw; right: -64vw; }
 }
