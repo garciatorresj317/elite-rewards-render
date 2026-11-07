@@ -61,9 +61,9 @@ function Home() {
           <a href="#access">{t("Access")}</a>
         </nav>
         <div className="header-actions">
-          <Link to="/login" className="text-link">
+          <a href="/login?access=member" className="text-link">
             {t("Member sign in")}
-          </Link>
+          </a>
           <Link to="/login" className="button button-dark">
             {t("Business sign in")}
           </Link>
@@ -87,9 +87,9 @@ function Home() {
               <Link to="/login" className="button button-primary">
                 {t("Open Elite Rewards")} <ArrowRight size={18} />
               </Link>
-              <Link to="/login" className="button button-ghost">
+              <a href="/login?access=member" className="button button-ghost">
                 {t("Member sign in")}
-              </Link>
+              </a>
             </div>
             <div className="hero-proof">
               <span>

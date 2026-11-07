@@ -554,6 +554,9 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 .auth-card { width: min(calc(100% - 36px), 560px); margin: 70px auto; padding: 38px; border: 1px solid var(--gold-line); border-radius: 22px; background: linear-gradient(145deg, rgba(20,17,9,.98), rgba(3,3,3,.99)); box-shadow: 0 24px 80px rgba(0,0,0,.6), var(--glow); }
 .auth-card h1 { font: 700 clamp(30px,5vw,44px)/1.15 var(--serif); color: var(--gold-pale); margin: 14px 0; }
 .auth-card > p, .auth-note { color: var(--muted); line-height: 1.65; }
+.member-account-switch { display: grid; gap: 14px; }
+.member-account-switch p { color: var(--muted); line-height: 1.65; margin: 0; }
+.member-account-switch .button { justify-content: center; }
 .auth-card form, .award-modal { display: grid; gap: 16px; }
 .auth-card label, .award-modal label { display: grid; gap: 8px; color: var(--gold-pale); font-weight: 700; }
 .auth-card input, .award-modal input, .award-modal select { width: 100%; min-height: 48px; border: 1px solid rgba(236,171,26,.45); border-radius: 10px; background: #080704; color: var(--text); padding: 0 13px; }

@@ -382,7 +382,7 @@ function Status({ label }: { label: string }) {
       <div>
         <BrandMark />
         <h1>{label}</h1>
-        <a className="button button-dark" href="/login">
+        <a className="button button-dark" href="/login?access=member">
           {t("Go to sign in")}
         </a>
       </div>

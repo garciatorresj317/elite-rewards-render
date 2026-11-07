@@ -31,9 +31,9 @@ function ClientExperience() {
       <ExperienceBackdrop settings={data.visualSettings} audience="member" />
       <header className="client-public-header container-mid themed-surface-content">
         <BusinessBrand business={data.business} />
-        <Link to="/login" className="button button-dark">
+        <a href="/login?access=member" className="button button-dark">
           <LogIn size={17} /> {t("Member sign in")}
-        </Link>
+        </a>
       </header>
       <main className="client-public-main container-mid themed-surface-content">
         <section className="client-public-hero">
@@ -54,9 +54,9 @@ function ClientExperience() {
             >
               <UserPlus size={18} /> {t("Join Rewards")}
             </a>
-            <Link to="/login" className="button button-primary">
+            <a href="/login?access=member" className="button button-primary">
               {t("Open member wallet")} <ArrowRight size={18} />
-            </Link>
+            </a>
             <span>
               <ScanLine size={18} /> {t("NFC card destination")}
             </span>

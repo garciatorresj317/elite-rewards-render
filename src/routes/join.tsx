@@ -93,7 +93,7 @@ function JoinRewards() {
       />
       <header className="wallet-header container-mid themed-surface-content">
         {branding ? <BusinessBrand business={branding} /> : <BrandMark />}
-        <a className="back-link" href="/login">
+        <a className="back-link" href="/login?access=member">
           {t("Already a member?")}
         </a>
       </header>
