@@ -83,10 +83,14 @@ describe("password visibility and join experience", () => {
       styles,
       /body:has\(\.business-join-page\) \.language-switcher[\s\S]*?position: absolute;[\s\S]*?bottom:/,
     );
-    assert.match(styles, /\.join-business-watermark\s*\{[\s\S]*?inset: 0;[\s\S]*?opacity: \.1;/);
+    assert.match(styles, /\.join-business-watermark\s*\{[\s\S]*?inset: 0;[\s\S]*?opacity: \.08;/);
     assert.match(
       styles,
-      /\.join-business-watermark img\s*\{[\s\S]*?width: 100vw;[\s\S]*?height: 100vh;[\s\S]*?object-fit: cover;/,
+      /\.join-business-watermark img\s*\{[\s\S]*?width: 100vw;[\s\S]*?height: 100vh;[\s\S]*?object-fit: cover;[\s\S]*?transform: scale\(2\.4\);/,
+    );
+    assert.match(
+      styles,
+      /@keyframes join-logo-breathe\s*\{\s*from\s*\{\s*transform: scale\(2\.35\);[\s\S]*?to\s*\{\s*transform: scale\(2\.5\);/,
     );
     assert.doesNotMatch(styles, /width: min\(78vw, 1100px\)|width: 112vw/);
     assert.match(styles, /@keyframes join-logo-breathe/);
