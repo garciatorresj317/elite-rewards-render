@@ -20,8 +20,8 @@ export type SessionUser = {
 };
 
 export async function hashPassword(password: string): Promise<string> {
-  if (password.length < 12 || password.length > 200) {
-    throw new Error("Password must contain between 12 and 200 characters");
+  if (password.length < 8 || password.length > 200) {
+    throw new Error("Password must contain between 8 and 200 characters");
   }
   const salt = randomBytes(16);
   const derived = (await scrypt(password, salt, 64)) as Buffer;

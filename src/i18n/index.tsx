@@ -103,6 +103,9 @@ const es: Record<string, Translation> = {
     "Usa tu cuenta de negocio o de miembro. Los saldos de recompensas se guardan en el registro de producción.",
   Email: "Correo electrónico",
   Password: "Contraseña",
+  "Show password": "Mostrar contraseña",
+  "Hide password": "Ocultar contraseña",
+  "Use at least 8 characters.": "Usa al menos 8 caracteres.",
   "Signing in…": "Iniciando sesión…",
   "Sign in": "Iniciar sesión",
   "Initial setup is required. Open the private setup page and use the deployment setup token.":
@@ -248,8 +251,8 @@ const es: Record<string, Translation> = {
   "This referral link is incomplete.": "Este enlace de referido está incompleto.",
   "Invalid credentials or account temporarily locked":
     "Credenciales inválidas o cuenta bloqueada temporalmente",
-  "Password must contain between 12 and 200 characters":
-    "La contraseña debe contener entre 12 y 200 caracteres",
+  "Password must contain between 8 and 200 characters":
+    "La contraseña debe contener entre 8 y 200 caracteres",
   "Cross-origin request rejected": "La solicitud fue rechazada por seguridad",
   "Logo not found": "No se encontró el logotipo",
   "API route not found": "No se encontró el servicio solicitado",
@@ -333,8 +336,8 @@ const knownErrorPatterns: Array<[RegExp, string]> = [
     "Invalid credentials or account temporarily locked",
   ],
   [
-    /password must contain between 12 and 200 characters/i,
-    "Password must contain between 12 and 200 characters",
+    /password must contain between 8 and 200 characters/i,
+    "Password must contain between 8 and 200 characters",
   ],
   [/cross-origin request rejected/i, "Cross-origin request rejected"],
   [/logo not found/i, "Logo not found"],

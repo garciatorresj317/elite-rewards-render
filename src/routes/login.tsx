@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, LockKeyhole, Sparkles } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
+import { PasswordField } from "@/components/PasswordField";
 import { useI18n } from "@/i18n";
 import { api, type SessionUser } from "@/lib/api-client";
 
@@ -125,17 +126,13 @@ function Login() {
                 onChange={(event) => setEmail(event.target.value)}
               />
             </label>
-            <label>
-              {t("Password")}
-              <input
-                type="password"
-                autoComplete="current-password"
-                required
-                minLength={12}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-            </label>
+            <PasswordField
+              label="Password"
+              autoComplete="current-password"
+              minLength={1}
+              value={password}
+              onChange={setPassword}
+            />
             <button className="admin-primary full" disabled={busy}>
               {busy ? t("Signing in…") : t(memberAccess ? "Open member wallet" : "Sign in")}
             </button>

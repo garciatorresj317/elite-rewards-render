@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ShieldCheck } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
+import { PasswordField } from "@/components/PasswordField";
 import { useI18n } from "@/i18n";
 import { api } from "@/lib/api-client";
 export const Route = createFileRoute("/setup")({
@@ -42,18 +43,29 @@ function Setup() {
       setBusy(false);
     }
   };
-  const field = (key: keyof typeof form, label: string, type = "text") => (
-    <label>
-      {t(label)}
-      <input
-        type={type}
-        required
-        minLength={type === "password" ? 12 : 2}
+  const field = (key: keyof typeof form, label: string, type = "text") =>
+    type === "password" ? (
+      <PasswordField
+        label={label}
+        autoComplete="new-password"
+        minLength={key === "setupToken" ? 24 : 8}
         value={form[key]}
-        onChange={(event) => setForm({ ...form, [key]: event.target.value })}
+        onChange={(value) => setForm({ ...form, [key]: value })}
+        showRequirement={key === "ownerPassword"}
       />
-    </label>
-  );
+    ) : (
+      <label>
+        {t(label)}
+        <input
+          type={type}
+          required
+          minLength={2}
+          autoComplete={type === "email" ? "email" : undefined}
+          value={form[key]}
+          onChange={(event) => setForm({ ...form, [key]: event.target.value })}
+        />
+      </label>
+    );
   return (
     <div className="auth-page">
       <header className="wallet-header container-mid">

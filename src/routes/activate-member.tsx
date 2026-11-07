@@ -3,6 +3,7 @@ import { UserRoundCheck } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
 import { ExperienceBackdrop } from "@/components/ExperienceTheme";
+import { PasswordField } from "@/components/PasswordField";
 import { useI18n } from "@/i18n";
 import { api } from "@/lib/api-client";
 export const Route = createFileRoute("/activate-member")({
@@ -80,30 +81,19 @@ function ActivateMember() {
                 </span>
                 <small>{invitation.memberEmail}</small>
               </div>
-              <label>
-                {t("Create member password")}
-                <input
-                  required
-                  type="password"
-                  minLength={12}
-                  maxLength={200}
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                />
-              </label>
-              <label>
-                {t("Confirm password")}
-                <input
-                  required
-                  type="password"
-                  minLength={12}
-                  maxLength={200}
-                  autoComplete="new-password"
-                  value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
-                />
-              </label>
+              <PasswordField
+                label="Create member password"
+                autoComplete="new-password"
+                value={password}
+                onChange={setPassword}
+                showRequirement
+              />
+              <PasswordField
+                label="Confirm password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+              />
               <button className="admin-primary full" disabled={busy}>
                 {busy ? t("Activating…") : t("Activate member wallet")}
               </button>

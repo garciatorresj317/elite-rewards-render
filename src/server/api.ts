@@ -187,7 +187,7 @@ export async function setupProductionProgram(payload: Record<string, unknown>) {
     const locationName = text(payload["locationName"], "Location name", 2, 120);
     const ownerName = text(payload["ownerName"], "Owner name", 2, 120);
     const ownerEmail = text(payload["ownerEmail"], "Owner email", 5, 254).toLowerCase();
-    const ownerPassword = text(payload["ownerPassword"], "Owner password", 12, 200);
+    const ownerPassword = text(payload["ownerPassword"], "Owner password", 8, 200);
     await client.query("INSERT INTO businesses(id,name) VALUES ($1,$2)", [
       businessId,
       businessName,
@@ -296,7 +296,7 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       const payload = await body(request);
       const result = await activateClient(
         text(payload["token"], "Invitation token", 32, 200),
-        text(payload["password"], "Password", 12, 200),
+        text(payload["password"], "Password", 8, 200),
       );
       return json({ ok: true }, 201, { "set-cookie": setSessionCookie(result.sessionToken) });
     }
@@ -308,7 +308,7 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       const payload = await body(request);
       const result = await activateMember(
         text(payload["token"], "Invitation token", 32, 200),
-        text(payload["password"], "Password", 12, 200),
+        text(payload["password"], "Password", 8, 200),
       );
       return json({ ok: true }, 201, { "set-cookie": setSessionCookie(result.sessionToken) });
     }
@@ -322,7 +322,7 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
         referralCode: text(payload["referralCode"], "Referral code", 20, 200),
         name: text(payload["name"], "Name", 2, 120),
         email: text(payload["email"], "Email", 5, 254).toLowerCase(),
-        password: text(payload["password"], "Password", 12, 200),
+        password: text(payload["password"], "Password", 8, 200),
         requestSubject: requestSubject(request),
       });
       return json({ ok: true }, 201, { "set-cookie": setSessionCookie(result.sessionToken) });
@@ -351,7 +351,7 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
         businessId,
         name: text(payload["name"], "Name", 2, 120),
         email: text(payload["email"], "Email", 5, 254).toLowerCase(),
-        password: text(payload["password"], "Password", 12, 200),
+        password: text(payload["password"], "Password", 8, 200),
         requestSubject: requestSubject(request),
       });
       return json({ ok: true }, 201, { "set-cookie": setSessionCookie(result.sessionToken) });

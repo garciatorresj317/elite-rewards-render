@@ -530,14 +530,22 @@ export async function getOrCreateReferralLink(user: SessionUser): Promise<{
 export async function getReferralEnrollment(referralCodeValue: string): Promise<{
   businessName: string;
   locationName: string;
+  logoUrl: string | null;
+  primaryColor: string;
+  secondaryColor: string;
   visualSettings: PublicVisualSettings;
 }> {
   const result = await getPool().query<{
     business_id: string;
     business_name: string;
     location_name: string;
+    logo_url: string | null;
+    has_logo: boolean;
+    primary_color: string;
+    secondary_color: string;
   }>(
-    `SELECT b.id AS business_id, b.name AS business_name, l.name AS location_name
+    `SELECT b.id AS business_id, b.name AS business_name, l.name AS location_name,
+            b.logo_url, (b.logo_data IS NOT NULL) AS has_logo, b.primary_color, b.secondary_color
        FROM member_referral_links rfl
        JOIN businesses b ON b.id = rfl.business_id
        JOIN locations l ON l.id = rfl.location_id
@@ -552,6 +560,11 @@ export async function getReferralEnrollment(referralCodeValue: string): Promise<
   return {
     businessName: row.business_name,
     locationName: row.location_name,
+    logoUrl: row.has_logo
+      ? `/api/public/clients/${encodeURIComponent(row.business_id)}/logo`
+      : row.logo_url,
+    primaryColor: row.primary_color,
+    secondaryColor: row.secondary_color,
     visualSettings: publicVisualSettings(await getBusinessVisualSettings(row.business_id)),
   };
 }

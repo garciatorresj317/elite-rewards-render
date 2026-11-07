@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
 import { BusinessBrand } from "@/components/BusinessBrand";
 import { ExperienceBackdrop } from "@/components/ExperienceTheme";
+import { PasswordField } from "@/components/PasswordField";
 import { useI18n } from "@/i18n";
 import { api, type BusinessEnrollment } from "@/lib/api-client";
 
@@ -18,6 +19,9 @@ function JoinRewards() {
   const [referralContext, setReferralContext] = useState<{
     businessName: string;
     locationName: string;
+    logoUrl: string | null;
+    primaryColor: string;
+    secondaryColor: string;
     visualSettings: BusinessEnrollment["visualSettings"];
   } | null>(null);
   const [businessContext, setBusinessContext] = useState<BusinessEnrollment | null>(null);
@@ -66,21 +70,28 @@ function JoinRewards() {
 
   const businessName = businessContext?.businessName ?? referralContext?.businessName;
   const locationName = businessContext?.locationName ?? referralContext?.locationName;
-  const branding = businessContext
-    ? {
-        business_name: businessContext.businessName,
-        location_name: businessContext.locationName,
-        logo_url: businessContext.logoUrl,
-        primary_color: businessContext.primaryColor,
-        secondary_color: businessContext.secondaryColor,
-      }
-    : null;
-  const style = businessContext
-    ? ({
-        "--client-primary": businessContext.primaryColor,
-        "--client-secondary": businessContext.secondaryColor,
-      } as React.CSSProperties)
-    : undefined;
+  const logoUrl = businessContext?.logoUrl ?? referralContext?.logoUrl ?? null;
+  const branding =
+    businessContext || referralContext
+      ? {
+          business_name: businessContext?.businessName ?? referralContext?.businessName ?? "",
+          location_name: businessContext?.locationName ?? referralContext?.locationName ?? "",
+          logo_url: businessContext?.logoUrl ?? referralContext?.logoUrl ?? null,
+          primary_color:
+            businessContext?.primaryColor ?? referralContext?.primaryColor ?? "#F6B900",
+          secondary_color:
+            businessContext?.secondaryColor ?? referralContext?.secondaryColor ?? "#FFE27A",
+        }
+      : null;
+  const style =
+    businessContext || referralContext
+      ? ({
+          "--client-primary":
+            businessContext?.primaryColor ?? referralContext?.primaryColor ?? "#F6B900",
+          "--client-secondary":
+            businessContext?.secondaryColor ?? referralContext?.secondaryColor ?? "#FFE27A",
+        } as React.CSSProperties)
+      : undefined;
 
   return (
     <div
@@ -91,6 +102,14 @@ function JoinRewards() {
         settings={businessContext?.visualSettings ?? referralContext?.visualSettings ?? null}
         audience="member"
       />
+      {logoUrl && (
+        <div className="join-business-watermark" aria-hidden="true">
+          <img src={logoUrl} alt="" />
+        </div>
+      )}
+      <div className="join-future-grid" aria-hidden="true" />
+      <div className="join-orbit join-orbit-one" aria-hidden="true" />
+      <div className="join-orbit join-orbit-two" aria-hidden="true" />
       <header className="wallet-header container-mid themed-surface-content">
         {branding ? <BusinessBrand business={branding} /> : <BrandMark />}
         <a className="back-link" href="/login?access=member">
@@ -149,30 +168,19 @@ function JoinRewards() {
                   onChange={(event) => setForm({ ...form, email: event.target.value })}
                 />
               </label>
-              <label>
-                {t("Password")}
-                <input
-                  required
-                  type="password"
-                  minLength={12}
-                  maxLength={200}
-                  autoComplete="new-password"
-                  value={form.password}
-                  onChange={(event) => setForm({ ...form, password: event.target.value })}
-                />
-              </label>
-              <label>
-                {t("Confirm password")}
-                <input
-                  required
-                  type="password"
-                  minLength={12}
-                  maxLength={200}
-                  autoComplete="new-password"
-                  value={form.confirmPassword}
-                  onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })}
-                />
-              </label>
+              <PasswordField
+                label="Password"
+                autoComplete="new-password"
+                value={form.password}
+                onChange={(password) => setForm({ ...form, password })}
+                showRequirement
+              />
+              <PasswordField
+                label="Confirm password"
+                autoComplete="new-password"
+                value={form.confirmPassword}
+                onChange={(confirmPassword) => setForm({ ...form, confirmPassword })}
+              />
               <label className="consent-check">
                 <input required type="checkbox" />
                 <span>

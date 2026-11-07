@@ -89,6 +89,28 @@ describe("business Join Rewards enrollment", () => {
     );
   });
 
+  it("accepts an eight-character member password and rejects shorter passwords", async () => {
+    const joined = await joinBusinessRewards({
+      businessId: "biz_client",
+      name: "Eight Character Member",
+      email: "eight@example.com",
+      password: "12345678",
+      requestSubject: "198.51.100.8",
+    });
+    assert.ok(joined.sessionToken);
+    await assert.rejects(
+      () =>
+        joinBusinessRewards({
+          businessId: "biz_client",
+          name: "Short Password",
+          email: "short@example.com",
+          password: "1234567",
+          requestSubject: "198.51.100.9",
+        }),
+      /between 8 and 200 characters/,
+    );
+  });
+
   it("does not allow public enrollment into the Elite platform tenant", async () => {
     await assert.rejects(() => getBusinessEnrollment("biz_platform"), /unavailable/);
     await assert.rejects(

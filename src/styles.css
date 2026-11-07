@@ -560,6 +560,18 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 .auth-card form, .award-modal { display: grid; gap: 16px; }
 .auth-card label, .award-modal label { display: grid; gap: 8px; color: var(--gold-pale); font-weight: 700; }
 .auth-card input, .award-modal input, .award-modal select { width: 100%; min-height: 48px; border: 1px solid rgba(236,171,26,.45); border-radius: 10px; background: #080704; color: var(--text); padding: 0 13px; }
+.password-input-wrap { position: relative; display: block; }
+.password-input-wrap input { padding-right: 54px; }
+.password-visibility-toggle {
+  position: absolute; top: 50%; right: 7px; width: 40px; height: 40px; padding: 0;
+  display: grid; place-items: center; transform: translateY(-50%);
+  border: 0; border-radius: 9px; color: var(--gold-bright); background: transparent; cursor: pointer;
+  transition: color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+.password-visibility-toggle:hover { color: #fff4b8; background: rgba(246,185,0,.1); }
+.password-visibility-toggle:focus-visible { outline: 2px solid var(--gold-bright); outline-offset: 1px; }
+.password-visibility-toggle svg { width: 20px; height: 20px; }
+.password-requirement { color: var(--muted); font-size: 11px; font-weight: 600; }
 .setup-card { width: min(calc(100% - 36px), 820px); }
 .setup-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
 .setup-grid label:first-child, .setup-grid button { grid-column: 1 / -1; }
@@ -672,7 +684,12 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 .referral-share button { display: flex; justify-content: center; align-items: center; gap: 8px; }
 .referral-share small { color: var(--muted); text-align: center; }
 .referral-join-card { position: relative; overflow: hidden; }
-.referral-join-card::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: .16; background: url('/themes/community-event.webp') center / cover; }
+.referral-join-card::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; opacity: .58;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--client-primary, var(--gold)) 8%, transparent), transparent 38%),
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--client-secondary, var(--gold-bright)) 18%, transparent), transparent 34%);
+}
 .activation-summary small { display: flex; gap: 7px; align-items: center; }
 .consent-check { grid-template-columns: auto 1fr; align-items: start; font-weight: 500 !important; line-height: 1.45; }
 .consent-check input { width: 18px; min-height: 18px; margin-top: 2px; accent-color: var(--gold); }
@@ -882,7 +899,50 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 }
 
 /* Join Rewards and tenant product catalogs */
-.business-join-page { background: radial-gradient(circle at 50% -10%, color-mix(in srgb, var(--client-primary, var(--gold)) 18%, transparent), transparent 38%), #030303; }
+.business-join-page {
+  position: relative; isolation: isolate; overflow: hidden;
+  background:
+    radial-gradient(circle at 50% -10%, color-mix(in srgb, var(--client-primary, var(--gold)) 26%, transparent), transparent 38%),
+    radial-gradient(circle at 8% 72%, color-mix(in srgb, var(--client-secondary, var(--gold-bright)) 11%, transparent), transparent 28%),
+    #030303;
+}
+.business-join-page .wallet-header { min-height: 114px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.business-join-page .referral-join-card {
+  border-color: color-mix(in srgb, var(--client-primary, var(--gold)) 76%, #fff 8%);
+  background: linear-gradient(145deg, rgba(15,14,9,.88), rgba(3,3,3,.94));
+  backdrop-filter: blur(24px) saturate(130%);
+  box-shadow:
+    0 30px 110px rgba(0,0,0,.72),
+    0 0 60px color-mix(in srgb, var(--client-primary, var(--gold)) 15%, transparent),
+    inset 0 1px 0 rgba(255,246,198,.1);
+}
+.business-join-page .referral-join-card::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  border-radius: inherit; padding: 1px;
+  background: linear-gradient(125deg, transparent 8%, color-mix(in srgb, var(--client-secondary, var(--gold-bright)) 85%, white 10%), transparent 46%);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
+}
+.join-business-watermark {
+  position: fixed; z-index: 0; inset: 112px 0 0; display: grid; place-items: center; pointer-events: none;
+  opacity: .095; filter: grayscale(.15) saturate(.75) drop-shadow(0 0 70px color-mix(in srgb, var(--client-primary, var(--gold)) 42%, transparent));
+}
+.join-business-watermark img { width: min(56vw, 720px); max-height: 62vh; object-fit: contain; transform: scale(1.04); animation: join-logo-breathe 10s ease-in-out infinite alternate; }
+.join-future-grid {
+  position: fixed; z-index: 0; inset: 52% -20% -42%; pointer-events: none;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--client-primary, var(--gold)) 30%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--client-primary, var(--gold)) 30%, transparent) 1px, transparent 1px);
+  background-size: 68px 42px; opacity: .25; transform: perspective(460px) rotateX(62deg) scale(1.35);
+  transform-origin: 50% 100%; mask-image: linear-gradient(to top, #000 5%, transparent 76%); animation: join-grid-flow 12s linear infinite;
+}
+.join-orbit { position: fixed; z-index: 0; pointer-events: none; border: 1px solid color-mix(in srgb, var(--client-secondary, var(--gold-bright)) 38%, transparent); border-radius: 50%; box-shadow: 0 0 42px color-mix(in srgb, var(--client-primary, var(--gold)) 12%, transparent), inset 0 0 42px rgba(246,185,0,.05); }
+.join-orbit::before, .join-orbit::after { content: ""; position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--client-secondary, var(--gold-bright)); box-shadow: 0 0 18px var(--client-primary, var(--gold)); }
+.join-orbit::before { top: 10%; left: 27%; }.join-orbit::after { right: 10%; bottom: 26%; }
+.join-orbit-one { width: min(72vw, 920px); aspect-ratio: 1; left: -28vw; top: 5vh; animation: spin 42s linear infinite; }
+.join-orbit-two { width: min(52vw, 660px); aspect-ratio: 1; right: -18vw; bottom: -10vh; border-style: dashed; animation: join-orbit-reverse 34s linear infinite; }
+@keyframes join-logo-breathe { from { transform: scale(1.01); opacity: .78; } to { transform: scale(1.09); opacity: 1; } }
+@keyframes join-grid-flow { from { background-position: 0 0, 0 0; } to { background-position: 0 42px, 68px 0; } }
+@keyframes join-orbit-reverse { to { transform: rotate(-1turn); } }
 .client-public-products { display: grid; gap: 22px; }
 .client-public-products h2 { margin: 5px 0 0; color: var(--client-secondary); font: 800 31px var(--serif); }
 .product-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
@@ -905,3 +965,14 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 .product-image-preview { width: min(100%, 320px); aspect-ratio: 16 / 10; object-fit: cover; border: 1px solid var(--gold-border); border-radius: 14px; margin-top: 8px; }
 @media (max-width: 900px) { .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 620px) { .product-grid { grid-template-columns: 1fr; } }
+@media (max-width: 620px) {
+  .business-join-page .wallet-header { min-height: 136px; align-items: flex-start; padding-top: 20px; }
+  .business-join-page .referral-join-card { margin-top: 26px; }
+  .join-business-watermark { inset: 136px 0 0; }
+  .join-business-watermark img { width: 86vw; max-height: 46vh; }
+  .join-orbit-one { width: 130vw; left: -84vw; }
+  .join-orbit-two { width: 98vw; right: -64vw; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .join-business-watermark img, .join-future-grid, .join-orbit { animation: none !important; }
+}

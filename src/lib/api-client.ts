@@ -221,6 +221,9 @@ export const api = {
     request<{
       businessName: string;
       locationName: string;
+      logoUrl: string | null;
+      primaryColor: string;
+      secondaryColor: string;
       visualSettings: PublicVisualSettings;
     }>(`/api/referrals/enrollment?ref=${encodeURIComponent(referralCode)}`),
   joinReferral: (payload: {
