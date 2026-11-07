@@ -16,6 +16,7 @@ import {
   Pencil,
   Plus,
   ReceiptText,
+  RotateCcw,
   Search,
   ShieldCheck,
   Store,
@@ -172,6 +173,7 @@ function Admin() {
     secondaryColor: "#FFE27A",
   });
   const [logoUploading, setLogoUploading] = useState(false);
+  const [brandingResetting, setBrandingResetting] = useState(false);
   const [clientVisualSettings, setClientVisualSettings] = useState<VisualSettings | null>(null);
   const [clientVisualDraft, setClientVisualDraft] = useState({
     themeKey: "elite-signature" as ThemeKey,
@@ -487,6 +489,55 @@ function Admin() {
       setError(tr("Logo upload failed", "No se pudo cargar el logotipo"));
     } finally {
       setLogoUploading(false);
+    }
+  };
+  const resetClientBranding = async () => {
+    if (!clientEditor) return;
+    const confirmed = window.confirm(
+      tr(
+        `Return ${clientEditor.name} to the default Elite Rewards logo and colors? The business name, location, rewards, products, and members will not change.`,
+        `¿Restablecer ${clientEditor.name} al logotipo y los colores predeterminados de Elite Rewards? El nombre del negocio, la ubicación, las recompensas, los productos y los miembros no cambiarán.`,
+      ),
+    );
+    if (!confirmed) return;
+    setError("");
+    try {
+      setBrandingResetting(true);
+      const result = await api.resetClientBranding(clientEditor.id);
+      setClientBranding({
+        name: result.branding.name,
+        locationName: result.branding.locationName,
+        logoUrl: result.branding.logoUrl,
+        primaryColor: result.branding.primaryColor,
+        secondaryColor: result.branding.secondaryColor,
+      });
+      setClients((current) =>
+        current.map((client) =>
+          client.id === clientEditor.id
+            ? {
+                ...client,
+                logoUrl: result.branding.logoUrl,
+                primaryColor: result.branding.primaryColor,
+                secondaryColor: result.branding.secondaryColor,
+              }
+            : client,
+        ),
+      );
+      setNotice(
+        tr(
+          `${clientEditor.name} branding returned to the Elite Rewards default.`,
+          `La marca de ${clientEditor.name} volvió a los valores predeterminados de Elite Rewards.`,
+        ),
+      );
+    } catch {
+      setError(
+        tr(
+          "Branding could not be returned to default.",
+          "No se pudo restablecer la marca a los valores predeterminados.",
+        ),
+      );
+    } finally {
+      setBrandingResetting(false);
     }
   };
   const copyClientLink = async (path: string, label: string) => {
@@ -1617,7 +1668,7 @@ function Admin() {
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
-                disabled={logoUploading}
+                disabled={logoUploading || brandingResetting}
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   if (file) void uploadClientLogo(file);
@@ -1658,9 +1709,21 @@ function Admin() {
             <button
               type="button"
               className="admin-primary full"
+              disabled={brandingResetting || logoUploading}
               onClick={() => void saveClientBranding()}
             >
               {tr("Publish client branding", "Publicar marca del cliente")}
+            </button>
+            <button
+              type="button"
+              className="client-customize branding-default-action"
+              disabled={brandingResetting || logoUploading}
+              onClick={() => void resetClientBranding()}
+            >
+              <RotateCcw size={17} />
+              {brandingResetting
+                ? tr("Returning to default…", "Restableciendo valores…")
+                : tr("Return to default", "Restablecer valores predeterminados")}
             </button>
             <section className="client-appearance-manager">
               <div>

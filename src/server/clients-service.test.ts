@@ -16,6 +16,7 @@ import {
   getPublicClientExperience,
   listClients,
   setClientActive,
+  resetClientBranding,
   updateClientBranding,
   updateClientLogo,
 } from "./clients-service.ts";
@@ -235,7 +236,7 @@ describe("platform client management", () => {
       mime: "image/webp",
       data: webp,
     });
-    assert.equal(saved.logoUrl, `/api/public/clients/${client.id}/logo`);
+    assert.match(saved.logoUrl ?? "", new RegExp(`^/api/public/clients/${client.id}/logo\\?v=`));
     assert.deepEqual(await getClientLogo(client.id), { mime: "image/webp", data: webp });
     const png = Buffer.from("89504e470d0a1a0a00000000", "hex");
     const publicPage = await getPublicClientExperience(client.id);
@@ -275,6 +276,15 @@ describe("platform client management", () => {
     });
     assert.equal((await getClientLogo(client.id))?.data.length, largerThanTwoMegabytes.length);
 
+    const secondWebp = Buffer.from("RIFF0000WEBPVP8 replacement", "ascii");
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const replaced = await updateClientLogo(platformOwner, client.id, {
+      mime: "image/webp",
+      data: secondWebp,
+    });
+    assert.notEqual(replaced.logoUrl, saved.logoUrl);
+    assert.deepEqual(await getClientLogo(client.id), { mime: "image/webp", data: secondWebp });
+
     const largerThanTenMegabytes = Buffer.alloc(CLIENT_LOGO_MAX_BYTES + 1, 0x20);
     Buffer.from("RIFF0000WEBP", "ascii").copy(largerThanTenMegabytes);
     await assert.rejects(
@@ -284,6 +294,45 @@ describe("platform client management", () => {
           data: largerThanTenMegabytes,
         }),
       /Logo must be 10 MB or smaller/,
+    );
+  });
+
+  it("returns only logo and colors to the Elite defaults while preserving client data", async () => {
+    const client = (await listClients(platformOwner)).find((item) => item.name === "Big Smoke");
+    assert.ok(client);
+    await updateClientBranding(platformOwner, client.id, {
+      name: "Big Smoke",
+      locationName: "Big Smoke Main",
+      primaryColor: "#123456",
+      secondaryColor: "#ABCDEF",
+    });
+    const before = await pool.query<{ rewards: string; users: string }>(
+      `SELECT
+         (SELECT count(*) FROM rewards WHERE business_id = $1) AS rewards,
+         (SELECT count(*) FROM users WHERE business_id = $1) AS users`,
+      [client.id],
+    );
+    const reset = await resetClientBranding(platformOwner, client.id);
+    assert.equal(reset.name, "Big Smoke");
+    assert.equal(reset.locationName, "Big Smoke Main");
+    assert.equal(reset.logoUrl, null);
+    assert.equal(reset.primaryColor, "#F6B900");
+    assert.equal(reset.secondaryColor, "#FFE27A");
+    assert.equal(await getClientLogo(client.id), null);
+    const after = await pool.query<{ rewards: string; users: string }>(
+      `SELECT
+         (SELECT count(*) FROM rewards WHERE business_id = $1) AS rewards,
+         (SELECT count(*) FROM users WHERE business_id = $1) AS users`,
+      [client.id],
+    );
+    assert.deepEqual(after.rows[0], before.rows[0]);
+    await assert.rejects(
+      () => resetClientBranding(ordinaryOwner, client.id),
+      /Platform administrator access required/,
+    );
+    await assert.rejects(
+      () => resetClientBranding(platformOwner, platformOwner.businessId),
+      /Client not found/,
     );
   });
 

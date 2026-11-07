@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import type { PoolClient } from "pg";
 import { getPool, id } from "./database.ts";
 import type { SessionUser } from "./auth.ts";
+import { clientLogoPath } from "./business-branding.ts";
 
 export type PublicReward = {
   id: string;
@@ -19,9 +20,13 @@ export async function getDashboard(user: SessionUser) {
       logo_url: string | null;
       primary_color: string;
       secondary_color: string;
+      business_id: string;
+      has_logo: boolean;
+      updated_at: Date;
     }>(
-      `SELECT b.name AS business_name, l.name AS location_name, b.logo_url,
-              b.primary_color, b.secondary_color
+      `SELECT b.id AS business_id, b.name AS business_name, l.name AS location_name, b.logo_url,
+              b.primary_color, b.secondary_color, b.updated_at,
+              (b.logo_data IS NOT NULL) AS has_logo
          FROM businesses b LEFT JOIN locations l ON l.business_id = b.id
         WHERE b.id = $1 ORDER BY l.created_at LIMIT 1`,
       [user.businessId],
@@ -78,10 +83,23 @@ export async function getDashboard(user: SessionUser) {
   ]);
   const total = totals.rows[0];
   return {
-    business: business.rows[0] ?? {
-      business_name: "Elite Rewards",
-      location_name: "Primary location",
-    },
+    business: business.rows[0]
+      ? {
+          business_name: business.rows[0].business_name,
+          location_name: business.rows[0].location_name,
+          logo_url: business.rows[0].has_logo
+            ? clientLogoPath(business.rows[0].business_id, business.rows[0].updated_at)
+            : business.rows[0].logo_url,
+          primary_color: business.rows[0].primary_color,
+          secondary_color: business.rows[0].secondary_color,
+        }
+      : {
+          business_name: "Elite Rewards",
+          location_name: "Primary location",
+          logo_url: null,
+          primary_color: "#F6B900",
+          secondary_color: "#FFE27A",
+        },
     metrics: {
       members: Number(total?.members ?? 0),
       pointsAwarded: Number(total?.points_awarded ?? 0),
@@ -157,9 +175,14 @@ export async function getWallet(user: SessionUser) {
       logo_url: string | null;
       primary_color: string;
       secondary_color: string;
+      business_id: string;
+      has_logo: boolean;
+      updated_at: Date;
     }>(
-      `SELECT b.name AS business_name, COALESCE(l.name, 'Primary location') AS location_name,
-              b.logo_url, b.primary_color, b.secondary_color
+      `SELECT b.id AS business_id, b.name AS business_name,
+              COALESCE(l.name, 'Primary location') AS location_name,
+              b.logo_url, b.primary_color, b.secondary_color, b.updated_at,
+              (b.logo_data IS NOT NULL) AS has_logo
          FROM businesses b LEFT JOIN locations l ON l.id = $2 WHERE b.id = $1`,
       [user.businessId, user.locationId],
     ),
@@ -184,7 +207,17 @@ export async function getWallet(user: SessionUser) {
   ]);
   return {
     member: user,
-    context: context.rows[0],
+    context: context.rows[0]
+      ? {
+          business_name: context.rows[0].business_name,
+          location_name: context.rows[0].location_name,
+          logo_url: context.rows[0].has_logo
+            ? clientLogoPath(context.rows[0].business_id, context.rows[0].updated_at)
+            : context.rows[0].logo_url,
+          primary_color: context.rows[0].primary_color,
+          secondary_color: context.rows[0].secondary_color,
+        }
+      : null,
     points: Number(balance.rows[0]?.points ?? 0),
     ledger: ledger.rows.map((row) => ({ ...row, pointsDelta: Number(row.points_delta) })),
     rewards: rewards.rows.map((row) => ({

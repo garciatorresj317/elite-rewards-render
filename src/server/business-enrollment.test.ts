@@ -38,6 +38,9 @@ describe("business Join Rewards enrollment", () => {
     await pool.query("ALTER TABLE businesses ADD COLUMN logo_url text");
     await pool.query("ALTER TABLE businesses ADD COLUMN logo_data bytea");
     await pool.query(
+      "ALTER TABLE businesses ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now()",
+    );
+    await pool.query(
       "ALTER TABLE businesses ADD COLUMN primary_color text NOT NULL DEFAULT '#F6B900'",
     );
     await pool.query(

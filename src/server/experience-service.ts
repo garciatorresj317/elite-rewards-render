@@ -2,6 +2,7 @@ import { createHash, createHmac, randomBytes } from "node:crypto";
 import type { SessionUser } from "./auth.ts";
 import { createSession, hashPassword, newUserId } from "./auth.ts";
 import { getPool, id } from "./database.ts";
+import { clientLogoPath } from "./business-branding.ts";
 import { normalizeTimeZone, resolveScheduledTheme } from "./holiday-theme-schedule.ts";
 
 export const themeKeys = [
@@ -150,9 +151,10 @@ export async function getBusinessEnrollment(businessId: string): Promise<{
     primary_color: string;
     secondary_color: string;
     has_logo: boolean;
+    updated_at: Date;
   }>(
     `SELECT b.id, b.name, l.name AS location_name, b.logo_url, b.primary_color,
-            b.secondary_color, (b.logo_data IS NOT NULL) AS has_logo
+            b.secondary_color, b.updated_at, (b.logo_data IS NOT NULL) AS has_logo
        FROM businesses b
        JOIN locations l ON l.business_id = b.id
       WHERE b.id = $1
@@ -168,7 +170,7 @@ export async function getBusinessEnrollment(businessId: string): Promise<{
     businessId: row.id,
     businessName: row.name,
     locationName: row.location_name,
-    logoUrl: row.has_logo ? `/api/public/clients/${encodeURIComponent(row.id)}/logo` : row.logo_url,
+    logoUrl: row.has_logo ? clientLogoPath(row.id, row.updated_at) : row.logo_url,
     primaryColor: row.primary_color,
     secondaryColor: row.secondary_color,
     visualSettings: publicVisualSettings(await getBusinessVisualSettings(row.id)),
@@ -543,9 +545,11 @@ export async function getReferralEnrollment(referralCodeValue: string): Promise<
     has_logo: boolean;
     primary_color: string;
     secondary_color: string;
+    updated_at: Date;
   }>(
     `SELECT b.id AS business_id, b.name AS business_name, l.name AS location_name,
-            b.logo_url, (b.logo_data IS NOT NULL) AS has_logo, b.primary_color, b.secondary_color
+            b.logo_url, (b.logo_data IS NOT NULL) AS has_logo, b.primary_color,
+            b.secondary_color, b.updated_at
        FROM member_referral_links rfl
        JOIN businesses b ON b.id = rfl.business_id
        JOIN locations l ON l.id = rfl.location_id
@@ -560,9 +564,7 @@ export async function getReferralEnrollment(referralCodeValue: string): Promise<
   return {
     businessName: row.business_name,
     locationName: row.location_name,
-    logoUrl: row.has_logo
-      ? `/api/public/clients/${encodeURIComponent(row.business_id)}/logo`
-      : row.logo_url,
+    logoUrl: row.has_logo ? clientLogoPath(row.business_id, row.updated_at) : row.logo_url,
     primaryColor: row.primary_color,
     secondaryColor: row.secondary_color,
     visualSettings: publicVisualSettings(await getBusinessVisualSettings(row.business_id)),

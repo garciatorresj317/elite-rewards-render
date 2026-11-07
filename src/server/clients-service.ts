@@ -3,6 +3,11 @@ import { createSession, hashPassword, newUserId, type SessionUser } from "./auth
 import { getPool, id } from "./database.ts";
 import { CLIENT_LOGO_MAX_BYTES, CLIENT_LOGO_MAX_MEGABYTES } from "../lib/upload-limits.ts";
 import {
+  clientLogoPath,
+  DEFAULT_CLIENT_PRIMARY_COLOR,
+  DEFAULT_CLIENT_SECONDARY_COLOR,
+} from "./business-branding.ts";
+import {
   getBusinessVisualSettings,
   publicVisualSettings,
   type PublicVisualSettings,
@@ -64,10 +69,6 @@ export type PublicClientExperience = {
 
 function clientPath(businessId: string): string {
   return `/clients/${encodeURIComponent(businessId)}`;
-}
-
-function logoPath(businessId: string): string {
-  return `/api/public/clients/${encodeURIComponent(businessId)}/logo`;
 }
 
 function joinPath(businessId: string): string {
@@ -189,8 +190,9 @@ export async function listClients(user: SessionUser): Promise<ClientSummary[]> {
     secondary_color: string;
     has_logo: boolean;
     active: boolean;
+    updated_at: Date;
   }>(
-    `SELECT id, name, created_at, logo_url, primary_color, secondary_color, active,
+    `SELECT id, name, created_at, logo_url, primary_color, secondary_color, active, updated_at,
             (logo_data IS NOT NULL) AS has_logo
        FROM businesses
       WHERE id <> (SELECT business_id FROM platform_state WHERE singleton = true)
@@ -227,7 +229,9 @@ export async function listClients(user: SessionUser): Promise<ClientSummary[]> {
       status: business.active ? (businessOwner ? "active" : "invited") : "suspended",
       members: Number(members.rows[0]?.count ?? 0),
       createdAt: business.created_at.toISOString(),
-      logoUrl: business.has_logo ? logoPath(business.id) : business.logo_url,
+      logoUrl: business.has_logo
+        ? clientLogoPath(business.id, business.updated_at)
+        : business.logo_url,
       primaryColor: business.primary_color,
       secondaryColor: business.secondary_color,
       previewPath: clientPath(business.id),
@@ -318,8 +322,8 @@ export async function createClient(
         members: 0,
         createdAt: new Date().toISOString(),
         logoUrl: null,
-        primaryColor: "#F6B900",
-        secondaryColor: "#FFE27A",
+        primaryColor: DEFAULT_CLIENT_PRIMARY_COLOR,
+        secondaryColor: DEFAULT_CLIENT_SECONDARY_COLOR,
         previewPath: clientPath(businessId),
         nfcPath: clientPath(businessId),
         joinPath: joinPath(businessId),
@@ -412,9 +416,10 @@ export async function getClientBranding(
     primary_color: string;
     secondary_color: string;
     has_logo: boolean;
+    updated_at: Date;
   }>(
     `SELECT b.id, b.name, COALESCE(l.name, 'Primary location') AS location_name,
-            b.logo_url, b.primary_color, b.secondary_color,
+            b.logo_url, b.primary_color, b.secondary_color, b.updated_at,
             (b.logo_data IS NOT NULL) AS has_logo
        FROM businesses b
        LEFT JOIN locations l ON l.business_id = b.id
@@ -430,7 +435,7 @@ export async function getClientBranding(
     id: row.id,
     name: row.name,
     locationName: row.location_name,
-    logoUrl: row.has_logo ? logoPath(row.id) : row.logo_url,
+    logoUrl: row.has_logo ? clientLogoPath(row.id, row.updated_at) : row.logo_url,
     primaryColor: row.primary_color,
     secondaryColor: row.secondary_color,
     previewPath: clientPath(row.id),
@@ -544,6 +549,51 @@ export async function updateClientLogo(
   return getClientBranding(user, businessId);
 }
 
+export async function resetClientBranding(
+  user: SessionUser,
+  businessId: string,
+): Promise<ClientBranding> {
+  requirePlatformAdmin(user);
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    const result = await client.query(
+      `UPDATE businesses
+          SET logo_data = NULL,
+              logo_mime = NULL,
+              logo_url = NULL,
+              primary_color = $2,
+              secondary_color = $3,
+              updated_at = now()
+        WHERE id = $1
+          AND id <> (SELECT business_id FROM platform_state WHERE singleton = true)`,
+      [businessId, DEFAULT_CLIENT_PRIMARY_COLOR, DEFAULT_CLIENT_SECONDARY_COLOR],
+    );
+    if (!result.rowCount) throw Object.assign(new Error("Client not found"), { status: 404 });
+    await client.query(
+      `INSERT INTO audit_events(id,business_id,actor_user_id,action,target_type,target_id,metadata)
+       VALUES ($1,$2,$3,'platform.client.branding.reset','business',$2,$4)`,
+      [
+        id("aud"),
+        businessId,
+        user.id,
+        JSON.stringify({
+          logoCleared: true,
+          primaryColor: DEFAULT_CLIENT_PRIMARY_COLOR,
+          secondaryColor: DEFAULT_CLIENT_SECONDARY_COLOR,
+        }),
+      ],
+    );
+    await client.query("COMMIT");
+    return await getClientBranding(user, businessId);
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export async function getClientLogo(
   businessId: string,
 ): Promise<{ mime: string; data: Buffer } | null> {
@@ -568,9 +618,10 @@ export async function getPublicClientExperience(
     primary_color: string;
     secondary_color: string;
     has_logo: boolean;
+    updated_at: Date;
   }>(
     `SELECT b.id, b.name, COALESCE(l.name, 'Primary location') AS location_name,
-            b.logo_url, b.primary_color, b.secondary_color,
+            b.logo_url, b.primary_color, b.secondary_color, b.updated_at,
             (b.logo_data IS NOT NULL) AS has_logo
        FROM businesses b
        LEFT JOIN locations l ON l.business_id = b.id
@@ -621,7 +672,7 @@ export async function getPublicClientExperience(
     business: {
       business_name: row.name,
       location_name: row.location_name,
-      logo_url: row.has_logo ? logoPath(row.id) : row.logo_url,
+      logo_url: row.has_logo ? clientLogoPath(row.id, row.updated_at) : row.logo_url,
       primary_color: row.primary_color,
       secondary_color: row.secondary_color,
     },

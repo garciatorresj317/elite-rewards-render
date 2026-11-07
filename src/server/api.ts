@@ -20,6 +20,7 @@ import {
   getClientLogo,
   getPublicClientExperience,
   listClients,
+  resetClientBranding,
   setClientActive,
   updateClientBranding,
   updateClientLogo,
@@ -367,10 +368,14 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       const businessId = text(decodeURIComponent(publicClientLogoMatch[1] ?? ""), "Client", 8, 120);
       const logo = await getClientLogo(businessId);
       if (!logo) return json({ error: "Logo not found" }, 404);
+      const etag = `"${createHash("sha256").update(logo.data).digest("base64url")}"`;
+      if (request.headers.get("if-none-match") === etag)
+        return new Response(null, { status: 304, headers: { etag } });
       return new Response(new Uint8Array(logo.data), {
         headers: {
           "content-type": logo.mime,
-          "cache-control": "public, max-age=3600, must-revalidate",
+          "cache-control": "public, max-age=31536000, immutable",
+          etag,
           "x-content-type-options": "nosniff",
         },
       });
@@ -465,6 +470,11 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
         secondaryColor: color(payload["secondaryColor"], "Secondary color"),
       });
       return json({ branding });
+    }
+    if (clientBrandingMatch && request.method === "DELETE") {
+      requirePlatformAdmin(user);
+      const businessId = text(decodeURIComponent(clientBrandingMatch[1] ?? ""), "Client", 8, 120);
+      return json({ branding: await resetClientBranding(user, businessId) });
     }
     const clientVisualSettingsMatch = url.pathname.match(
       /^\/api\/admin\/clients\/([^/]+)\/visual-settings$/,

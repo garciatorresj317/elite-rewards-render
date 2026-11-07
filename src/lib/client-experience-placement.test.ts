@@ -8,6 +8,9 @@ describe("client customization placement", () => {
     const admin = await readFile(join(process.cwd(), "src", "routes", "admin.tsx"), "utf8");
     assert.match(admin, /type="file"/);
     assert.match(admin, /Choose logo from files/);
+    assert.match(admin, /Return to default/);
+    assert.match(admin, /Restablecer valores predeterminados/);
+    assert.match(admin, /resetClientBranding/);
     assert.match(admin, /Open client page/);
     assert.match(admin, /Copy NFC card link/);
     const automaticStart = admin.indexOf('className="panel automatic-theme-editor"');

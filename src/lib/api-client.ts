@@ -78,6 +78,11 @@ export const api = {
       `/api/admin/clients/${encodeURIComponent(businessId)}/branding`,
       { method: "PUT", body: JSON.stringify(payload) },
     ),
+  resetClientBranding: (businessId: string) =>
+    request<{ branding: ClientBranding }>(
+      `/api/admin/clients/${encodeURIComponent(businessId)}/branding`,
+      { method: "DELETE", body: "{}" },
+    ),
   clientVisualSettings: (businessId: string) =>
     request<VisualSettings>(`/api/admin/clients/${encodeURIComponent(businessId)}/visual-settings`),
   updateClientVisualSettings: (businessId: string, payload: VisualSettingsUpdate) =>
