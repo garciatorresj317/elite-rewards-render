@@ -31,6 +31,7 @@ import { BusinessBrand } from "@/components/BusinessBrand";
 import { ExperienceBackdrop } from "@/components/ExperienceTheme";
 import { useI18n } from "@/i18n";
 import { themeCatalog } from "@/lib/theme-catalog";
+import { CLIENT_LOGO_MAX_BYTES, CLIENT_LOGO_MAX_MEGABYTES } from "@/lib/upload-limits";
 import {
   api,
   type ClientBrandingDraft,
@@ -458,8 +459,13 @@ function Admin() {
       setError(tr("Choose a PNG, JPEG, or WebP logo.", "Elige un logotipo PNG, JPEG o WebP."));
       return;
     }
-    if (file.size > 2_097_152) {
-      setError(tr("Logo must be 2 MB or smaller.", "El logotipo debe medir 2 MB o menos."));
+    if (file.size > CLIENT_LOGO_MAX_BYTES) {
+      setError(
+        tr(
+          `Logo must be ${CLIENT_LOGO_MAX_MEGABYTES} MB or smaller.`,
+          `El logotipo debe medir ${CLIENT_LOGO_MAX_MEGABYTES} MB o menos.`,
+        ),
+      );
       return;
     }
     try {
@@ -1621,7 +1627,10 @@ function Admin() {
               <small>
                 {logoUploading
                   ? tr("Uploading logo…", "Cargando logotipo…")
-                  : tr("PNG, JPEG, or WebP · maximum 2 MB", "PNG, JPEG o WebP · máximo 2 MB")}
+                  : tr(
+                      `PNG, JPEG, or WebP · maximum ${CLIENT_LOGO_MAX_MEGABYTES} MB`,
+                      `PNG, JPEG o WebP · máximo ${CLIENT_LOGO_MAX_MEGABYTES} MB`,
+                    )}
               </small>
             </label>
             <div className="client-color-fields">

@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { createSession, hashPassword, newUserId, type SessionUser } from "./auth.ts";
 import { getPool, id } from "./database.ts";
+import { CLIENT_LOGO_MAX_BYTES, CLIENT_LOGO_MAX_MEGABYTES } from "../lib/upload-limits.ts";
 import {
   getBusinessVisualSettings,
   publicVisualSettings,
@@ -507,8 +508,10 @@ export async function updateClientLogo(
   input: { mime: "image/png" | "image/jpeg" | "image/webp"; data: Buffer },
 ): Promise<ClientBranding> {
   requirePlatformAdmin(user);
-  if (!input.data.length || input.data.length > 2_097_152)
-    throw Object.assign(new Error("Logo must be 2 MB or smaller"), { status: 400 });
+  if (!input.data.length || input.data.length > CLIENT_LOGO_MAX_BYTES)
+    throw Object.assign(new Error(`Logo must be ${CLIENT_LOGO_MAX_MEGABYTES} MB or smaller`), {
+      status: 400,
+    });
   const signatures: Record<typeof input.mime, (data: Buffer) => boolean> = {
     "image/png": (data) => data.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex")),
     "image/jpeg": (data) => data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff,

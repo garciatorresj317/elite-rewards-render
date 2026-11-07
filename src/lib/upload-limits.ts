@@ -1,0 +1,2 @@
+export const CLIENT_LOGO_MAX_BYTES = 10 * 1024 * 1024;
+export const CLIENT_LOGO_MAX_MEGABYTES = 10;

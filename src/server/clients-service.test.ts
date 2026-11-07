@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { DataType, newDb } from "pg-mem";
 import type pg from "pg";
+import { CLIENT_LOGO_MAX_BYTES } from "../lib/upload-limits.ts";
 import { authenticate, getSessionUser, type SessionUser } from "./auth.ts";
 import {
   activateClient,
@@ -121,6 +122,9 @@ describe("platform client management", () => {
     );
     await pool.query("ALTER TABLE businesses ADD COLUMN logo_data bytea");
     await pool.query("ALTER TABLE businesses ADD COLUMN logo_mime text");
+    await pool.query(
+      await readFile(join(process.cwd(), "migrations", "012_client_logo_10mb.sql"), "utf8"),
+    );
     await pool.query(
       "CREATE TABLE platform_administrator(singleton boolean PRIMARY KEY, user_id text NOT NULL UNIQUE REFERENCES users(id))",
     );
@@ -261,6 +265,25 @@ describe("platform client management", () => {
           data: Buffer.from("not an image"),
         }),
       /does not match/,
+    );
+
+    const largerThanTwoMegabytes = Buffer.alloc(2_097_153, 0x20);
+    Buffer.from("RIFF0000WEBP", "ascii").copy(largerThanTwoMegabytes);
+    await updateClientLogo(platformOwner, client.id, {
+      mime: "image/webp",
+      data: largerThanTwoMegabytes,
+    });
+    assert.equal((await getClientLogo(client.id))?.data.length, largerThanTwoMegabytes.length);
+
+    const largerThanTenMegabytes = Buffer.alloc(CLIENT_LOGO_MAX_BYTES + 1, 0x20);
+    Buffer.from("RIFF0000WEBP", "ascii").copy(largerThanTenMegabytes);
+    await assert.rejects(
+      () =>
+        updateClientLogo(platformOwner, client.id, {
+          mime: "image/webp",
+          data: largerThanTenMegabytes,
+        }),
+      /Logo must be 10 MB or smaller/,
     );
   });
 

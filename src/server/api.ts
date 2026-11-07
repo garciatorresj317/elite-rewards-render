@@ -67,6 +67,7 @@ import {
   updateProductImage,
   updateProduct,
 } from "./products-service.ts";
+import { CLIENT_LOGO_MAX_BYTES } from "../lib/upload-limits.ts";
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -505,7 +506,11 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       requirePlatformAdmin(user);
       const businessId = text(decodeURIComponent(clientLogoMatch[1] ?? ""), "Client", 8, 120);
       return json({
-        branding: await updateClientLogo(user, businessId, await imageUpload(request)),
+        branding: await updateClientLogo(
+          user,
+          businessId,
+          await imageUpload(request, "Logo", CLIENT_LOGO_MAX_BYTES),
+        ),
       });
     }
     const clientRewardsMatch = url.pathname.match(/^\/api\/admin\/clients\/([^/]+)\/rewards$/);
