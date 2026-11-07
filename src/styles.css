@@ -903,15 +903,17 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 
 /* Join Rewards and tenant product catalogs */
 .business-join-page {
-  position: relative; isolation: isolate; overflow: hidden;
+  position: relative; isolation: isolate; overflow: hidden; padding-bottom: 132px;
   background:
     radial-gradient(circle at 50% -10%, color-mix(in srgb, var(--client-primary, var(--gold)) 26%, transparent), transparent 38%),
     radial-gradient(circle at 8% 72%, color-mix(in srgb, var(--client-secondary, var(--gold-bright)) 11%, transparent), transparent 28%),
     #030303;
 }
+body:has(.business-join-page) { position: relative; }
 body:has(.business-join-page) .language-switcher {
+  position: absolute;
   top: auto;
-  bottom: max(14px, env(safe-area-inset-bottom));
+  bottom: max(24px, env(safe-area-inset-bottom));
 }
 .business-join-page .wallet-header { min-height: 114px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .business-join-page .referral-join-card {

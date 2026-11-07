@@ -79,7 +79,10 @@ describe("password visibility and join experience", () => {
     assert.doesNotMatch(route, /className="modal-icon"/);
     assert.doesNotMatch(route, /className="section-kicker"/);
     assert.doesNotMatch(route, /Sparkles|Users/);
-    assert.match(styles, /body:has\(\.business-join-page\) \.language-switcher[\s\S]*?bottom:/);
+    assert.match(
+      styles,
+      /body:has\(\.business-join-page\) \.language-switcher[\s\S]*?position: absolute;[\s\S]*?bottom:/,
+    );
     assert.match(styles, /width: min\(78vw, 1100px\)/);
     assert.match(styles, /width: 112vw/);
     assert.match(styles, /@keyframes join-logo-breathe/);
