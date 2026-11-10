@@ -935,7 +935,13 @@ body:has(.business-join-page) .language-switcher {
   position: fixed; z-index: 0; inset: 0; display: grid; place-items: center; pointer-events: none;
   opacity: .08; filter: grayscale(.15) saturate(.75) drop-shadow(0 0 90px color-mix(in srgb, var(--client-primary, var(--gold)) 48%, transparent));
 }
-.join-business-watermark img { width: 100vw; height: 100vh; object-fit: cover; transform: scale(2.4); animation: join-logo-breathe 10s ease-in-out infinite alternate; }
+.join-business-watermark img {
+  width: min(92vw, 1200px);
+  height: min(82vh, 900px);
+  object-fit: contain;
+  object-position: center;
+  animation: join-logo-breathe 10s ease-in-out infinite alternate;
+}
 .join-future-grid {
   position: fixed; z-index: 0; inset: 52% -20% -42%; pointer-events: none;
   background-image:
@@ -949,7 +955,7 @@ body:has(.business-join-page) .language-switcher {
 .join-orbit::before { top: 10%; left: 27%; }.join-orbit::after { right: 10%; bottom: 26%; }
 .join-orbit-one { width: min(72vw, 920px); aspect-ratio: 1; left: -28vw; top: 5vh; animation: spin 42s linear infinite; }
 .join-orbit-two { width: min(52vw, 660px); aspect-ratio: 1; right: -18vw; bottom: -10vh; border-style: dashed; animation: join-orbit-reverse 34s linear infinite; }
-@keyframes join-logo-breathe { from { transform: scale(2.35); opacity: .78; } to { transform: scale(2.5); opacity: 1; } }
+@keyframes join-logo-breathe { from { transform: scale(.98); opacity: .78; } to { transform: scale(1.03); opacity: 1; } }
 @keyframes join-grid-flow { from { background-position: 0 0, 0 0; } to { background-position: 0 42px, 68px 0; } }
 @keyframes join-orbit-reverse { to { transform: rotate(-1turn); } }
 .client-public-products { display: grid; gap: 22px; }
@@ -977,6 +983,7 @@ body:has(.business-join-page) .language-switcher {
 @media (max-width: 620px) {
   .business-join-page .wallet-header { min-height: 136px; align-items: flex-start; padding-top: 20px; }
   .business-join-page .referral-join-card { margin-top: 26px; }
+  .join-business-watermark img { width: 94vw; height: 78vh; }
   .join-orbit-one { width: 130vw; left: -84vw; }
   .join-orbit-two { width: 98vw; right: -64vw; }
 }

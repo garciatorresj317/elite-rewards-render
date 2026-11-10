@@ -86,13 +86,17 @@ describe("password visibility and join experience", () => {
     assert.match(styles, /\.join-business-watermark\s*\{[\s\S]*?inset: 0;[\s\S]*?opacity: \.08;/);
     assert.match(
       styles,
-      /\.join-business-watermark img\s*\{[\s\S]*?width: 100vw;[\s\S]*?height: 100vh;[\s\S]*?object-fit: cover;[\s\S]*?transform: scale\(2\.4\);/,
+      /\.join-business-watermark img\s*\{[\s\S]*?width: min\(92vw, 1200px\);[\s\S]*?height: min\(82vh, 900px\);[\s\S]*?object-fit: contain;[\s\S]*?object-position: center;/,
     );
     assert.match(
       styles,
-      /@keyframes join-logo-breathe\s*\{\s*from\s*\{\s*transform: scale\(2\.35\);[\s\S]*?to\s*\{\s*transform: scale\(2\.5\);/,
+      /@keyframes join-logo-breathe\s*\{\s*from\s*\{\s*transform: scale\(\.98\);[\s\S]*?to\s*\{\s*transform: scale\(1\.03\);/,
     );
-    assert.doesNotMatch(styles, /width: min\(78vw, 1100px\)|width: 112vw/);
+    assert.doesNotMatch(styles, /object-fit: cover;\s*transform: scale\(2\.4\)|scale\(2\.[0-9]+\)/);
+    assert.match(
+      styles,
+      /@media \(max-width: 620px\)[\s\S]*?\.join-business-watermark img \{ width: 94vw; height: 78vh; \}/,
+    );
     assert.match(styles, /@keyframes join-logo-breathe/);
     assert.match(styles, /@keyframes join-grid-flow/);
     assert.match(styles, /prefers-reduced-motion: reduce/);
