@@ -16,6 +16,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { BrandMark } from "@/components/BrandMark";
 import { BusinessBrand } from "@/components/BusinessBrand";
 import { ExperienceBackdrop } from "@/components/ExperienceTheme";
+import { PageStatus } from "@/components/PageStatus";
 import { useI18n } from "@/i18n";
 import { api, type VisualSettings, type WalletData } from "@/lib/api-client";
 export const Route = createFileRoute("/wallet")({
@@ -31,13 +32,16 @@ function Wallet() {
     [error, setError] = useState(""),
     [historyOpen, setHistoryOpen] = useState(false),
     [codeOpen, setCodeOpen] = useState(false),
+    [redeemingId, setRedeemingId] = useState<string | null>(null),
     [referral, setReferral] = useState<{ sharePath: string; referralCount: number } | null>(null),
     [settings, setSettings] = useState<VisualSettings | null>(null);
   const load = useCallback(async () => {
+    setBusy(true);
+    setError("");
     try {
       const session = await api.session();
       if (!session.user || session.user.role !== "member") {
-        await navigate({ to: "/login" });
+        await navigate({ to: "/login", search: { access: "member" } });
         return;
       }
       const [wallet, visualSettings] = await Promise.all([api.wallet(), api.visualSettings()]);
@@ -52,19 +56,35 @@ function Wallet() {
   useEffect(() => {
     void load();
   }, [load]);
-  const redeem = async (rewardId: string, name: string) => {
+  const redeem = async (rewardId: string, name: string, points: number) => {
+    if (redeemingId !== null) return;
+    if (
+      !window.confirm(
+        t(
+          "Redeem {rewardName} for {count} points? This will deduct the points from your balance.",
+          {
+            rewardName: name,
+            count: points,
+          },
+        ),
+      )
+    )
+      return;
     setError("");
+    setRedeemingId(rewardId);
     try {
       const result = await api.redeem(rewardId);
       setNotice(t("{rewardName} redeemed. Code: {code}", { rewardName: name, code: result.code }));
       await load();
     } catch (cause) {
       setError(errorMessage(cause, "Redemption failed"));
+    } finally {
+      setRedeemingId(null);
     }
   };
   const logout = async () => {
     await api.logout();
-    await navigate({ to: "/login" });
+    await navigate({ to: "/login", search: { access: "member" } });
   };
   const loadReferral = async () => {
     try {
@@ -73,8 +93,21 @@ function Wallet() {
       setError(errorMessage(cause, "Referral link unavailable"));
     }
   };
-  if (busy) return <Status label={t("Loading secure wallet…")} />;
-  if (!data) return <Status label={error || t("Wallet unavailable.")} />;
+  if (busy) return <PageStatus title={t("Loading secure wallet…")} loading />;
+  if (!data)
+    return (
+      <PageStatus
+        title={t("Wallet unavailable.")}
+        message={error}
+        retryLabel={t("Try again")}
+        onRetry={() => void load()}
+        action={
+          <a className="button button-ghost" href="/login?access=member">
+            {t("Go to sign in")}
+          </a>
+        }
+      />
+    );
   const futureRewardPoints = data.rewards
     .map((reward) => reward.points)
     .filter((points) => points > data.points);
@@ -178,8 +211,13 @@ function Wallet() {
                 </span>
                 <h3>{reward.name}</h3>
                 <p>{reward.description}</p>
-                <button disabled={disabled} onClick={() => void redeem(reward.id, reward.name)}>
-                  {t(disabled ? "Keep earning" : "Redeem")}
+                <button
+                  disabled={disabled || redeemingId !== null}
+                  onClick={() => void redeem(reward.id, reward.name, reward.points)}
+                >
+                  {t(
+                    redeemingId === reward.id ? "Redeeming…" : disabled ? "Keep earning" : "Redeem",
+                  )}
                   <ChevronRight size={17} />
                 </button>
               </article>
@@ -270,9 +308,10 @@ function Wallet() {
               <code>{`${window.location.origin}${referral.sharePath}`}</code>
               <button
                 onClick={() =>
-                  void navigator.clipboard.writeText(
-                    `${window.location.origin}${referral.sharePath}`,
-                  )
+                  void navigator.clipboard
+                    .writeText(`${window.location.origin}${referral.sharePath}`)
+                    .then(() => setNotice(t("Referral link copied.")))
+                    .catch(() => setError(t("Copy failed. Select and copy the link manually.")))
                 }
               >
                 <Copy size={17} /> {t("Copy link")}
@@ -371,20 +410,6 @@ function Modal({
         <span className="section-kicker">{t("Live account")}</span>
         <h2>{title}</h2>
         {children}
-      </div>
-    </div>
-  );
-}
-function Status({ label }: { label: string }) {
-  const { t } = useI18n();
-  return (
-    <div className="error-screen">
-      <div>
-        <BrandMark />
-        <h1>{label}</h1>
-        <a className="button button-dark" href="/login?access=member">
-          {t("Go to sign in")}
-        </a>
       </div>
     </div>
   );

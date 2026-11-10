@@ -35,11 +35,11 @@ Elite Rewards uses an explicit three-level operating model: one immutable platfo
 - Platform-admin-only client suspension and reactivation from every Clients card, with durable status, audit events, immediate tenant-session revocation, preserved data, and fail-closed login, public-page, invitation, direct-enrollment, and referral access.
 - Per-business manual and automatic holiday themes, resolved server-side in the business time zone without overwriting manual settings.
 - Bilingual forgot-password and reset-password recovery for business and member sign-in, with generic public responses, persistent request limits, hashed 30-minute single-use tokens, platform-admin-only link issuance, lockout clearing, session revocation, and audit events.
-- Eighty passing unit/integration tests, including owner-only setup, customer self-enrollment, member/referral isolation, product tenant isolation, password recovery, automatic holiday boundaries, origin rejection before database work, and production ledger behavior.
+- Eighty-six passing unit/integration tests, including owner-only setup, customer self-enrollment, member/referral isolation, product tenant isolation, password recovery, automatic holiday boundaries, origin rejection before database work, production ledger behavior, and user-experience regressions.
 
 ## Verification
 
-- `npm test`: 80/80 tests passed.
+- `npm test`: 86/86 tests passed.
 - `npm run typecheck`: passed.
 - `npm run lint`: passed.
 - `npm run build`: passed.

@@ -85,7 +85,7 @@ function Home() {
             </p>
             <div className="hero-actions">
               <Link to="/login" className="button button-primary">
-                {t("Open Elite Rewards")} <ArrowRight size={18} />
+                {t("Open business dashboard")} <ArrowRight size={18} />
               </Link>
               <a href="/login?access=member" className="button button-ghost">
                 {t("Member sign in")}
@@ -122,7 +122,7 @@ function Home() {
                 <span>{t("160 points to go")}</span>
                 <strong>{t("$15 reward")}</strong>
               </div>
-              <div className="reward-ticket">
+              <div className="reward-ticket" aria-hidden="true">
                 <span className="ticket-icon">
                   <Gift />
                 </span>
@@ -130,7 +130,7 @@ function Home() {
                   <small>{t("Ready to use")}</small>
                   <strong>{t("$5 off your next visit")}</strong>
                 </span>
-                <button>{t("Use reward")}</button>
+                <span className="reward-preview-action">{t("Use reward")}</span>
               </div>
               <div className="mini-stats">
                 <span>

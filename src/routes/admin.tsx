@@ -219,6 +219,7 @@ function Admin() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(true);
+  const [initialLoadFailed, setInitialLoadFailed] = useState(false);
   const [visualSettings, setVisualSettings] = useState<VisualSettings | null>(null);
   const [visualDraft, setVisualDraft] = useState({
     themeKey: "elite-signature" as ThemeKey,
@@ -248,6 +249,8 @@ function Admin() {
     inventoryRemaining: null,
   });
   const load = useCallback(async () => {
+    setBusy(true);
+    setInitialLoadFailed(false);
     try {
       const session = await api.session();
       if (!session.user || session.user.role === "member") {
@@ -295,6 +298,7 @@ function Admin() {
         setAward((current) => ({ ...current, memberId: firstMember.id }));
     } catch (cause) {
       setError(tr("Dashboard failed to load", "No se pudo cargar el panel"));
+      setInitialLoadFailed(true);
     } finally {
       setBusy(false);
     }
@@ -878,7 +882,13 @@ function Admin() {
   if (busy) return <Loading label={tr("Loading secure dashboard…", "Cargando el panel seguro…")} />;
   if (!data || !user)
     return (
-      <Loading label={error || tr("Dashboard is unavailable.", "El panel no está disponible.")} />
+      <Loading
+        label={error || tr("Dashboard is unavailable.", "El panel no está disponible.")}
+        failed={initialLoadFailed}
+        retryLabel={tr("Try again", "Intentar de nuevo")}
+        onRetry={() => void load()}
+        signInLabel={tr("Go to sign in", "Ir a iniciar sesión")}
+      />
     );
   return (
     <div className={`admin-shell theme-${visualSettings?.themeKey ?? "elite-signature"}`}>
@@ -950,15 +960,17 @@ function Admin() {
             <h1>{sections.find((section) => section.id === active)?.[locale] ?? active}</h1>
           </div>
           <div className="admin-header-actions">
-            <label className="search-box">
-              <Search />
-              <input
-                aria-label={tr("Search transactions", "Buscar transacciones")}
-                placeholder={tr("Search activity…", "Buscar actividad…")}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </label>
+            {(active === "Dashboard" || active === "Transactions") && (
+              <label className="search-box">
+                <Search />
+                <input
+                  aria-label={tr("Search transactions", "Buscar transacciones")}
+                  placeholder={tr("Search transactions…", "Buscar transacciones…")}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </label>
+            )}
             <div className="owner-chip">
               <span>{initials(user.name)}</span>
               <div>
@@ -1003,21 +1015,12 @@ function Admin() {
                 </div>
                 <button
                   className="admin-primary"
-                  onClick={() => setModal(true)}
-                  disabled={!data.members.length}
-                  title={
-                    !data.members.length
-                      ? tr(
-                          "Add a member before awarding points",
-                          "Agrega un miembro antes de otorgar puntos",
-                        )
-                      : undefined
-                  }
+                  onClick={() => (data.members.length ? setModal(true) : setActive("Members"))}
                 >
                   <Plus />{" "}
                   {data.members.length
                     ? tr("Award points", "Otorgar puntos")
-                    : tr("No members yet", "Aún no hay miembros")}
+                    : tr("Enroll your first member", "Inscribe a tu primer miembro")}
                 </button>
               </section>
               <section className="metrics-grid">
@@ -1048,6 +1051,53 @@ function Admin() {
                   }).format(data.metrics.eligibleSalesCents / 100)}
                   tr={tr}
                 />
+              </section>
+              <section
+                className="quick-actions"
+                aria-label={tr("Quick actions", "Acciones rápidas")}
+              >
+                <button type="button" onClick={() => setActive("Members")}>
+                  <UserPlus />
+                  <span>
+                    <strong>{tr("Add a member", "Agregar un miembro")}</strong>
+                    <small>
+                      {tr(
+                        "Enroll a customer or award points",
+                        "Inscribe a un cliente u otorga puntos",
+                      )}
+                    </small>
+                  </span>
+                </button>
+                <button type="button" onClick={() => setActive("Rewards")}>
+                  <Gift />
+                  <span>
+                    <strong>{tr("Manage rewards", "Administrar recompensas")}</strong>
+                    <small>
+                      {tr(
+                        "Create and publish member offers",
+                        "Crea y publica ofertas para miembros",
+                      )}
+                    </small>
+                  </span>
+                </button>
+                <button type="button" onClick={() => setActive("Products")}>
+                  <PackageOpen />
+                  <span>
+                    <strong>{tr("Manage products", "Administrar productos")}</strong>
+                    <small>
+                      {tr("Update the customer catalog", "Actualiza el catálogo para clientes")}
+                    </small>
+                  </span>
+                </button>
+                <button type="button" onClick={() => setActive("Appearance")}>
+                  <Palette />
+                  <span>
+                    <strong>{tr("Customize appearance", "Personalizar apariencia")}</strong>
+                    <small>
+                      {tr("Change themes and live messages", "Cambia temas y mensajes en vivo")}
+                    </small>
+                  </span>
+                </button>
               </section>
               <TransactionTable
                 transactions={visible}
@@ -2687,17 +2737,38 @@ function clientBrandStyle(branding: ClientBrandingDraft) {
     "--client-secondary": branding.secondaryColor,
   } as CSSProperties;
 }
-function Loading({ label }: { label: string }) {
+function Loading({
+  label,
+  failed = false,
+  retryLabel = "Try again",
+  onRetry,
+  signInLabel = "Go to sign in",
+}: {
+  label: string;
+  failed?: boolean;
+  retryLabel?: string;
+  onRetry?: () => void;
+  signInLabel?: string;
+}) {
   return (
     <div className="error-screen">
       <div>
         <BrandMark />
         <h1>{label}</h1>
-        <p>
-          <a className="button button-dark" href="/login">
-            Go to sign in
-          </a>
-        </p>
+        {failed ? (
+          <div className="status-actions">
+            {onRetry && (
+              <button className="button button-dark" type="button" onClick={onRetry}>
+                <RotateCcw size={17} /> {retryLabel}
+              </button>
+            )}
+            <a className="button button-ghost" href="/login">
+              {signInLabel}
+            </a>
+          </div>
+        ) : (
+          <span className="status-spinner" aria-hidden="true" />
+        )}
       </div>
     </div>
   );

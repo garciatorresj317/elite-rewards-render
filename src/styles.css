@@ -202,7 +202,7 @@ textarea:focus-visible { outline: 3px solid var(--gold-bright); outline-offset: 
 .reward-ticket span { display: grid; gap: 3px; }
 .reward-ticket small { color: var(--gold-bright); font-size: 10px; }
 .reward-ticket strong { font-size: 12px; }
-.reward-ticket button { border: 0; background: none; color: var(--gold-bright); font-weight: 800; cursor: pointer; }
+.reward-ticket button, .reward-preview-action { border: 0; background: none; color: var(--gold-bright); font-weight: 800; }
 .mini-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 20px; }
 .mini-stats span { display: grid; gap: 5px; padding: 12px 6px; text-align: center; border-top: 1px solid var(--gold-faint); }
 .mini-stats strong { font-family: var(--serif); color: var(--gold-pale); }
@@ -361,6 +361,16 @@ textarea:focus-visible { outline: 3px solid var(--gold-bright); outline-offset: 
 .dashboard-welcome { display: flex; align-items: center; justify-content: space-between; gap: 22px; margin-bottom: 18px; }
 .dashboard-welcome h2 { margin: 0; font: 700 25px var(--serif); color: var(--gold-pale); }
 .dashboard-welcome p { margin: 5px 0 0; color: var(--muted); }
+.quick-actions { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin: 0 0 18px; }
+.quick-actions button {
+  min-height: 82px; padding: 15px; display: flex; align-items: center; gap: 12px; text-align: left;
+  border: 1px solid var(--gold-faint); border-radius: 12px; color: var(--text); background: rgba(8,7,4,.86); cursor: pointer;
+}
+.quick-actions button:hover { border-color: var(--gold-line); background: rgba(246,185,0,.07); }
+.quick-actions svg { flex: 0 0 auto; color: var(--gold-bright); }
+.quick-actions span { display: grid; gap: 4px; }
+.quick-actions strong { color: var(--gold-pale); }
+.quick-actions small { color: var(--muted); line-height: 1.35; }
 .demo-badge {
   display: inline-flex; margin-bottom: 8px; padding: 5px 9px; border: 1px solid var(--gold-line); border-radius: 99px;
   color: var(--gold-bright); background: rgba(246,185,0,.08); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
@@ -482,6 +492,7 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
   .activity-body { grid-template-columns: 220px 1fr; }
   .admin-shell { grid-template-columns: 230px 1fr; }
   .search-box { display: none; }
+  .quick-actions { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 
 @media (max-width: 820px) {
@@ -519,6 +530,7 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
   .brand-wordmark strong { font-size: 18px; }
   .brand-wordmark small { font-size: 7px; }
   .site-header .button { padding-inline: 13px; font-size: 11px; }
+  .quick-actions { grid-template-columns: 1fr; }
   .hero-actions { flex-direction: column; }
   .hero-actions .button { width: 100%; }
   .hero-visual { min-height: 460px; }
@@ -530,7 +542,7 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
   .note-two { bottom: 32px; left: -5px; }
   .trust-strip div { gap: 18px 24px; font-size: 10px; }
   .wallet-header { height: 92px; }
-  .back-link { font-size: 0; }
+  .wallet-page .back-link { font-size: 0; }
   .back-link svg { width: 22px; height: 22px; }
   .wallet-layout { padding-top: 42px; }
   .points-orb { width: 190px; }
@@ -563,7 +575,7 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 .password-input-wrap { position: relative; display: block; }
 .password-input-wrap input { padding-right: 54px; }
 .password-visibility-toggle {
-  position: absolute; top: 50%; right: 7px; width: 40px; height: 40px; padding: 0;
+  position: absolute; top: 50%; right: 4px; width: 44px; height: 44px; padding: 0;
   display: grid; place-items: center; transform: translateY(-50%);
   border: 0; border-radius: 9px; color: var(--gold-bright); background: transparent; cursor: pointer;
   transition: color .2s ease, background .2s ease, box-shadow .2s ease;
@@ -884,7 +896,8 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 .language-switcher {
   position: fixed;
   z-index: 500;
-  top: max(10px, env(safe-area-inset-top));
+  top: auto;
+  bottom: max(12px, env(safe-area-inset-bottom));
   right: max(10px, env(safe-area-inset-right));
   display: inline-flex;
   gap: 3px;
@@ -896,7 +909,7 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
   backdrop-filter: blur(14px);
 }
 .language-switcher button {
-  min-height: 34px;
+  min-height: 44px;
   padding: 0 11px;
   border: 0;
   border-radius: 999px;
@@ -911,8 +924,8 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
   background: var(--gold-gradient);
 }
 @media (max-width: 560px) {
-  .language-switcher { top: auto; bottom: max(10px, env(safe-area-inset-bottom)); }
-  .language-switcher button { min-height: 38px; }
+  .language-switcher { bottom: max(10px, env(safe-area-inset-bottom)); }
+  body:has(.language-switcher) { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
 }
 
 /* Join Rewards and tenant product catalogs */
@@ -1004,3 +1017,37 @@ body:has(.business-join-page) .language-switcher {
 @media (prefers-reduced-motion: reduce) {
   .join-business-watermark img, .join-future-grid, .join-orbit { animation: none !important; }
 }
+
+/* Clear, recoverable page states */
+.status-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  color: var(--text);
+  background: radial-gradient(circle at 50% 15%, rgba(246,185,0,.12), transparent 32rem), var(--black);
+}
+.status-card {
+  width: min(100%, 560px);
+  padding: clamp(28px, 6vw, 54px);
+  text-align: center;
+  border: 1px solid var(--gold-line);
+  border-radius: 20px;
+  background: rgba(9,8,5,.96);
+  box-shadow: var(--glow);
+}
+.status-card h1 { margin: 18px 0 10px; color: var(--gold-pale); font: 700 clamp(28px,5vw,44px)/1.12 var(--serif); }
+.status-card p { color: var(--muted); line-height: 1.65; }
+.status-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.status-spinner {
+  width: 34px;
+  height: 34px;
+  margin-inline: auto;
+  color: var(--gold-bright);
+  animation: status-spin .9s linear infinite;
+}
+.inline-loading { display: flex; align-items: center; gap: 12px; color: var(--muted); }
+.inline-loading .status-spinner { width: 22px; height: 22px; margin: 0; flex: 0 0 auto; }
+.inline-loading p { margin: 0; }
+.join-privacy-note { margin: 14px 0 0; color: var(--muted-low); font-size: 12px; line-height: 1.55; text-align: center; }
+@keyframes status-spin { to { transform: rotate(1turn); } }

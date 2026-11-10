@@ -4,17 +4,25 @@ import { FormEvent, useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
 import { BusinessBrand } from "@/components/BusinessBrand";
 import { ExperienceBackdrop } from "@/components/ExperienceTheme";
+import { PageStatus } from "@/components/PageStatus";
 import { PasswordField } from "@/components/PasswordField";
 import { useI18n } from "@/i18n";
 import { api, type BusinessEnrollment } from "@/lib/api-client";
 
+type JoinSearch = { ref?: string; business?: string };
+
 export const Route = createFileRoute("/join")({
+  validateSearch: (search: Record<string, unknown>): JoinSearch => ({
+    ...(typeof search["ref"] === "string" ? { ref: search["ref"] } : {}),
+    ...(typeof search["business"] === "string" ? { business: search["business"] } : {}),
+  }),
   head: () => ({ meta: [{ title: "Join rewards | Elite Rewards" }] }),
   component: JoinRewards,
 });
 
 function JoinRewards() {
   const navigate = useNavigate();
+  const search = Route.useSearch();
   const { t, errorMessage } = useI18n();
   const [referralContext, setReferralContext] = useState<{
     businessName: string;
@@ -28,13 +36,16 @@ function JoinRewards() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "" });
-  const params =
-    typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(location.search);
-  const referralCode = params.get("ref") ?? "";
-  const businessId = params.get("business") ?? "";
+  const referralCode = search.ref ?? "";
+  const businessId = search.business ?? "";
 
   useEffect(() => {
+    setError("");
+    setBusinessContext(null);
+    setReferralContext(null);
+    setBusy(true);
     if (!referralCode && !businessId) {
       setError(t("This Join Rewards link is incomplete."));
       setBusy(false);
@@ -46,7 +57,7 @@ function JoinRewards() {
     request
       .catch((cause) => setError(errorMessage(cause, "Enrollment unavailable")))
       .finally(() => setBusy(false));
-  }, [referralCode, businessId, t, errorMessage]);
+  }, [referralCode, businessId, t, errorMessage, reloadKey]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -93,6 +104,24 @@ function JoinRewards() {
         } as React.CSSProperties)
       : undefined;
 
+  if (!busy && error && !businessName) {
+    return (
+      <PageStatus
+        title={t("Enrollment unavailable")}
+        message={error}
+        retryLabel={t("Try again")}
+        {...(referralCode || businessId
+          ? { onRetry: () => setReloadKey((value) => value + 1) }
+          : {})}
+        action={
+          <a className="button button-ghost" href="/login?access=member">
+            {t("Member sign in")}
+          </a>
+        }
+      />
+    );
+  }
+
   return (
     <div
       className={`auth-page business-join-page theme-${businessContext?.visualSettings.themeKey ?? referralContext?.visualSettings.themeKey ?? "elite-signature"}`}
@@ -118,7 +147,12 @@ function JoinRewards() {
       </header>
       <main className="auth-card referral-join-card themed-surface-content">
         <h1>{t("Join {businessName}", { businessName: businessName ?? "Elite Rewards" })}</h1>
-        {busy && <p>{t("Loading your rewards program…")}</p>}
+        {busy && (
+          <div className="inline-loading" role="status">
+            <span className="status-spinner" aria-hidden="true" />
+            <p>{t("Loading your rewards program…")}</p>
+          </div>
+        )}
         {error && (
           <div className="form-error" role="alert">
             {error}
@@ -186,6 +220,11 @@ function JoinRewards() {
               <button className="admin-primary full" disabled={submitting}>
                 {submitting ? t("Creating wallet…") : t("Join rewards")}
               </button>
+              <p className="join-privacy-note">
+                {t(
+                  "Your account is private. This business can manage rewards, but it cannot see your password.",
+                )}
+              </p>
             </form>
           </>
         )}

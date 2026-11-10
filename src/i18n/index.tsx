@@ -45,6 +45,7 @@ const es: Record<string, Translation> = {
   "Elite Rewards gives growing businesses a simple way to recognize their best customers, reward real loyalty, and bring people back.":
     "Elite Rewards ofrece a los negocios en crecimiento una forma sencilla de reconocer a sus mejores clientes, premiar la lealtad real y hacer que regresen.",
   "Open Elite Rewards": "Abrir Elite Rewards",
+  "Open business dashboard": "Abrir panel del negocio",
   "No app required": "No requiere aplicación",
   "Secure member access": "Acceso seguro para miembros",
   "Server-backed rewards ledger": "Registro de recompensas respaldado por el servidor",
@@ -240,6 +241,9 @@ const es: Record<string, Translation> = {
   "Reward history": "Historial de recompensas",
   "Keep earning": "Sigue acumulando",
   Redeem: "Canjear",
+  "Redeeming…": "Canjeando…",
+  "Redeem {rewardName} for {count} points? This will deduct the points from your balance.":
+    "¿Canjear {rewardName} por {count} puntos? Esto descontará los puntos de tu saldo.",
   "This business has not published an available reward yet. Check back soon.":
     "Este negocio aún no ha publicado una recompensa disponible. Vuelve pronto.",
   "Member products": "Productos para miembros",
@@ -253,6 +257,9 @@ const es: Record<string, Translation> = {
   "Friends can use your secure link to create a wallet for {businessName}.":
     "Tus amigos pueden usar tu enlace seguro para crear una billetera de {businessName}.",
   "Copy link": "Copiar enlace",
+  "Referral link copied.": "Enlace de referido copiado.",
+  "Copy failed. Select and copy the link manually.":
+    "No se pudo copiar. Selecciona y copia el enlace manualmente.",
   "{count} joined referral": {
     one: "{count} referido se unió",
     other: "{count} referidos se unieron",
@@ -300,11 +307,14 @@ const es: Record<string, Translation> = {
   "Referral unavailable": "El referido no está disponible",
   "Enrollment failed": "No se pudo completar el registro",
   "Client rewards page unavailable": "La página de recompensas del cliente no está disponible",
+  "Rewards program unavailable": "El programa de recompensas no está disponible",
   "Wallet failed to load": "No se pudo cargar la billetera",
   "Redemption failed": "No se pudo canjear la recompensa",
   "Referral link unavailable": "El enlace de referido no está disponible",
   "Unable to complete the request. Please try again.":
     "No se pudo completar la solicitud. Inténtalo de nuevo.",
+  "Your account is private. This business can manage rewards, but it cannot see your password.":
+    "Tu cuenta es privada. Este negocio puede administrar recompensas, pero no puede ver tu contraseña.",
 };
 
 function interpolate(value: string, parameters?: Parameters) {
