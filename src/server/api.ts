@@ -69,6 +69,13 @@ import {
   updateProduct,
 } from "./products-service.ts";
 import { CLIENT_LOGO_MAX_BYTES } from "../lib/upload-limits.ts";
+import {
+  completePasswordReset,
+  getPasswordResetStatus,
+  issuePasswordReset,
+  listPasswordResetRequests,
+  requestPasswordReset,
+} from "./password-reset-service.ts";
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -286,6 +293,26 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       if (!result) return json({ error: "Invalid credentials or account temporarily locked" }, 401);
       return json({ user: result.user }, 200, { "set-cookie": setSessionCookie(result.token) });
     }
+    if (url.pathname === "/api/auth/forgot-password" && request.method === "POST") {
+      const payload = await body(request);
+      await requestPasswordReset(
+        text(payload["email"], "Email", 5, 254).toLowerCase(),
+        requestSubject(request),
+      );
+      return json({ ok: true }, 202);
+    }
+    if (url.pathname === "/api/auth/password-reset/status" && request.method === "GET") {
+      const token = text(url.searchParams.get("token"), "Password reset token", 32, 200);
+      return json(await getPasswordResetStatus(token));
+    }
+    if (url.pathname === "/api/auth/password-reset" && request.method === "POST") {
+      const payload = await body(request);
+      const result = await completePasswordReset(
+        text(payload["token"], "Password reset token", 32, 200),
+        text(payload["password"], "Password", 8, 200),
+      );
+      return json({ ok: true, role: result.role });
+    }
     if (url.pathname === "/api/auth/logout" && request.method === "POST") {
       await destroySession(request);
       return json({ ok: true }, 200, { "set-cookie": clearSessionCookie() });
@@ -432,6 +459,23 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
     if (url.pathname === "/api/admin/clients" && request.method === "GET") {
       requirePlatformAdmin(user);
       return json({ clients: await listClients(user) });
+    }
+    if (url.pathname === "/api/admin/password-resets" && request.method === "GET") {
+      requirePlatformAdmin(user);
+      return json({ requests: await listPasswordResetRequests(user) });
+    }
+    const passwordResetIssueMatch = url.pathname.match(
+      /^\/api\/admin\/password-resets\/([^/]+)\/issue$/,
+    );
+    if (passwordResetIssueMatch && request.method === "POST") {
+      requirePlatformAdmin(user);
+      const requestId = text(
+        decodeURIComponent(passwordResetIssueMatch[1] ?? ""),
+        "Password reset request",
+        8,
+        120,
+      );
+      return json(await issuePasswordReset(user, requestId), 201);
     }
     if (url.pathname === "/api/admin/clients" && request.method === "POST") {
       requirePlatformAdmin(user);

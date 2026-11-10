@@ -33,6 +33,7 @@ describe("password visibility and join experience", () => {
       "activate-member.tsx",
       "join.tsx",
       "login.tsx",
+      "reset-password.tsx",
       "setup.tsx",
     ]);
     const component = await read("src", "components", "PasswordField.tsx");
@@ -58,7 +59,7 @@ describe("password visibility and join experience", () => {
     ]);
     const combined = [auth, api, i18n, ...routes].join("\n");
     assert.match(auth, /password\.length < 8/);
-    assert.equal((api.match(/"Password", 8, 200/g) ?? []).length, 4);
+    assert.equal((api.match(/"Password", 8, 200/g) ?? []).length, 5);
     assert.match(api, /"Owner password", 8, 200/);
     assert.match(i18n, /Password must contain between 8 and 200 characters/);
     assert.match(routes[1], /minLength=\{1\}/);

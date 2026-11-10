@@ -49,11 +49,30 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
   logout: () => request<{ ok: boolean }>("/api/auth/logout", { method: "POST", body: "{}" }),
+  forgotPassword: (email: string) =>
+    request<{ ok: boolean }>("/api/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  passwordResetStatus: (token: string) =>
+    request<{ valid: true }>(`/api/auth/password-reset/status?token=${encodeURIComponent(token)}`),
+  resetPassword: (token: string, password: string) =>
+    request<{ ok: boolean; role: "owner" | "staff" | "member" }>("/api/auth/password-reset", {
+      method: "POST",
+      body: JSON.stringify({ token, password }),
+    }),
   setupStatus: () => request<{ setupRequired: boolean }>("/api/setup/status"),
   setup: (payload: Record<string, string>) =>
     request<{ ok: boolean }>("/api/setup", { method: "POST", body: JSON.stringify(payload) }),
   dashboard: () => request<DashboardData>("/api/admin/dashboard"),
   clients: () => request<{ clients: ClientSummary[] }>("/api/admin/clients"),
+  passwordResetRequests: () =>
+    request<{ requests: PasswordResetRequest[] }>("/api/admin/password-resets"),
+  issuePasswordReset: (requestId: string) =>
+    request<{ resetPath: string; expiresAt: string }>(
+      `/api/admin/password-resets/${encodeURIComponent(requestId)}/issue`,
+      { method: "POST", body: "{}" },
+    ),
   createClient: (payload: {
     businessName: string;
     locationName: string;
@@ -357,6 +376,18 @@ export type ClientSummary = {
   previewPath: string;
   nfcPath: string;
   joinPath: string;
+};
+
+export type PasswordResetRequest = {
+  id: string;
+  userId: string;
+  businessId: string;
+  businessName: string;
+  userName: string;
+  email: string;
+  role: "owner" | "staff" | "member";
+  requestedAt: string;
+  expiresAt: string;
 };
 
 export type ClientBranding = {

@@ -22,6 +22,8 @@ const es: Record<string, Translation> = {
   "A modern rewards program that helps local businesses turn everyday customers into loyal regulars.":
     "Un programa de recompensas moderno que ayuda a los negocios locales a convertir clientes cotidianos en clientes leales.",
   "Sign in | Elite Rewards": "Iniciar sesión | Elite Rewards",
+  "Forgot password | Elite Rewards": "Olvidé mi contraseña | Elite Rewards",
+  "Reset password | Elite Rewards": "Restablecer contraseña | Elite Rewards",
   "Initial setup | Elite Rewards": "Configuración inicial | Elite Rewards",
   "Activate client account | Elite Rewards": "Activar cuenta de cliente | Elite Rewards",
   "Activate member account | Elite Rewards": "Activar cuenta de miembro | Elite Rewards",
@@ -108,6 +110,39 @@ const es: Record<string, Translation> = {
   "Use at least 8 characters.": "Usa al menos 8 caracteres.",
   "Signing in…": "Iniciando sesión…",
   "Sign in": "Iniciar sesión",
+  "Forgot password?": "¿Olvidaste tu contraseña?",
+  "Back to sign in": "Volver a iniciar sesión",
+  "Account recovery": "Recuperación de cuenta",
+  "Forgot your password?": "¿Olvidaste tu contraseña?",
+  "Enter the email on your Elite Rewards account. If it matches an active account, Elite Rewards will prepare a secure reset request.":
+    "Ingresa el correo electrónico de tu cuenta de Elite Rewards. Si coincide con una cuenta activa, Elite Rewards preparará una solicitud segura para restablecerla.",
+  "Request received": "Solicitud recibida",
+  "If that email belongs to an active account, the Elite Rewards administrator can now provide a private reset link.":
+    "Si ese correo pertenece a una cuenta activa, el administrador de Elite Rewards ahora puede proporcionar un enlace privado para restablecerla.",
+  "Return to sign in": "Volver a iniciar sesión",
+  "Submitting…": "Enviando…",
+  "Request password reset": "Solicitar restablecimiento de contraseña",
+  "Secure password reset": "Restablecimiento seguro de contraseña",
+  "Create a new password": "Crea una nueva contraseña",
+  "Use a new password with at least 8 characters.":
+    "Usa una contraseña nueva de al menos 8 caracteres.",
+  "This password reset link is incomplete.":
+    "Este enlace para restablecer la contraseña está incompleto.",
+  "Checking your secure reset link…": "Verificando tu enlace seguro…",
+  "New password": "Nueva contraseña",
+  "Resetting…": "Restableciendo…",
+  "Reset password": "Restablecer contraseña",
+  "Password reset complete": "Contraseña restablecida",
+  "Sign in with your new password on the next screen.":
+    "Inicia sesión con tu nueva contraseña en la siguiente pantalla.",
+  "Continue to sign in": "Continuar para iniciar sesión",
+  "Password reset request failed": "No se pudo solicitar el restablecimiento de contraseña",
+  "Password reset unavailable": "El restablecimiento de contraseña no está disponible",
+  "Password reset failed": "No se pudo restablecer la contraseña",
+  "Password reset link is invalid or expired":
+    "El enlace para restablecer la contraseña no es válido o venció",
+  "Too many password reset requests; try again later":
+    "Demasiadas solicitudes para restablecer la contraseña; inténtalo más tarde",
   "Initial setup is required. Open the private setup page and use the deployment setup token.":
     "Se requiere la configuración inicial. Abre la página privada de configuración y usa el token de configuración de implementación.",
   "One-time production setup": "Configuración única de producción",

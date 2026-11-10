@@ -15,6 +15,8 @@ The Elite platform tenant is never listed as one of its own clients. Platform ad
 - `/` — public marketing site
 - `/clients/:clientId` — permanent public client page and NFC-card destination
 - `/login` — secure business and member access
+- `/forgot-password` — bilingual account recovery request for owners, staff, and members
+- `/reset-password` — single-use, expiring password reset completion
 - `/wallet` — authenticated member page with the client business’s products, balance, ledger, reward codes, and redemptions
 - `/admin` — authenticated business dashboard with customer enrollment links, editable product and reward catalogs, live transactions, point awards, and appearance controls
 - `/join?business=:clientId` — permanent, tenant-branded Join Rewards self-enrollment link for each client business
@@ -23,6 +25,8 @@ The Elite platform tenant is never listed as one of its own clients. Platform ad
 - `/setup` — one-time protected production bootstrap
 
 The current production slice supports isolated business clients and one location per client. Authentication, opaque server sessions, role enforcement, PostgreSQL persistence, an append-only points ledger, idempotent point awards, atomic reward redemptions, direct Join Rewards self-enrollment, member referral attribution, per-business product and reward catalogs, and per-business visual themes are connected. Every client card has a platform-admin-only Suspend/Activate control: suspension preserves all tenant data while immediately revoking tenant sessions and disabling login, public client pages, invitations, direct enrollment, and referral enrollment until reactivation. Every client receives a permanent Join Rewards link in Admin → Clients; customers use it to create a zero-point wallet for that client. Owners manage ordinary merchandise separately under **Admin → Products**, and published products appear on that client’s public page and authenticated member page without becoming redeemable rewards. Owners can create, edit, publish, hide, inventory-limit, and archive reward offers from **Admin → Rewards**; available changes appear in that business's member wallets while redemption history retains the original offer name and points cost. Referral links enroll members at a zero-point balance; no automatic referral award is issued until a business policy is defined. Business owners can enable automatic holiday themes from **Admin → Appearance**; Elite Rewards resolves dates server-side in the selected business time zone and temporarily applies MLK Day, Spring Celebration, September 11 Remembrance, and Winter Holiday themes without overwriting the business's manual theme. POS ingestion, billing, messaging, multi-location management, and the remaining administrative modules are later phases.
+
+Forgot-password requests intentionally return the same public response for known and unknown addresses. Because automated transactional email is not connected yet, only the Elite platform administrator can see a pending request and create its 30-minute, single-use reset link under **Admin → Password resets** after verifying the account holder. Completing a reset changes the password, clears login lockouts, revokes older sessions, signs in the account, and writes an audit event.
 
 ## Development
 

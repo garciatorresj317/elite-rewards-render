@@ -13,8 +13,10 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ActivateClientRouteImport } from './routes/activate-client'
 import { Route as ActivateMemberRouteImport } from './routes/activate-member'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as WalletRouteImport } from './routes/wallet'
 import { Route as ClientsClientIdRouteImport } from './routes/clients.$clientId'
@@ -39,6 +41,11 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const JoinRoute = JoinRouteImport.update({
   id: '/join',
   path: '/join',
@@ -47,6 +54,11 @@ const JoinRoute = JoinRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SetupRoute = SetupRouteImport.update({
@@ -70,8 +82,10 @@ export interface FileRoutesByFullPath {
   '/activate-client': typeof ActivateClientRoute
   '/activate-member': typeof ActivateMemberRoute
   '/admin': typeof AdminRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/wallet': typeof WalletRoute
   '/clients/$clientId': typeof ClientsClientIdRoute
@@ -81,8 +95,10 @@ export interface FileRoutesByTo {
   '/activate-client': typeof ActivateClientRoute
   '/activate-member': typeof ActivateMemberRoute
   '/admin': typeof AdminRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/wallet': typeof WalletRoute
   '/clients/$clientId': typeof ClientsClientIdRoute
@@ -93,8 +109,10 @@ export interface FileRoutesById {
   '/activate-client': typeof ActivateClientRoute
   '/activate-member': typeof ActivateMemberRoute
   '/admin': typeof AdminRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/wallet': typeof WalletRoute
   '/clients/$clientId': typeof ClientsClientIdRoute
@@ -106,8 +124,10 @@ export interface FileRouteTypes {
     | '/activate-client'
     | '/activate-member'
     | '/admin'
+    | '/forgot-password'
     | '/join'
     | '/login'
+    | '/reset-password'
     | '/setup'
     | '/wallet'
     | '/clients/$clientId'
@@ -117,8 +137,10 @@ export interface FileRouteTypes {
     | '/activate-client'
     | '/activate-member'
     | '/admin'
+    | '/forgot-password'
     | '/join'
     | '/login'
+    | '/reset-password'
     | '/setup'
     | '/wallet'
     | '/clients/$clientId'
@@ -128,8 +150,10 @@ export interface FileRouteTypes {
     | '/activate-client'
     | '/activate-member'
     | '/admin'
+    | '/forgot-password'
     | '/join'
     | '/login'
+    | '/reset-password'
     | '/setup'
     | '/wallet'
     | '/clients/$clientId'
@@ -140,8 +164,10 @@ export interface RootRouteChildren {
   ActivateClientRoute: typeof ActivateClientRoute
   ActivateMemberRoute: typeof ActivateMemberRoute
   AdminRoute: typeof AdminRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   JoinRoute: typeof JoinRoute
   LoginRoute: typeof LoginRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SetupRoute: typeof SetupRoute
   WalletRoute: typeof WalletRoute
   ClientsClientIdRoute: typeof ClientsClientIdRoute
@@ -177,6 +203,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/join': {
       id: '/join'
       path: '/join'
@@ -189,6 +222,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/setup': {
@@ -220,8 +260,10 @@ const rootRouteChildren: RootRouteChildren = {
   ActivateClientRoute: ActivateClientRoute,
   ActivateMemberRoute: ActivateMemberRoute,
   AdminRoute: AdminRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   JoinRoute: JoinRoute,
   LoginRoute: LoginRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SetupRoute: SetupRoute,
   WalletRoute: WalletRoute,
   ClientsClientIdRoute: ClientsClientIdRoute,

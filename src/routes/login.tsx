@@ -133,6 +133,13 @@ function Login() {
               value={password}
               onChange={setPassword}
             />
+            <Link
+              to="/forgot-password"
+              search={memberAccess ? { access: "member" as const } : {}}
+              className="forgot-password-link"
+            >
+              {t("Forgot password?")}
+            </Link>
             <button className="admin-primary full" disabled={busy}>
               {busy ? t("Signing in…") : t(memberAccess ? "Open member wallet" : "Sign in")}
             </button>

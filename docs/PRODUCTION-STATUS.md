@@ -1,6 +1,6 @@
 # Elite Rewards production status
 
-Date: 2026-11-05
+Date: 2026-11-10
 
 ## Platform/client/member architecture
 
@@ -34,11 +34,12 @@ Elite Rewards uses an explicit three-level operating model: one immutable platfo
 - Separate tenant-owned product catalogs managed by business owners or the sole platform administrator; published products appear on public client and authenticated member pages but never enter reward redemption or points inventory.
 - Platform-admin-only client suspension and reactivation from every Clients card, with durable status, audit events, immediate tenant-session revocation, preserved data, and fail-closed login, public-page, invitation, direct-enrollment, and referral access.
 - Per-business manual and automatic holiday themes, resolved server-side in the business time zone without overwriting manual settings.
-- Fifty-five passing unit/integration tests, including owner-only setup, customer self-enrollment, member/referral isolation, product tenant isolation, automatic holiday boundaries, origin rejection before database work, and production ledger behavior.
+- Bilingual forgot-password and reset-password recovery for business and member sign-in, with generic public responses, persistent request limits, hashed 30-minute single-use tokens, platform-admin-only link issuance, lockout clearing, session revocation, and audit events.
+- Eighty passing unit/integration tests, including owner-only setup, customer self-enrollment, member/referral isolation, product tenant isolation, password recovery, automatic holiday boundaries, origin rejection before database work, and production ledger behavior.
 
 ## Verification
 
-- `npm test`: 55/55 tests passed.
+- `npm test`: 80/80 tests passed.
 - `npm run typecheck`: passed.
 - `npm run lint`: passed.
 - `npm run build`: passed.
@@ -53,7 +54,7 @@ Render has provisioned PostgreSQL and the service health endpoint reports `datab
 
 - Owner-managed creation of additional staff accounts.
 - Member invitation revocation/reissue and automated email delivery of optional staff-created enrollment links; permanent self-enrollment links are live.
-- Password recovery, password change, session revocation, and MFA.
+- Authenticated password change, user-controlled session management, and MFA. Forgot-password recovery now works through platform-admin-verified private reset-link delivery until transactional email is connected.
 - Persistent IP/account rate limiting and login-event audit.
 - Reward scheduling and time-window availability. Reward creation, editing, visibility, optional inventory, and archival are live under Admin → Rewards.
 - Redemption consumption by staff and reversal/refund workflows.

@@ -28,4 +28,17 @@ describe("member wallet routing", () => {
     assert.match(login, /navigate\(\{ to: "\/wallet" \}\)/);
     assert.match(login, /navigate\(\{ to: "\/admin" \}\)/);
   });
+
+  it("keeps member intent through password recovery", async () => {
+    const [login, forgot, reset, service] = await Promise.all([
+      readFile(join(routes, "login.tsx"), "utf8"),
+      readFile(join(routes, "forgot-password.tsx"), "utf8"),
+      readFile(join(routes, "reset-password.tsx"), "utf8"),
+      readFile(join(process.cwd(), "src", "server", "password-reset-service.ts"), "utf8"),
+    ]);
+    assert.match(login, /to="\/forgot-password"[\s\S]*?access: "member"/);
+    assert.match(forgot, /search\["access"\] === "member"/);
+    assert.match(reset, /access === "member"/);
+    assert.match(service, /pending\.role === "member" \? "&access=member"/);
+  });
 });

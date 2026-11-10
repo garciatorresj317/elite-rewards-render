@@ -572,6 +572,12 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 .password-visibility-toggle:focus-visible { outline: 2px solid var(--gold-bright); outline-offset: 1px; }
 .password-visibility-toggle svg { width: 20px; height: 20px; }
 .password-requirement { color: var(--muted); font-size: 11px; font-weight: 600; }
+.forgot-password-link { justify-self: end; margin-top: -7px; color: var(--gold-bright); font-weight: 750; text-decoration: none; }
+.forgot-password-link:hover { color: #fff1ad; text-decoration: underline; }
+.form-success { display: grid; gap: 12px; padding: 18px; border: 1px solid rgba(73, 221, 112, .45); border-radius: 12px; color: #d8ffe2; background: rgba(20, 104, 42, .2); }
+.form-success strong { color: #86ff9e; font: 700 21px var(--serif); }
+.form-success p { margin: 0; color: var(--cream); line-height: 1.6; }
+.form-success .button { justify-content: center; }
 .setup-card { width: min(calc(100% - 36px), 820px); }
 .setup-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
 .setup-grid label:first-child, .setup-grid button { grid-column: 1 / -1; }
@@ -608,6 +614,14 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 .activation-result strong { color: var(--gold-pale); font: 700 21px var(--serif); }
 .activation-result p { margin: 0; }
 .activation-result code { overflow-wrap: anywhere; padding: 11px; border: 1px solid rgba(236,171,26,.2); border-radius: 8px; color: var(--gold-bright); background: #050402; }
+.password-reset-result { margin: 18px; }
+.password-reset-list { display: grid; gap: 12px; padding: 18px; }
+.password-reset-card { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 14px; padding: 16px; border: 1px solid rgba(236,171,26,.25); border-radius: 13px; background: rgba(8,7,4,.86); }
+.password-reset-card h3, .password-reset-card p { margin: 0; }
+.password-reset-card h3 { color: var(--gold-pale); font: 700 18px var(--serif); }
+.password-reset-card p { margin-top: 3px; color: var(--cream); }
+.password-reset-card small { display: block; margin-top: 5px; color: var(--muted); }
+@media (max-width: 680px) { .password-reset-card { grid-template-columns: auto 1fr; } .password-reset-card .admin-primary { grid-column: 1 / -1; justify-content: center; } }
 @media (max-width: 1050px) { .client-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 680px) { .client-panel-title { align-items: stretch; flex-direction: column; gap: 14px; } .client-panel-title .admin-primary { width: 100%; justify-content: center; } .client-grid { grid-template-columns: 1fr; padding: 12px; } }
 

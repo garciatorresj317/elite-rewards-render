@@ -57,6 +57,7 @@ export async function migrateDatabase(): Promise<void> {
         [10, "010_client_suspension.sql"],
         [11, "011_product_images_and_points.sql"],
         [12, "012_client_logo_10mb.sql"],
+        [13, "013_password_resets.sql"],
       ] as const;
       for (const [version, filename] of migrations) {
         if (versions.has(version)) continue;

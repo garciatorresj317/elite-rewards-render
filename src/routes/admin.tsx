@@ -15,6 +15,7 @@ import {
   Palette,
   Pencil,
   Plus,
+  KeyRound,
   ReceiptText,
   RotateCcw,
   Search,
@@ -41,6 +42,7 @@ import {
   type ManagedProduct,
   type ManagedReward,
   type MemberSummary,
+  type PasswordResetRequest,
   type ProductDraft,
   type RewardDraft,
   type SessionUser,
@@ -55,6 +57,13 @@ export const Route = createFileRoute("/admin")({
 const sections = [
   { id: "Dashboard", en: "Dashboard", es: "Panel", icon: LayoutDashboard, platformOnly: false },
   { id: "Clients", en: "Clients", es: "Clientes", icon: Building2, platformOnly: true },
+  {
+    id: "Password resets",
+    en: "Password resets",
+    es: "Contraseñas",
+    icon: KeyRound,
+    platformOnly: true,
+  },
   { id: "Members", en: "Members", es: "Miembros", icon: Users, platformOnly: false },
   {
     id: "Transactions",
@@ -137,6 +146,9 @@ function Admin() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
   const [clients, setClients] = useState<ClientSummary[]>([]);
+  const [passwordResetRequests, setPasswordResetRequests] = useState<PasswordResetRequest[]>([]);
+  const [passwordResetBusyId, setPasswordResetBusyId] = useState<string | null>(null);
+  const [passwordResetLink, setPasswordResetLink] = useState("");
   const [members, setMembers] = useState<MemberSummary[]>([]);
   const [active, setActive] = useState<SectionId>("Dashboard");
   const [mobile, setMobile] = useState(false);
@@ -243,19 +255,30 @@ function Admin() {
         return;
       }
       setUser(session.user);
-      const [dashboard, clientResult, memberResult, visualResult, rewardResult, productResult] =
-        await Promise.all([
-          api.dashboard(),
-          session.user.platformAdmin ? api.clients() : Promise.resolve({ clients: [] }),
-          api.members(),
-          api.visualSettings(),
-          session.user.role === "owner"
-            ? api.managedRewards()
-            : Promise.resolve({ rewards: [] as ManagedReward[] }),
-          api.managedProducts(),
-        ]);
+      const [
+        dashboard,
+        clientResult,
+        passwordResetResult,
+        memberResult,
+        visualResult,
+        rewardResult,
+        productResult,
+      ] = await Promise.all([
+        api.dashboard(),
+        session.user.platformAdmin ? api.clients() : Promise.resolve({ clients: [] }),
+        session.user.platformAdmin
+          ? api.passwordResetRequests()
+          : Promise.resolve({ requests: [] as PasswordResetRequest[] }),
+        api.members(),
+        api.visualSettings(),
+        session.user.role === "owner"
+          ? api.managedRewards()
+          : Promise.resolve({ rewards: [] as ManagedReward[] }),
+        api.managedProducts(),
+      ]);
       setData(dashboard);
       setClients(clientResult.clients);
+      setPasswordResetRequests(passwordResetResult.requests);
       setMembers(memberResult.members);
       setVisualSettings(visualResult);
       setManagedRewards(rewardResult.rewards);
@@ -315,6 +338,31 @@ function Admin() {
       setClientForm({ businessName: "", locationName: "", ownerName: "", ownerEmail: "" });
     } catch (cause) {
       setError(tr("Client creation failed", "No se pudo crear el cliente"));
+    }
+  };
+  const issuePasswordReset = async (request: PasswordResetRequest) => {
+    setError("");
+    setPasswordResetLink("");
+    try {
+      setPasswordResetBusyId(request.id);
+      const result = await api.issuePasswordReset(request.id);
+      setPasswordResetLink(`${window.location.origin}${result.resetPath}`);
+      setPasswordResetRequests((current) => current.filter((item) => item.id !== request.id));
+      setNotice(
+        tr(
+          `A private password reset link was created for ${request.userName}.`,
+          `Se creó un enlace privado para restablecer la contraseña de ${request.userName}.`,
+        ),
+      );
+    } catch {
+      setError(
+        tr(
+          "Password reset link could not be created.",
+          "No se pudo crear el enlace para restablecer la contraseña.",
+        ),
+      );
+    } finally {
+      setPasswordResetBusyId(null);
     }
   };
   const toggleClientActive = async (client: ClientSummary) => {
@@ -1142,6 +1190,88 @@ function Admin() {
                     </div>
                   </article>
                 ))}
+              </div>
+            </section>
+          )}
+          {active === "Password resets" && user.platformAdmin && (
+            <section className="panel client-panel password-reset-panel">
+              <div className="panel-title client-panel-title">
+                <div>
+                  <span>
+                    <KeyRound />
+                  </span>
+                  <div>
+                    <h3>{tr("Password reset requests", "Solicitudes de contraseña")}</h3>
+                    <small>
+                      {tr(
+                        "Verify the requester, then create a private single-use link that expires in 30 minutes.",
+                        "Verifica a la persona y luego crea un enlace privado de un solo uso que vence en 30 minutos.",
+                      )}
+                    </small>
+                  </div>
+                </div>
+              </div>
+              {passwordResetLink && (
+                <div className="activation-result password-reset-result" role="status">
+                  <strong>{tr("Private reset link", "Enlace privado de restablecimiento")}</strong>
+                  <p>
+                    {tr(
+                      "Send this only to the verified account holder. It works once and expires in 30 minutes.",
+                      "Envíalo solo al titular verificado de la cuenta. Funciona una sola vez y vence en 30 minutos.",
+                    )}
+                  </p>
+                  <code>{passwordResetLink}</code>
+                  <button
+                    type="button"
+                    className="admin-primary"
+                    onClick={() =>
+                      void navigator.clipboard
+                        .writeText(passwordResetLink)
+                        .then(() =>
+                          setNotice(
+                            tr("Reset link copied.", "Se copió el enlace de restablecimiento."),
+                          ),
+                        )
+                    }
+                  >
+                    <Copy size={16} /> {tr("Copy reset link", "Copiar enlace")}
+                  </button>
+                </div>
+              )}
+              <div className="password-reset-list">
+                {passwordResetRequests.map((request) => (
+                  <article key={request.id} className="password-reset-card">
+                    <span className="client-avatar">
+                      <KeyRound size={18} />
+                    </span>
+                    <div>
+                      <h3>{request.userName}</h3>
+                      <p>{request.email}</p>
+                      <small>
+                        {request.businessName} · {request.role} ·{" "}
+                        {formatDateTime(request.requestedAt)}
+                      </small>
+                    </div>
+                    <button
+                      type="button"
+                      className="admin-primary"
+                      disabled={passwordResetBusyId === request.id}
+                      onClick={() => void issuePasswordReset(request)}
+                    >
+                      {passwordResetBusyId === request.id
+                        ? tr("Creating…", "Creando…")
+                        : tr("Create reset link", "Crear enlace")}
+                    </button>
+                  </article>
+                ))}
+                {!passwordResetRequests.length && (
+                  <p className="empty-table">
+                    {tr(
+                      "No pending password reset requests.",
+                      "No hay solicitudes pendientes para restablecer contraseñas.",
+                    )}
+                  </p>
+                )}
               </div>
             </section>
           )}
