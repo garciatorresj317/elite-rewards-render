@@ -355,16 +355,52 @@ function Admin() {
   };
   const openClientEditor = async (client: ClientSummary) => {
     setError("");
-    try {
-      const [result, rewards, products, clientAppearance] = await Promise.all([
+    // Open from the already-authorized client summary first. Optional catalog or
+    // appearance failures must not make the entire branding editor unusable.
+    setClientEditor(client);
+    setClientBranding({
+      name: client.name,
+      locationName: client.locationName,
+      logoUrl: client.logoUrl,
+      primaryColor: client.primaryColor,
+      secondaryColor: client.secondaryColor,
+    });
+    setClientRewards([]);
+    setClientProducts([]);
+    setClientVisualSettings(null);
+    setClientRewardEditingId(null);
+    setClientProductEditingId(null);
+    setClientProductDraft(emptyProductForm());
+    setClientRewardDraft({
+      name: "",
+      description: "",
+      points: 100,
+      active: true,
+      inventoryRemaining: null,
+    });
+
+    const [brandingResult, rewardsResult, productsResult, appearanceResult] =
+      await Promise.allSettled([
         api.clientBranding(client.id),
         api.clientRewards(client.id),
         api.clientProducts(client.id),
         api.clientVisualSettings(client.id),
       ]);
-      setClientEditor(client);
-      setClientRewards(rewards.rewards);
-      setClientProducts(products.products);
+
+    if (brandingResult.status === "fulfilled") {
+      const { branding } = brandingResult.value;
+      setClientBranding({
+        name: branding.name,
+        locationName: branding.locationName,
+        logoUrl: branding.logoUrl,
+        primaryColor: branding.primaryColor,
+        secondaryColor: branding.secondaryColor,
+      });
+    }
+    if (rewardsResult.status === "fulfilled") setClientRewards(rewardsResult.value.rewards);
+    if (productsResult.status === "fulfilled") setClientProducts(productsResult.value.products);
+    if (appearanceResult.status === "fulfilled") {
+      const clientAppearance = appearanceResult.value;
       setClientVisualSettings(clientAppearance);
       setClientVisualDraft({
         themeKey: clientAppearance.configuredThemeKey,
@@ -373,28 +409,19 @@ function Admin() {
         automaticHolidayThemes: clientAppearance.automaticHolidayThemes,
         timeZone: clientAppearance.timeZone,
       });
-      setClientProductEditingId(null);
-      setClientProductDraft(emptyProductForm());
-      setClientBranding({
-        name: result.branding.name,
-        locationName: result.branding.locationName,
-        logoUrl: result.branding.logoUrl,
-        primaryColor: result.branding.primaryColor,
-        secondaryColor: result.branding.secondaryColor,
-      });
-      setClientRewardEditingId(null);
-      setClientRewardDraft({
-        name: "",
-        description: "",
-        points: 100,
-        active: true,
-        inventoryRemaining: null,
-      });
-    } catch (cause) {
+    }
+
+    const failedSections = [
+      brandingResult.status === "rejected" ? tr("branding", "marca") : null,
+      rewardsResult.status === "rejected" ? tr("rewards", "recompensas") : null,
+      productsResult.status === "rejected" ? tr("products", "productos") : null,
+      appearanceResult.status === "rejected" ? tr("appearance", "apariencia") : null,
+    ].filter((section): section is string => Boolean(section));
+    if (failedSections.length) {
       setError(
         tr(
-          "Client customization failed to load",
-          "No se pudo cargar la personalización del cliente",
+          `The client editor opened, but these sections could not load: ${failedSections.join(", ")}. Refresh and try again.`,
+          `El editor del cliente se abrió, pero no se pudieron cargar estas secciones: ${failedSections.join(", ")}. Actualiza la página e inténtalo de nuevo.`,
         ),
       );
     }

@@ -49,4 +49,19 @@ describe("client customization placement", () => {
     assert.match(clientPage, /alt=\{product\.name\}/);
     assert.match(wallet, /alt=\{product\.name\}/);
   });
+
+  it("opens client customization without letting one failed section collapse the editor", async () => {
+    const admin = await readFile(join(process.cwd(), "src", "routes", "admin.tsx"), "utf8");
+    const loaderStart = admin.indexOf("const openClientEditor");
+    const loaderEnd = admin.indexOf("const saveClientBranding", loaderStart);
+    const loader = admin.slice(loaderStart, loaderEnd);
+    assert.ok(loaderStart >= 0 && loaderEnd > loaderStart);
+    assert.match(loader, /setClientEditor\(client\)/);
+    assert.match(loader, /Promise\.allSettled/);
+    assert.match(loader, /brandingResult\.status === "fulfilled"/);
+    assert.match(loader, /rewardsResult\.status === "fulfilled"/);
+    assert.match(loader, /productsResult\.status === "fulfilled"/);
+    assert.match(loader, /appearanceResult\.status === "fulfilled"/);
+    assert.doesNotMatch(loader, /Client customization failed to load/);
+  });
 });
