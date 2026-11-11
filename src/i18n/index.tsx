@@ -102,6 +102,7 @@ const es: Record<string, Translation> = {
   "Return to business dashboard": "Volver al panel del negocio",
   "Thoughtful loyalty tools for growing businesses.":
     "Herramientas de lealtad bien diseñadas para negocios en crecimiento.",
+  "Trade Marked and Registered LLC": "Marca registrada y LLC registrada",
   "Back to site": "Volver al sitio",
   "Secure access": "Acceso seguro",
   "Use your business or member account. Rewards balances are stored in the production ledger.":

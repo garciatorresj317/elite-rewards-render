@@ -80,4 +80,12 @@ describe("user-friendly experience regression coverage", () => {
     assert.doesNotMatch(home, /href="\/login/);
     assert.doesNotMatch(home, /Member sign in|Business sign in|Sign in to Elite Rewards/);
   });
+
+  it("shows the registered LLC notice beneath the How It Works footer message", async () => {
+    const home = await source("routes", "index.tsx");
+    assert.match(
+      home,
+      /Thoughtful loyalty tools for growing businesses\."\)}<\/p>[\s\S]*Trade Marked and Registered LLC/,
+    );
+  });
 });

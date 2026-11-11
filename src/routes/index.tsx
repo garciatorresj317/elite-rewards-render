@@ -203,7 +203,10 @@ function Home() {
       </main>
       <footer className="site-footer container-wide">
         <BrandMark compact />
-        <p>{t("Thoughtful loyalty tools for growing businesses.")}</p>
+        <div className="site-footer-copy">
+          <p>{t("Thoughtful loyalty tools for growing businesses.")}</p>
+          <p>{t("Trade Marked and Registered LLC")}</p>
+        </div>
         <span>© 2026 Elite Rewards</span>
       </footer>
     </div>
