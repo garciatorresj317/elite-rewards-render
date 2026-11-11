@@ -86,25 +86,20 @@ textarea:focus-visible { outline: 3px solid var(--gold-bright); outline-offset: 
 .container-mid { width: min(100% - 56px, 1180px); margin-inline: auto; }
 
 /* Brand */
-.brand-mark { display: inline-flex; align-items: center; gap: 12px; min-width: max-content; }
-.brand-icon {
-  width: 42px; height: 42px; display: grid; place-items: center;
-  color: var(--gold-bright); filter: drop-shadow(0 0 8px rgba(246,185,0,.48));
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  width: 168px;
+  min-width: 0;
 }
-.brand-wordmark { display: grid; line-height: 1; text-align: center; }
-.brand-wordmark strong {
-  font: 800 24px/1 var(--serif); letter-spacing: .08em; text-transform: uppercase;
-  color: var(--gold-pale); text-shadow: 0 0 12px rgba(246,185,0,.28);
+.brand-logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(0, 194, 255, .2));
 }
-.brand-wordmark small {
-  position: relative; margin-top: 5px; font: 600 9px/1 var(--serif);
-  letter-spacing: .5em; text-transform: uppercase; color: var(--gold-bright);
-}
-.brand-wordmark small::before, .brand-wordmark small::after {
-  content: ""; position: absolute; top: 50%; width: 18px; height: 1px; background: var(--gold);
-}
-.brand-wordmark small::before { left: -19px; }
-.brand-wordmark small::after { right: -15px; }
+.brand-mark-compact { width: 126px; }
 
 /* Buttons and shared text */
 .button {
