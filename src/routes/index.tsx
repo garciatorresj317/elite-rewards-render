@@ -59,7 +59,7 @@ function Home() {
       icon: Share2,
       title: t("Grow through referrals"),
       copy: t(
-        "Turn on member referrals when they fit your strategy. Members can share a personal link with friends and family, helping your program reach new customers.",
+        "Use member referrals when they fit your strategy. Members can share a personal link with friends and family, helping your program reach new customers.",
       ),
     },
   ];
@@ -241,7 +241,7 @@ function Home() {
             </h2>
             <p>
               {t(
-                "Change branding, choose points or visits, publish rewards and products, and enable referrals from one business dashboard while every member keeps a secure, business-specific wallet.",
+                "Change branding, choose points or visits, publish rewards and products, and manage referrals from one business dashboard while every member keeps a secure, business-specific wallet.",
               )}
             </p>
           </div>

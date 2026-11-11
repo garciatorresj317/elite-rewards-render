@@ -113,8 +113,8 @@ const es: Record<string, Translation> = {
   "Run the loyalty model that fits your business. Award points for eligible purchases or count visits toward rewards, then set each offer's required value.":
     "Usa el modelo de lealtad que se adapte a tu negocio. Otorga puntos por compras elegibles o cuenta visitas para alcanzar recompensas y luego establece el valor requerido de cada oferta.",
   "Grow through referrals": "Crece por medio de referidos",
-  "Turn on member referrals when they fit your strategy. Members can share a personal link with friends and family, helping your program reach new customers.":
-    "Activa los referidos de miembros cuando encajen con tu estrategia. Los miembros pueden compartir un enlace personal con amigos y familiares para ayudar a que tu programa llegue a nuevos clientes.",
+  "Use member referrals when they fit your strategy. Members can share a personal link with friends and family, helping your program reach new customers.":
+    "Usa los referidos de miembros cuando encajen con tu estrategia. Los miembros pueden compartir un enlace personal con amigos y familiares para ayudar a que tu programa llegue a nuevos clientes.",
   "More than a rewards page": "Más que una página de recompensas",
   "Add a loyalty system your whole team can use.":
     "Agrega un sistema de lealtad que todo tu equipo pueda usar.",
@@ -131,8 +131,8 @@ const es: Record<string, Translation> = {
   "Built to grow with you": "Creado para crecer contigo",
   "Start simple, then shape the program around what your customers respond to.":
     "Comienza de forma sencilla y luego adapta el programa a lo que mejor responden tus clientes.",
-  "Change branding, choose points or visits, publish rewards and products, and enable referrals from one business dashboard while every member keeps a secure, business-specific wallet.":
-    "Cambia la imagen de marca, elige puntos o visitas, publica recompensas y productos, y activa referidos desde un solo panel del negocio mientras cada miembro mantiene una billetera segura y específica para ese negocio.",
+  "Change branding, choose points or visits, publish rewards and products, and manage referrals from one business dashboard while every member keeps a secure, business-specific wallet.":
+    "Cambia la imagen de marca, elige puntos o visitas, publica recompensas y productos, y administra referidos desde un solo panel del negocio mientras cada miembro mantiene una billetera segura y específica para ese negocio.",
   "Rewards they want": "Recompensas que desean",
   "Build flexible offers around visits, points, birthdays, or your best-selling items.":
     "Crea ofertas flexibles basadas en visitas, puntos, cumpleaños o tus artículos más vendidos.",
