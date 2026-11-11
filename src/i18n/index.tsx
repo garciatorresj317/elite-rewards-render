@@ -96,9 +96,43 @@ const es: Record<string, Translation> = {
   "Reward loyalty without adding more work.": "Premia la lealtad sin agregar más trabajo.",
   "From sign-up to redemption, every part of Elite Rewards is designed to feel effortless for your team and your customers.":
     "Desde el registro hasta el canje, cada parte de Elite Rewards está diseñada para ser sencilla para tu equipo y tus clientes.",
+  "Designed around your business": "Diseñado alrededor de tu negocio",
+  "Your brand. Your rewards. Your way to build loyalty.":
+    "Tu marca. Tus recompensas. Tu manera de generar lealtad.",
+  "Elite Rewards becomes the digital loyalty side of your team. We give your business one customizable system for attracting members, rewarding repeat customers, and keeping the entire experience organized.":
+    "Elite Rewards se convierte en el área digital de lealtad de tu equipo. Le damos a tu negocio un sistema personalizable para atraer miembros, premiar a clientes frecuentes y mantener toda la experiencia organizada.",
+  "How Elite Rewards works": "Cómo funciona Elite Rewards",
   "Join in seconds": "Únete en segundos",
   "One scan. No app download. Members start earning before they leave the counter.":
     "Un escaneo. Sin descargar una aplicación. Los miembros empiezan a ganar antes de salir del mostrador.",
+  "Give customers a permanent Join Rewards link or NFC card. They create a private member wallet in English or Spanish without downloading an app.":
+    "Ofrece a tus clientes un enlace permanente para unirse a recompensas o una tarjeta NFC. Crean una billetera privada de miembro en inglés o español sin descargar una aplicación.",
+  "Built around your brand": "Creado alrededor de tu marca",
+  "Make the experience feel like your business with your logo, colors, business motto or live message, products, and reward offers across customer and member pages.":
+    "Haz que la experiencia se sienta como tu negocio con tu logotipo, colores, lema o mensaje en vivo, productos y ofertas de recompensas en las páginas de clientes y miembros.",
+  "Run the loyalty model that fits your business. Award points for eligible purchases or count visits toward rewards, then set each offer's required value.":
+    "Usa el modelo de lealtad que se adapte a tu negocio. Otorga puntos por compras elegibles o cuenta visitas para alcanzar recompensas y luego establece el valor requerido de cada oferta.",
+  "Grow through referrals": "Crece por medio de referidos",
+  "Turn on member referrals when they fit your strategy. Members can share a personal link with friends and family, helping your program reach new customers.":
+    "Activa los referidos de miembros cuando encajen con tu estrategia. Los miembros pueden compartir un enlace personal con amigos y familiares para ayudar a que tu programa llegue a nuevos clientes.",
+  "More than a rewards page": "Más que una página de recompensas",
+  "Add a loyalty system your whole team can use.":
+    "Agrega un sistema de lealtad que todo tu equipo pueda usar.",
+  "Elite Rewards connects your customer sign-up, branded member experience, rewards, referrals, and activity records so your staff can spend less time juggling separate tools and more time building customer relationships.":
+    "Elite Rewards conecta el registro de clientes, la experiencia de miembro con tu marca, las recompensas, los referidos y los registros de actividad para que tu personal dedique menos tiempo a manejar herramientas separadas y más tiempo a fortalecer las relaciones con los clientes.",
+  "One organized place to manage members, balances, rewards, products, and client branding.":
+    "Un lugar organizado para administrar miembros, saldos, recompensas, productos y la imagen de cada cliente.",
+  "A consistent branded experience from the first scan to the member wallet and redemption.":
+    "Una experiencia de marca consistente desde el primer escaneo hasta la billetera del miembro y el canje.",
+  "Flexible program controls that can change as your business and customer strategy evolve.":
+    "Controles flexibles que pueden cambiar a medida que evolucionan tu negocio y tu estrategia de clientes.",
+  "Clear activity and redemption records that help your team serve members with confidence.":
+    "Registros claros de actividad y canjes que ayudan a tu equipo a atender a los miembros con confianza.",
+  "Built to grow with you": "Creado para crecer contigo",
+  "Start simple, then shape the program around what your customers respond to.":
+    "Comienza de forma sencilla y luego adapta el programa a lo que mejor responden tus clientes.",
+  "Change branding, choose points or visits, publish rewards and products, and enable referrals from one business dashboard while every member keeps a secure, business-specific wallet.":
+    "Cambia la imagen de marca, elige puntos o visitas, publica recompensas y productos, y activa referidos desde un solo panel del negocio mientras cada miembro mantiene una billetera segura y específica para ese negocio.",
   "Rewards they want": "Recompensas que desean",
   "Build flexible offers around visits, points, birthdays, or your best-selling items.":
     "Crea ofertas flexibles basadas en visitas, puntos, cumpleaños o tus artículos más vendidos.",

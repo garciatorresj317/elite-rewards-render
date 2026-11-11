@@ -5,7 +5,10 @@ import {
   Check,
   Gift,
   HeartHandshake,
+  Palette,
   QrCode,
+  RefreshCcw,
+  Share2,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -30,26 +33,41 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const { t, formatNumber, formatDateTime } = useI18n();
-  const features = [
+  const howItWorks = [
     {
       icon: QrCode,
       title: t("Join in seconds"),
-      copy: t("One scan. No app download. Members start earning before they leave the counter."),
-    },
-    {
-      icon: Gift,
-      title: t("Rewards they want"),
       copy: t(
-        "Build flexible offers around visits, points, birthdays, or your best-selling items.",
+        "Give customers a permanent Join Rewards link or NFC card. They create a private member wallet in English or Spanish without downloading an app.",
       ),
     },
     {
-      icon: BarChart3,
-      title: t("Know what works"),
+      icon: Palette,
+      title: t("Built around your brand"),
       copy: t(
-        "See member growth, repeat visits, redemptions, and eligible sales in one clear view.",
+        "Make the experience feel like your business with your logo, colors, business motto or live message, products, and reward offers across customer and member pages.",
       ),
     },
+    {
+      icon: RefreshCcw,
+      title: t("Choose points or visits"),
+      copy: t(
+        "Run the loyalty model that fits your business. Award points for eligible purchases or count visits toward rewards, then set each offer's required value.",
+      ),
+    },
+    {
+      icon: Share2,
+      title: t("Grow through referrals"),
+      copy: t(
+        "Turn on member referrals when they fit your strategy. Members can share a personal link with friends and family, helping your program reach new customers.",
+      ),
+    },
+  ];
+  const teamBenefits = [
+    t("One organized place to manage members, balances, rewards, products, and client branding."),
+    t("A consistent branded experience from the first scan to the member wallet and redemption."),
+    t("Flexible program controls that can change as your business and customer strategy evolve."),
+    t("Clear activity and redemption records that help your team serve members with confidence."),
   ];
   return (
     <div className="marketing-shell">
@@ -166,17 +184,20 @@ function Home() {
         </section>
         <section id="how" className="section container-wide intro-section">
           <div>
-            <span className="section-kicker">{t("Simple by design")}</span>
-            <h2>{t("Reward loyalty without adding more work.")}</h2>
+            <span className="section-kicker">{t("Designed around your business")}</span>
+            <h2>{t("Your brand. Your rewards. Your way to build loyalty.")}</h2>
           </div>
           <p>
             {t(
-              "From sign-up to redemption, every part of Elite Rewards is designed to feel effortless for your team and your customers.",
+              "Elite Rewards becomes the digital loyalty side of your team. We give your business one customizable system for attracting members, rewarding repeat customers, and keeping the entire experience organized.",
             )}
           </p>
         </section>
-        <section id="features" className="feature-grid container-wide">
-          {features.map(({ icon: Icon, title: featureTitle, copy }, index) => (
+        <section
+          className="feature-grid how-it-works-grid container-wide"
+          aria-label={t("How Elite Rewards works")}
+        >
+          {howItWorks.map(({ icon: Icon, title: featureTitle, copy }, index) => (
             <article key={featureTitle}>
               <span className="feature-number">0{index + 1}</span>
               <span className="feature-icon">
@@ -187,15 +208,40 @@ function Home() {
             </article>
           ))}
         </section>
+        <section id="features" className="team-benefits container-wide">
+          <div className="team-benefits-copy">
+            <span className="eyebrow light">
+              <HeartHandshake size={14} /> {t("More than a rewards page")}
+            </span>
+            <h2>{t("Add a loyalty system your whole team can use.")}</h2>
+            <p>
+              {t(
+                "Elite Rewards connects your customer sign-up, branded member experience, rewards, referrals, and activity records so your staff can spend less time juggling separate tools and more time building customer relationships.",
+              )}
+            </p>
+          </div>
+          <ul className="team-benefit-list">
+            {teamBenefits.map((benefit) => (
+              <li key={benefit}>
+                <span>
+                  <Check size={17} />
+                </span>
+                {benefit}
+              </li>
+            ))}
+          </ul>
+        </section>
         <section className="cta-panel container-wide">
           <div>
             <span className="eyebrow light">
-              <Sparkles size={14} /> {t("A better reason to return")}
+              <BarChart3 size={14} /> {t("Built to grow with you")}
             </span>
-            <h2>{t("Make every customer feel like a regular.")}</h2>
+            <h2>
+              {t("Start simple, then shape the program around what your customers respond to.")}
+            </h2>
             <p>
               {t(
-                "Elite Rewards keeps member activity, eligible purchases, and redemptions organized in one authoritative rewards ledger.",
+                "Change branding, choose points or visits, publish rewards and products, and enable referrals from one business dashboard while every member keeps a secure, business-specific wallet.",
               )}
             </p>
           </div>

@@ -88,4 +88,24 @@ describe("user-friendly experience regression coverage", () => {
       /Thoughtful loyalty tools for growing businesses\."\)}<\/p>[\s\S]*Trade Marked and Registered LLC/,
     );
   });
+
+  it("details branding, loyalty modes, referrals, and team benefits on How It Works", async () => {
+    const [home, i18n] = await Promise.all([
+      source("routes", "index.tsx"),
+      source("i18n", "index.tsx"),
+    ]);
+    for (const phrase of [
+      "Built around your brand",
+      "Choose points or visits",
+      "Grow through referrals",
+      "Add a loyalty system your whole team can use.",
+    ]) {
+      assert.match(home, new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+      assert.match(i18n, new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    }
+    assert.match(home, /logo, colors, business motto or live message/);
+    assert.match(home, /points for eligible purchases or count visits/);
+    assert.match(home, /personal link with friends and family/);
+    assert.match(home, /className="team-benefits container-wide"/);
+  });
 });
