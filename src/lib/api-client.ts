@@ -88,6 +88,15 @@ export const api = {
       `/api/admin/clients/${encodeURIComponent(businessId)}/status`,
       { method: "PUT", body: JSON.stringify({ active }) },
     ),
+  clientLoyaltySettings: (businessId: string) =>
+    request<LoyaltySettings>(
+      `/api/admin/clients/${encodeURIComponent(businessId)}/loyalty-settings`,
+    ),
+  updateClientLoyaltySettings: (businessId: string, loyaltyMode: LoyaltyMode) =>
+    request<LoyaltySettings>(
+      `/api/admin/clients/${encodeURIComponent(businessId)}/loyalty-settings`,
+      { method: "PUT", body: JSON.stringify({ loyaltyMode }) },
+    ),
   clientBranding: (businessId: string) =>
     request<{ branding: ClientBranding }>(
       `/api/admin/clients/${encodeURIComponent(businessId)}/branding`,
@@ -166,7 +175,19 @@ export const api = {
       `/api/admin/clients/${encodeURIComponent(businessId)}/products/${encodeURIComponent(productId)}`,
       { method: "DELETE", body: "{}" },
     ),
-  award: (payload: { memberId: string; points: number; amountCents: number; note?: string }) =>
+  loyaltySettings: () => request<LoyaltySettings>("/api/admin/loyalty-settings"),
+  updateLoyaltySettings: (loyaltyMode: LoyaltyMode) =>
+    request<LoyaltySettings>("/api/admin/loyalty-settings", {
+      method: "PUT",
+      body: JSON.stringify({ loyaltyMode }),
+    }),
+  award: (payload: {
+    memberId: string;
+    units?: number;
+    points?: number;
+    amountCents: number;
+    note?: string;
+  }) =>
     request<{ id: string; duplicate: boolean }>("/api/admin/award", {
       method: "POST",
       headers: { "idempotency-key": crypto.randomUUID() },
@@ -248,6 +269,7 @@ export const api = {
       logoUrl: string | null;
       primaryColor: string;
       secondaryColor: string;
+      loyaltyMode: LoyaltyMode;
       visualSettings: PublicVisualSettings;
     }>(`/api/referrals/enrollment?ref=${encodeURIComponent(referralCode)}`),
   joinReferral: (payload: {
@@ -282,13 +304,17 @@ export type BusinessContext = {
   logo_url: string | null;
   primary_color: string;
   secondary_color: string;
+  loyalty_mode: LoyaltyMode;
 };
+
+export type LoyaltyMode = "points" | "visits";
+export type LoyaltySettings = { loyaltyMode: LoyaltyMode };
 
 export type DashboardData = {
   business: BusinessContext;
   metrics: {
     members: number;
-    pointsAwarded: number;
+    unitsAwarded: number;
     rewardsRedeemed: number;
     eligibleSalesCents: number;
   };
@@ -296,33 +322,35 @@ export type DashboardData = {
     id: string;
     member: string;
     amount: number;
-    points: number;
+    units: number;
     type: "earned" | "redeemed";
     time: string;
     rewardName: string | null;
   }>;
-  members: Array<{ id: string; name: string; email: string; member_code: string; points: number }>;
-  rewards: Array<{ id: string; name: string; description: string; points: number }>;
+  members: Array<{ id: string; name: string; email: string; member_code: string; units: number }>;
+  rewards: Array<{ id: string; name: string; description: string; cost: number }>;
 };
 
 export type WalletData = {
   member: SessionUser;
   context: BusinessContext;
+  balance: number;
   points: number;
+  loyaltyMode: LoyaltyMode;
   ledger: Array<{
     id: string;
     entry_type: string;
-    pointsDelta: number;
+    unitsDelta: number;
     note: string;
     created_at: string;
     reward_name: string | null;
   }>;
-  rewards: Array<{ id: string; name: string; description: string; points: number }>;
+  rewards: Array<{ id: string; name: string; description: string; cost: number; points: number }>;
   redemptions: Array<{
     id: string;
     reward_id: string;
     name: string;
-    points_cost: number;
+    cost: number;
     code: string;
     status: string;
     created_at: string;
@@ -376,6 +404,7 @@ export type ClientSummary = {
   previewPath: string;
   nfcPath: string;
   joinPath: string;
+  loyaltyMode: LoyaltyMode;
 };
 
 export type PasswordResetRequest = {
@@ -400,16 +429,17 @@ export type ClientBranding = {
   previewPath: string;
   nfcPath: string;
   joinPath: string;
+  loyaltyMode: LoyaltyMode;
 };
 
 export type ClientBrandingDraft = Omit<
   ClientBranding,
-  "id" | "previewPath" | "nfcPath" | "joinPath"
+  "id" | "previewPath" | "nfcPath" | "joinPath" | "loyaltyMode"
 >;
 
 export type PublicClientExperience = {
   business: BusinessContext;
-  rewards: Array<{ id: string; name: string; description: string; points: number }>;
+  rewards: Array<{ id: string; name: string; description: string; cost: number }>;
   products: PublicProduct[];
   joinPath: string;
   visualSettings: PublicVisualSettings;
@@ -423,6 +453,7 @@ export type BusinessEnrollment = {
   primaryColor: string;
   secondaryColor: string;
   visualSettings: PublicVisualSettings;
+  loyaltyMode: LoyaltyMode;
 };
 
 export type JoinBusinessPayload = {
@@ -437,7 +468,7 @@ export type MemberSummary = {
   email: string;
   memberCode: string | null;
   status: "active" | "invited";
-  points: number;
+  units: number;
   createdAt: string;
 };
 
@@ -445,6 +476,7 @@ export type RewardDraft = {
   name: string;
   description: string;
   points: number;
+  visits?: number;
   active: boolean;
   inventoryRemaining: number | null;
 };
@@ -463,6 +495,7 @@ export type ProductDraft = {
   category: string;
   priceCents: number;
   pointsCost: number;
+  visitsCost?: number;
   imageUrl: string | null;
   purchaseUrl: string | null;
   active: boolean;

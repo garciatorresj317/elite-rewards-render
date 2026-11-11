@@ -7,6 +7,7 @@ export type ManagedReward = {
   name: string;
   description: string;
   points: number;
+  visits: number;
   active: boolean;
   inventoryRemaining: number | null;
   archivedAt: string | null;
@@ -19,6 +20,7 @@ export type RewardInput = {
   name: string;
   description: string;
   points: number;
+  visits?: number;
   active: boolean;
   inventoryRemaining: number | null;
 };
@@ -42,6 +44,7 @@ function clientOwnerContext(user: SessionUser, businessId: string): SessionUser 
 function validate(input: RewardInput): RewardInput {
   const name = input.name.trim();
   const description = input.description.trim();
+  const visits = input.visits ?? Math.max(1, Math.ceil(input.points / 100));
   if (name.length < 2 || name.length > 120)
     throw Object.assign(new Error("Reward name must contain 2 to 120 characters"), { status: 400 });
   if (description.length > 500)
@@ -50,6 +53,8 @@ function validate(input: RewardInput): RewardInput {
     });
   if (!Number.isSafeInteger(input.points) || input.points < 1 || input.points > 1_000_000)
     throw Object.assign(new Error("Points cost must be a positive whole number"), { status: 400 });
+  if (!Number.isSafeInteger(visits) || visits < 1 || visits > 1_000_000)
+    throw Object.assign(new Error("Visits cost must be a positive whole number"), { status: 400 });
   if (
     input.inventoryRemaining !== null &&
     (!Number.isSafeInteger(input.inventoryRemaining) ||
@@ -59,7 +64,7 @@ function validate(input: RewardInput): RewardInput {
     throw Object.assign(new Error("Inventory must be empty or a non-negative whole number"), {
       status: 400,
     });
-  return { ...input, name, description };
+  return { ...input, visits, name, description };
 }
 
 async function audit(
@@ -80,6 +85,7 @@ function mapReward(row: {
   name: string;
   description: string;
   points_cost: number;
+  visits_cost: number;
   active: boolean;
   inventory_remaining: number | null;
   archived_at: Date | string | null;
@@ -92,6 +98,7 @@ function mapReward(row: {
     name: row.name,
     description: row.description,
     points: Number(row.points_cost),
+    visits: Number(row.visits_cost),
     active: row.active,
     inventoryRemaining: row.inventory_remaining === null ? null : Number(row.inventory_remaining),
     archivedAt: row.archived_at ? new Date(row.archived_at).toISOString() : null,
@@ -105,7 +112,7 @@ export async function listManagedRewards(user: SessionUser): Promise<ManagedRewa
   requireOwner(user);
   const database = getPool();
   const result = await database.query<Omit<Parameters<typeof mapReward>[0], "redemption_count">>(
-    `SELECT r.id, r.name, r.description, r.points_cost, r.active, r.inventory_remaining,
+    `SELECT r.id, r.name, r.description, r.points_cost, r.visits_cost, r.active, r.inventory_remaining,
             r.archived_at, r.created_at, r.updated_at
        FROM rewards r
       WHERE r.business_id = $1
@@ -133,14 +140,15 @@ export async function createReward(user: SessionUser, input: RewardInput): Promi
     await client.query("BEGIN");
     const rewardId = id("rew");
     await client.query(
-      `INSERT INTO rewards(id,business_id,name,description,points_cost,active,inventory_remaining)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      `INSERT INTO rewards(id,business_id,name,description,points_cost,visits_cost,active,inventory_remaining)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
       [
         rewardId,
         user.businessId,
         value.name,
         value.description,
         value.points,
+        value.visits,
         value.active,
         value.inventoryRemaining,
       ],
@@ -170,11 +178,12 @@ export async function updateReward(
       name: string;
       description: string;
       points_cost: number;
+      visits_cost: number;
       active: boolean;
       inventory_remaining: number | null;
       archived_at: Date | null;
     }>(
-      `SELECT name, description, points_cost, active, inventory_remaining, archived_at
+      `SELECT name, description, points_cost, visits_cost, active, inventory_remaining, archived_at
          FROM rewards WHERE id = $1 AND business_id = $2 FOR UPDATE`,
       [rewardId, user.businessId],
     );
@@ -183,8 +192,8 @@ export async function updateReward(
       throw Object.assign(new Error("Archived rewards cannot be edited"), { status: 409 });
     await client.query(
       `UPDATE rewards
-          SET name = $3, description = $4, points_cost = $5, active = $6,
-              inventory_remaining = $7, updated_at = now()
+          SET name = $3, description = $4, points_cost = $5, visits_cost = $6, active = $7,
+              inventory_remaining = $8, updated_at = now()
         WHERE id = $1 AND business_id = $2`,
       [
         rewardId,
@@ -192,6 +201,7 @@ export async function updateReward(
         value.name,
         value.description,
         value.points,
+        value.visits,
         value.active,
         value.inventoryRemaining,
       ],
@@ -202,6 +212,7 @@ export async function updateReward(
         name: previous.name,
         description: previous.description,
         points: Number(previous.points_cost),
+        visits: Number(previous.visits_cost),
         active: previous.active,
         inventoryRemaining:
           previous.inventory_remaining === null ? null : Number(previous.inventory_remaining),

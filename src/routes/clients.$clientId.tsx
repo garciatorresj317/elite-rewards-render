@@ -60,7 +60,9 @@ function ClientExperience() {
           <h1>{t("Earn more every time you return.")}</h1>
           <p>
             {t(
-              "Join {businessName} rewards, collect points, and unlock offers selected by this business.",
+              data.business.loyalty_mode === "visits"
+                ? "Join {businessName} rewards, collect visits, and unlock offers selected by this business."
+                : "Join {businessName} rewards, collect points, and unlock offers selected by this business.",
               { businessName: data.business.business_name },
             )}
           </p>
@@ -91,7 +93,8 @@ function ClientExperience() {
                   <Gift />
                 </span>
                 <span className="reward-cost">
-                  {formatNumber(reward.points)} {t("pts")}
+                  {formatNumber(reward.cost)}{" "}
+                  {data.business.loyalty_mode === "visits" ? t("visits") : t("pts")}
                 </span>
                 <h3>{reward.name}</h3>
                 <p>{reward.description}</p>
@@ -128,9 +131,16 @@ function ClientExperience() {
                         }).format(product.priceCents / 100)}
                       </strong>
                     )}
-                    {product.pointsCost > 0 && (
+                    {(data.business.loyalty_mode === "visits"
+                      ? (product.visitsCost ?? 0)
+                      : product.pointsCost) > 0 && (
                       <span className="product-points">
-                        {formatNumber(product.pointsCost)} {t("points")}
+                        {formatNumber(
+                          data.business.loyalty_mode === "visits"
+                            ? (product.visitsCost ?? 0)
+                            : product.pointsCost,
+                        )}{" "}
+                        {data.business.loyalty_mode === "visits" ? t("visits") : t("points")}
                       </span>
                     )}
                     {product.purchaseUrl && (

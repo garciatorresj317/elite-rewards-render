@@ -165,6 +165,7 @@ function Admin() {
     category: "",
     priceCents: 0,
     pointsCost: 100,
+    visitsCost: 10,
     imageUrl: null,
     purchaseUrl: null,
     active: true,
@@ -174,6 +175,7 @@ function Admin() {
     name: "",
     description: "",
     points: 100,
+    visits: 10,
     active: true,
     inventoryRemaining: null,
   });
@@ -195,6 +197,7 @@ function Admin() {
     timeZone: "UTC",
   });
   const [clientStatusBusyId, setClientStatusBusyId] = useState<string | null>(null);
+  const [loyaltyModeBusy, setLoyaltyModeBusy] = useState(false);
   const [activationPath, setActivationPath] = useState("");
   const [memberModal, setMemberModal] = useState(false);
   const [memberActivationPath, setMemberActivationPath] = useState("");
@@ -208,6 +211,7 @@ function Admin() {
     category: "",
     priceCents: 0,
     pointsCost: 100,
+    visitsCost: 10,
     imageUrl: null,
     purchaseUrl: null,
     active: true,
@@ -245,6 +249,7 @@ function Admin() {
     name: "",
     description: "",
     points: 100,
+    visits: 10,
     active: true,
     inventoryRemaining: null,
   });
@@ -316,19 +321,23 @@ function Admin() {
       await api.award({
         memberId: award.memberId,
         amountCents: Math.round(Number(award.amount) * 100),
-        points: Number(award.points),
+        units: Number(award.points),
         note: award.note,
       });
       setModal(false);
       setNotice(
         tr(
-          "Points were added to the production ledger.",
-          "Los puntos se agregaron al registro de producción.",
+          data?.business.loyalty_mode === "visits"
+            ? "Visits were added to the production ledger."
+            : "Points were added to the production ledger.",
+          data?.business.loyalty_mode === "visits"
+            ? "Las visitas se agregaron al registro de producción."
+            : "Los puntos se agregaron al registro de producción.",
         ),
       );
       await load();
     } catch (cause) {
-      setError(tr("Award failed", "No se pudo otorgar los puntos"));
+      setError(tr("Award failed", "No se pudo registrar la recompensa"));
     }
   };
   const submitClient = async (event: FormEvent) => {
@@ -431,12 +440,13 @@ function Admin() {
       inventoryRemaining: null,
     });
 
-    const [brandingResult, rewardsResult, productsResult, appearanceResult] =
+    const [brandingResult, rewardsResult, productsResult, appearanceResult, loyaltyResult] =
       await Promise.allSettled([
         api.clientBranding(client.id),
         api.clientRewards(client.id),
         api.clientProducts(client.id),
         api.clientVisualSettings(client.id),
+        api.clientLoyaltySettings(client.id),
       ]);
 
     if (brandingResult.status === "fulfilled") {
@@ -462,12 +472,18 @@ function Admin() {
         timeZone: clientAppearance.timeZone,
       });
     }
+    if (loyaltyResult.status === "fulfilled") {
+      setClientEditor((current) =>
+        current ? { ...current, loyaltyMode: loyaltyResult.value.loyaltyMode } : current,
+      );
+    }
 
     const failedSections = [
       brandingResult.status === "rejected" ? tr("branding", "marca") : null,
       rewardsResult.status === "rejected" ? tr("rewards", "recompensas") : null,
       productsResult.status === "rejected" ? tr("products", "productos") : null,
       appearanceResult.status === "rejected" ? tr("appearance", "apariencia") : null,
+      loyaltyResult.status === "rejected" ? tr("loyalty model", "modelo de lealtad") : null,
     ].filter((section): section is string => Boolean(section));
     if (failedSections.length) {
       setError(
@@ -531,6 +547,37 @@ function Admin() {
       setError(
         tr("Client appearance update failed", "No se pudo actualizar la apariencia del cliente"),
       );
+    }
+  };
+  const saveLoyaltyMode = async (loyaltyMode: "points" | "visits") => {
+    setError("");
+    setLoyaltyModeBusy(true);
+    try {
+      if (clientEditor) {
+        const saved = await api.updateClientLoyaltySettings(clientEditor.id, loyaltyMode);
+        setClientEditor({ ...clientEditor, loyaltyMode: saved.loyaltyMode });
+        setClients((current) =>
+          current.map((client) =>
+            client.id === clientEditor.id ? { ...client, loyaltyMode: saved.loyaltyMode } : client,
+          ),
+        );
+      } else {
+        const saved = await api.updateLoyaltySettings(loyaltyMode);
+        setData((current) =>
+          current
+            ? { ...current, business: { ...current.business, loyalty_mode: saved.loyaltyMode } }
+            : current,
+        );
+      }
+      setNotice(
+        loyaltyMode === "visits"
+          ? tr("The rewards program now runs on visits.", "El programa ahora funciona con visitas.")
+          : tr("The rewards program now runs on points.", "El programa ahora funciona con puntos."),
+      );
+    } catch {
+      setError(tr("Loyalty model update failed", "No se pudo actualizar el modelo de lealtad"));
+    } finally {
+      setLoyaltyModeBusy(false);
     }
   };
   const uploadClientLogo = async (file: File) => {
@@ -651,6 +698,7 @@ function Admin() {
     category: "",
     priceCents: 0,
     pointsCost: 100,
+    visitsCost: 10,
     imageUrl: null,
     purchaseUrl: null,
     active: true,
@@ -684,6 +732,7 @@ function Admin() {
       category: product.category,
       priceCents: product.priceCents,
       pointsCost: product.pointsCost,
+      visitsCost: product.visitsCost ?? Math.max(1, Math.ceil(product.pointsCost / 100)),
       imageUrl: product.imageUrl,
       purchaseUrl: product.purchaseUrl,
       active: product.active,
@@ -713,6 +762,7 @@ function Admin() {
       category: product.category,
       priceCents: product.priceCents,
       pointsCost: product.pointsCost,
+      visitsCost: product.visitsCost ?? Math.max(1, Math.ceil(product.pointsCost / 100)),
       imageUrl: product.imageUrl,
       purchaseUrl: product.purchaseUrl,
       active: product.active,
@@ -751,6 +801,7 @@ function Admin() {
     name: "",
     description: "",
     points: 100,
+    visits: 10,
     active: true,
     inventoryRemaining: null,
   });
@@ -783,6 +834,7 @@ function Admin() {
       name: reward.name,
       description: reward.description,
       points: reward.points,
+      visits: reward.visits ?? Math.max(1, Math.ceil(reward.points / 100)),
       active: reward.active,
       inventoryRemaining: reward.inventoryRemaining,
     });
@@ -806,6 +858,7 @@ function Admin() {
       name: reward.name,
       description: reward.description,
       points: reward.points,
+      visits: reward.visits ?? Math.max(1, Math.ceil(reward.points / 100)),
       active: reward.active,
       inventoryRemaining: reward.inventoryRemaining,
     });
@@ -1019,7 +1072,9 @@ function Admin() {
                 >
                   <Plus />{" "}
                   {data.members.length
-                    ? tr("Award points", "Otorgar puntos")
+                    ? data.business.loyalty_mode === "visits"
+                      ? tr("Record visits", "Registrar visitas")
+                      : tr("Award points", "Otorgar puntos")
                     : tr("Enroll your first member", "Inscribe a tu primer miembro")}
                 </button>
               </section>
@@ -1032,8 +1087,12 @@ function Admin() {
                 />
                 <Metric
                   icon={Award}
-                  label={tr("Points awarded", "Puntos otorgados")}
-                  value={formatNumber(data.metrics.pointsAwarded)}
+                  label={
+                    data.business.loyalty_mode === "visits"
+                      ? tr("Visits recorded", "Visitas registradas")
+                      : tr("Points awarded", "Puntos otorgados")
+                  }
+                  value={formatNumber(data.metrics.unitsAwarded)}
                   tr={tr}
                 />
                 <Metric
@@ -1101,6 +1160,7 @@ function Admin() {
               </section>
               <TransactionTable
                 transactions={visible}
+                loyaltyMode={data.business.loyalty_mode}
                 tr={tr}
                 formatDateTime={formatDateTime}
                 formatNumber={formatNumber}
@@ -1368,7 +1428,10 @@ function Admin() {
                     <span>
                       <strong>{member.name}</strong>
                       <small>
-                        {member.email} · {formatNumber(member.points)} {tr("points", "puntos")}
+                        {member.email} · {formatNumber(member.units)}{" "}
+                        {data.business.loyalty_mode === "visits"
+                          ? tr("visits", "visitas")
+                          : tr("points", "puntos")}
                       </small>
                     </span>
                     <span className={`client-status ${member.status}`}>
@@ -1390,6 +1453,7 @@ function Admin() {
           {active === "Transactions" && (
             <TransactionTable
               transactions={visible}
+              loyaltyMode={data.business.loyalty_mode}
               tr={tr}
               formatDateTime={formatDateTime}
               formatNumber={formatNumber}
@@ -1414,10 +1478,15 @@ function Admin() {
                       )}
                     </h2>
                     <p>
-                      {tr(
-                        "Set the offer, points cost, availability, and optional quantity. Wallets update from the live catalog automatically.",
-                        "Configura la oferta, el costo en puntos, la disponibilidad y una cantidad opcional. Las billeteras se actualizan automáticamente desde el catálogo en vivo.",
-                      )}
+                      {data.business.loyalty_mode === "visits"
+                        ? tr(
+                            "Set the offer, visits cost, availability, and optional quantity. Wallets update from the live catalog automatically.",
+                            "Configura la oferta, el costo en visitas, la disponibilidad y una cantidad opcional. Las billeteras se actualizan automáticamente desde el catálogo en vivo.",
+                          )
+                        : tr(
+                            "Set the offer, points cost, availability, and optional quantity. Wallets update from the live catalog automatically.",
+                            "Configura la oferta, el costo en puntos, la disponibilidad y una cantidad opcional. Las billeteras se actualizan automáticamente desde el catálogo en vivo.",
+                          )}
                     </p>
                   </div>
                 </div>
@@ -1442,7 +1511,14 @@ function Admin() {
                       <Gift />
                     </span>
                     <span className="reward-cost">
-                      {formatNumber(reward.points)} {tr("pts", "pts")}
+                      {formatNumber(
+                        data.business.loyalty_mode === "visits"
+                          ? (reward.visits ?? Math.max(1, Math.ceil(reward.points / 100)))
+                          : reward.points,
+                      )}{" "}
+                      {data.business.loyalty_mode === "visits"
+                        ? tr("visits", "visitas")
+                        : tr("pts", "pts")}
                     </span>
                     <h3>{reward.name}</h3>
                     <p>
@@ -1544,12 +1620,23 @@ function Admin() {
                           currency: "USD",
                         }).format(product.priceCents / 100)}
                       </strong>
-                      {product.pointsCost > 0 ? (
+                      {(data.business.loyalty_mode === "visits"
+                        ? (product.visitsCost ?? 0)
+                        : product.pointsCost) > 0 ? (
                         <span className="product-points">
-                          {formatNumber(product.pointsCost)} {tr("points", "puntos")}
+                          {formatNumber(
+                            data.business.loyalty_mode === "visits"
+                              ? (product.visitsCost ?? 0)
+                              : product.pointsCost,
+                          )}{" "}
+                          {data.business.loyalty_mode === "visits"
+                            ? tr("visits", "visitas")
+                            : tr("points", "puntos")}
                         </span>
                       ) : (
-                        <small>{tr("Points not set", "Puntos sin configurar")}</small>
+                        <small>
+                          {tr("Reward value not set", "Valor de recompensa sin configurar")}
+                        </small>
                       )}
                       <button
                         type="button"
@@ -1569,6 +1656,47 @@ function Admin() {
           )}
           {active === "Appearance" && (
             <section className="appearance-layout">
+              <section className="panel automatic-theme-editor">
+                <div className="automatic-theme-heading">
+                  <span className="modal-icon">
+                    <Award />
+                  </span>
+                  <div>
+                    <span className="section-kicker">
+                      {tr("Loyalty model", "Modelo de lealtad")}
+                    </span>
+                    <h3>{tr("Choose points or visits", "Elige puntos o visitas")}</h3>
+                    <p>
+                      {tr(
+                        "This controls balances, earning, reward costs, customer pages, and member wallets for this business.",
+                        "Esto controla los saldos, la acumulación, los costos de recompensas, las páginas para clientes y las billeteras de miembros de este negocio.",
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="client-color-fields">
+                  <button
+                    type="button"
+                    className={
+                      data.business.loyalty_mode === "points" ? "admin-primary" : "client-customize"
+                    }
+                    disabled={user.role !== "owner" || loyaltyModeBusy}
+                    onClick={() => void saveLoyaltyMode("points")}
+                  >
+                    {tr("Use points", "Usar puntos")}
+                  </button>
+                  <button
+                    type="button"
+                    className={
+                      data.business.loyalty_mode === "visits" ? "admin-primary" : "client-customize"
+                    }
+                    disabled={user.role !== "owner" || loyaltyModeBusy}
+                    onClick={() => void saveLoyaltyMode("visits")}
+                  >
+                    {tr("Use visits", "Usar visitas")}
+                  </button>
+                </div>
+              </section>
               <div className="panel appearance-intro">
                 <span className="modal-icon">
                   <Palette />
@@ -1842,6 +1970,37 @@ function Admin() {
               <strong>{clientBranding.name || clientEditor.name}</strong>
               <small>{clientBranding.locationName || clientEditor.locationName}</small>
             </div>
+            <fieldset className="loyalty-mode-control">
+              <legend>{tr("Loyalty model", "Modelo de lealtad")}</legend>
+              <p>
+                {tr(
+                  "Choose what this business awards and what members spend on rewards.",
+                  "Elige lo que este negocio otorga y lo que los miembros usan para recompensas.",
+                )}
+              </p>
+              <div className="client-color-fields">
+                <button
+                  type="button"
+                  className={
+                    clientEditor.loyaltyMode === "points" ? "admin-primary" : "client-customize"
+                  }
+                  disabled={loyaltyModeBusy}
+                  onClick={() => void saveLoyaltyMode("points")}
+                >
+                  {tr("Use points", "Usar puntos")}
+                </button>
+                <button
+                  type="button"
+                  className={
+                    clientEditor.loyaltyMode === "visits" ? "admin-primary" : "client-customize"
+                  }
+                  disabled={loyaltyModeBusy}
+                  onClick={() => void saveLoyaltyMode("visits")}
+                >
+                  {tr("Use visits", "Usar visitas")}
+                </button>
+              </div>
+            </fieldset>
             <label>
               {tr("Business name", "Nombre del negocio")}
               <input
@@ -2104,9 +2263,11 @@ function Admin() {
                     <span>
                       <strong>{product.name}</strong>
                       <small>
-                        {product.pointsCost > 0
-                          ? `${formatNumber(product.pointsCost)} ${tr("points", "puntos")}`
-                          : tr("Points not set", "Puntos sin configurar")}
+                        {(clientEditor.loyaltyMode === "visits"
+                          ? (product.visitsCost ?? 0)
+                          : product.pointsCost) > 0
+                          ? `${formatNumber(clientEditor.loyaltyMode === "visits" ? (product.visitsCost ?? 0) : product.pointsCost)} ${clientEditor.loyaltyMode === "visits" ? tr("visits", "visitas") : tr("points", "puntos")}`
+                          : tr("Reward value not set", "Valor de recompensa sin configurar")}
                       </small>
                     </span>
                     <span className={`client-status ${product.active ? "active" : "invited"}`}>
@@ -2137,6 +2298,7 @@ function Admin() {
                 onSubmit={saveClientProduct}
                 editing={Boolean(clientProductEditingId)}
                 onArchive={archiveSelectedClientProduct}
+                loyaltyMode={clientEditor.loyaltyMode}
               />
             </div>
             <div className="client-reward-manager">
@@ -2157,7 +2319,14 @@ function Admin() {
                     <span>
                       <strong>{reward.name}</strong>
                       <small>
-                        {formatNumber(reward.points)} {tr("points", "puntos")}
+                        {formatNumber(
+                          clientEditor.loyaltyMode === "visits"
+                            ? (reward.visits ?? Math.max(1, Math.ceil(reward.points / 100)))
+                            : reward.points,
+                        )}{" "}
+                        {clientEditor.loyaltyMode === "visits"
+                          ? tr("visits", "visitas")
+                          : tr("points", "puntos")}
                       </small>
                     </span>
                     <span className={`client-status ${reward.active ? "active" : "invited"}`}>
@@ -2209,16 +2378,24 @@ function Admin() {
                 </label>
                 <div className="client-color-fields">
                   <label>
-                    {tr("Points", "Puntos")}
+                    {clientEditor.loyaltyMode === "visits"
+                      ? tr("Visits", "Visitas")
+                      : tr("Points", "Puntos")}
                     <input
                       type="number"
                       min="1"
                       max="1000000"
-                      value={clientRewardDraft.points}
+                      value={
+                        clientEditor.loyaltyMode === "visits"
+                          ? clientRewardDraft.visits
+                          : clientRewardDraft.points
+                      }
                       onChange={(event) =>
                         setClientRewardDraft({
                           ...clientRewardDraft,
-                          points: Number(event.target.value),
+                          ...(clientEditor.loyaltyMode === "visits"
+                            ? { visits: Number(event.target.value) }
+                            : { points: Number(event.target.value) }),
                         })
                       }
                     />
@@ -2513,6 +2690,7 @@ function Admin() {
               onSubmit={submitProduct}
               editing={Boolean(editingProductId)}
               onArchive={archiveCurrentProduct}
+              loyaltyMode={data.business.loyalty_mode}
             />
           </div>
         </div>
@@ -2579,16 +2757,25 @@ function Admin() {
             </label>
             <div className="reward-editor-grid">
               <label>
-                {tr("Points cost", "Costo en puntos")}
+                {data.business.loyalty_mode === "visits"
+                  ? tr("Visits cost", "Costo en visitas")
+                  : tr("Points cost", "Costo en puntos")}
                 <input
                   required
                   type="number"
                   min="1"
                   max="1000000"
                   step="1"
-                  value={rewardForm.points}
+                  value={
+                    data.business.loyalty_mode === "visits" ? rewardForm.visits : rewardForm.points
+                  }
                   onChange={(event) =>
-                    setRewardForm({ ...rewardForm, points: Number(event.target.value) })
+                    setRewardForm({
+                      ...rewardForm,
+                      ...(data.business.loyalty_mode === "visits"
+                        ? { visits: Number(event.target.value) }
+                        : { points: Number(event.target.value) }),
+                    })
                   }
                 />
               </label>
@@ -2681,7 +2868,10 @@ function Admin() {
               >
                 {data.members.map((member) => (
                   <option key={member.id} value={member.id}>
-                    {member.name} — {formatNumber(member.points)} {tr("points", "puntos")}
+                    {member.name} — {formatNumber(member.units)}{" "}
+                    {data.business.loyalty_mode === "visits"
+                      ? tr("visits", "visitas")
+                      : tr("points", "puntos")}
                   </option>
                 ))}
               </select>
@@ -2698,7 +2888,9 @@ function Admin() {
               />
             </label>
             <label>
-              {tr("Points", "Puntos")}
+              {data.business.loyalty_mode === "visits"
+                ? tr("Visits", "Visitas")
+                : tr("Points", "Puntos")}
               <input
                 type="number"
                 min="1"
@@ -2716,7 +2908,11 @@ function Admin() {
                 onChange={(e) => setAward({ ...award, note: e.target.value })}
               />
             </label>
-            <button className="admin-primary full">{tr("Post award", "Publicar puntos")}</button>
+            <button className="admin-primary full">
+              {data.business.loyalty_mode === "visits"
+                ? tr("Post visits", "Registrar visitas")
+                : tr("Post award", "Publicar puntos")}
+            </button>
           </form>
         </div>
       )}
@@ -2801,12 +2997,14 @@ function Metric({
 }
 function TransactionTable({
   transactions,
+  loyaltyMode = "points",
   tr,
   formatDateTime,
   formatNumber,
   localeCode,
 }: {
   transactions: DashboardData["transactions"];
+  loyaltyMode?: "points" | "visits";
   tr: TranslatePair;
   formatDateTime: (value: string | number | Date, options?: Intl.DateTimeFormatOptions) => string;
   formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string;
@@ -2828,7 +3026,7 @@ function TransactionTable({
             <tr>
               <th>{tr("Member", "Miembro")}</th>
               <th>{tr("Purchase", "Compra")}</th>
-              <th>{tr("Points", "Puntos")}</th>
+              <th>{loyaltyMode === "visits" ? tr("Visits", "Visitas") : tr("Points", "Puntos")}</th>
               <th>{tr("Status", "Estado")}</th>
             </tr>
           </thead>
@@ -2852,7 +3050,7 @@ function TransactionTable({
                 </td>
                 <td className={t.type === "earned" ? "positive" : "redeemed"}>
                   {t.type === "earned" ? "+" : "−"}
-                  {formatNumber(t.points)}
+                  {formatNumber(t.units)}
                 </td>
                 <td>
                   <span className={`table-status ${t.type}`}>
@@ -2884,6 +3082,7 @@ function ProductEditorFields({
   onSubmit,
   editing,
   onArchive,
+  loyaltyMode = "points",
 }: {
   draft: ProductDraft;
   setDraft: (draft: ProductDraft) => void;
@@ -2893,6 +3092,7 @@ function ProductEditorFields({
   onSubmit: (event: FormEvent) => void | Promise<void>;
   editing: boolean;
   onArchive: () => void | Promise<void>;
+  loyaltyMode?: "points" | "visits";
 }) {
   return (
     <form className="client-reward-form product-editor-form" onSubmit={onSubmit}>
@@ -2940,18 +3140,20 @@ function ProductEditorFields({
           />
         </label>
         <label>
-          {tr("Points", "Puntos")}
+          {loyaltyMode === "visits" ? tr("Visits", "Visitas") : tr("Points", "Puntos")}
           <input
             required
             type="number"
             min="1"
             max="1000000"
             step="1"
-            value={draft.pointsCost}
+            value={loyaltyMode === "visits" ? draft.visitsCost : draft.pointsCost}
             onChange={(event) =>
               setDraft({
                 ...draft,
-                pointsCost: Math.max(1, Math.round(Number(event.target.value))),
+                ...(loyaltyMode === "visits"
+                  ? { visitsCost: Math.max(1, Math.round(Number(event.target.value))) }
+                  : { pointsCost: Math.max(1, Math.round(Number(event.target.value))) }),
               })
             }
           />

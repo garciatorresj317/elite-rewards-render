@@ -76,6 +76,13 @@ import {
   listPasswordResetRequests,
   requestPasswordReset,
 } from "./password-reset-service.ts";
+import {
+  getClientLoyaltySettings,
+  getLoyaltySettings,
+  parseLoyaltyMode,
+  updateClientLoyaltySettings,
+  updateLoyaltySettings,
+} from "./loyalty-settings-service.ts";
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -161,6 +168,7 @@ function productInput(payload: Record<string, unknown>) {
     category: text(payload["category"] ?? "", "Category", 0, 80),
     priceCents: integer(payload["priceCents"], "Price", 0, 100_000_000),
     pointsCost: integer(payload["pointsCost"], "Points", 1, 1_000_000),
+    visitsCost: integer(payload["visitsCost"], "Visits", 1, 1_000_000),
     imageUrl: optionalHttpsUrl(payload["imageUrl"], "Product image"),
     purchaseUrl: optionalHttpsUrl(payload["purchaseUrl"], "Purchase link"),
     active: payload["active"],
@@ -497,6 +505,26 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
         throw Object.assign(new Error("Active status is required"), { status: 400 });
       return json({ client: await setClientActive(user, businessId, payload["active"]) });
     }
+    const clientLoyaltyMatch = url.pathname.match(
+      /^\/api\/admin\/clients\/([^/]+)\/loyalty-settings$/,
+    );
+    if (clientLoyaltyMatch && request.method === "GET") {
+      requirePlatformAdmin(user);
+      const businessId = text(decodeURIComponent(clientLoyaltyMatch[1] ?? ""), "Client", 8, 120);
+      return json(await getClientLoyaltySettings(user, businessId));
+    }
+    if (clientLoyaltyMatch && request.method === "PUT") {
+      requirePlatformAdmin(user);
+      const businessId = text(decodeURIComponent(clientLoyaltyMatch[1] ?? ""), "Client", 8, 120);
+      const payload = await body(request);
+      return json(
+        await updateClientLoyaltySettings(
+          user,
+          businessId,
+          parseLoyaltyMode(payload["loyaltyMode"]),
+        ),
+      );
+    }
     const clientBrandingMatch = url.pathname.match(/^\/api\/admin\/clients\/([^/]+)\/branding$/);
     if (clientBrandingMatch && request.method === "GET") {
       requirePlatformAdmin(user);
@@ -585,6 +613,7 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
             name: text(payload["name"], "Reward name", 2, 120),
             description: text(payload["description"] ?? "", "Description", 0, 500),
             points: integer(payload["points"], "Points cost", 1, 1_000_000),
+            visits: integer(payload["visits"], "Visits cost", 1, 1_000_000),
             active: payload["active"],
             inventoryRemaining:
               payload["inventoryRemaining"] === null || payload["inventoryRemaining"] === undefined
@@ -610,6 +639,7 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
           name: text(payload["name"], "Reward name", 2, 120),
           description: text(payload["description"] ?? "", "Description", 0, 500),
           points: integer(payload["points"], "Points cost", 1, 1_000_000),
+          visits: integer(payload["visits"], "Visits cost", 1, 1_000_000),
           active: payload["active"],
           inventoryRemaining:
             payload["inventoryRemaining"] === null || payload["inventoryRemaining"] === undefined
@@ -705,6 +735,15 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       requireRole(user, ["owner"]);
       return json({ rewards: await listManagedRewards(user) });
     }
+    if (url.pathname === "/api/admin/loyalty-settings" && request.method === "GET") {
+      requireRole(user, ["owner"]);
+      return json(await getLoyaltySettings(user));
+    }
+    if (url.pathname === "/api/admin/loyalty-settings" && request.method === "PUT") {
+      requireRole(user, ["owner"]);
+      const payload = await body(request);
+      return json(await updateLoyaltySettings(user, parseLoyaltyMode(payload["loyaltyMode"])));
+    }
     if (url.pathname === "/api/admin/rewards" && request.method === "POST") {
       requireRole(user, ["owner"]);
       const payload = await body(request);
@@ -714,6 +753,7 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
         name: text(payload["name"], "Reward name", 2, 120),
         description: text(payload["description"] ?? "", "Description", 0, 500),
         points: integer(payload["points"], "Points cost", 1, 1_000_000),
+        visits: integer(payload["visits"], "Visits cost", 1, 1_000_000),
         active: payload["active"],
         inventoryRemaining:
           payload["inventoryRemaining"] === null || payload["inventoryRemaining"] === undefined
@@ -733,6 +773,7 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
         name: text(payload["name"], "Reward name", 2, 120),
         description: text(payload["description"] ?? "", "Description", 0, 500),
         points: integer(payload["points"], "Points cost", 1, 1_000_000),
+        visits: integer(payload["visits"], "Visits cost", 1, 1_000_000),
         active: payload["active"],
         inventoryRemaining:
           payload["inventoryRemaining"] === null || payload["inventoryRemaining"] === undefined
@@ -786,7 +827,7 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       const payload = await body(request);
       const awardInput = {
         memberId: text(payload["memberId"], "Member", 8, 120),
-        points: integer(payload["points"], "Points", 1, 1_000_000),
+        units: integer(payload["units"] ?? payload["points"], "Loyalty amount", 1, 1_000_000),
         amountCents: integer(payload["amountCents"], "Amount", 0, 100_000_000),
         idempotencyKey: text(request.headers.get("idempotency-key"), "Idempotency key", 8, 120),
         ...(typeof payload["note"] === "string" ? { note: payload["note"].slice(0, 300) } : {}),

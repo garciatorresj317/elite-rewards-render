@@ -15,7 +15,7 @@ export type MemberSummary = {
   email: string;
   memberCode: string | null;
   status: "active" | "invited";
-  points: number;
+  units: number;
   createdAt: string;
 };
 
@@ -116,7 +116,7 @@ export async function activateMember(
       ],
     );
     await client.query(
-      "INSERT INTO member_balances(business_id,member_id,points) VALUES ($1,$2,0)",
+      "INSERT INTO member_balances(business_id,member_id,points,visits) VALUES ($1,$2,0,0)",
       [invitation.business_id, memberId],
     );
     await client.query("UPDATE member_invitations SET accepted_at = now() WHERE id = $1", [
@@ -146,19 +146,21 @@ export async function listMembers(user: SessionUser): Promise<MemberSummary[]> {
     email: string;
     member_code: string | null;
     status: "active" | "invited";
-    points: number;
+    units: number;
     created_at: Date;
   }>(
-    `SELECT id, name, email, member_code, status, points, created_at
+    `SELECT id, name, email, member_code, status, units, created_at
        FROM (
          SELECT u.id, u.name, u.email, u.member_code, 'active'::text AS status,
-                COALESCE(mb.points, 0) AS points, u.created_at
+                CASE WHEN b.loyalty_mode = 'visits' THEN COALESCE(mb.visits, 0)
+                     ELSE COALESCE(mb.points, 0) END AS units, u.created_at
            FROM users u
+           JOIN businesses b ON b.id = u.business_id
            LEFT JOIN member_balances mb ON mb.business_id = u.business_id AND mb.member_id = u.id
           WHERE u.business_id = $1 AND u.role = 'member' AND u.active = true
          UNION ALL
          SELECT mi.id, mi.member_name AS name, mi.member_email AS email, NULL AS member_code,
-                'invited'::text AS status, 0 AS points, mi.created_at
+                'invited'::text AS status, 0 AS units, mi.created_at
            FROM member_invitations mi
           WHERE mi.business_id = $1 AND mi.accepted_at IS NULL AND mi.expires_at > now()
        ) members
@@ -171,7 +173,7 @@ export async function listMembers(user: SessionUser): Promise<MemberSummary[]> {
     email: row.email,
     memberCode: row.member_code,
     status: row.status,
-    points: Number(row.points),
+    units: Number(row.units),
     createdAt: row.created_at.toISOString(),
   }));
 }
@@ -238,7 +240,7 @@ export async function createMemberInvitation(
         email: input.email,
         memberCode: null,
         status: "invited",
-        points: 0,
+        units: 0,
         createdAt: new Date().toISOString(),
       },
       activationPath: `/activate-member?token=${encodeURIComponent(invitationToken)}`,

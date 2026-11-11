@@ -30,6 +30,7 @@ function JoinRewards() {
     logoUrl: string | null;
     primaryColor: string;
     secondaryColor: string;
+    loyaltyMode: "points" | "visits";
     visualSettings: BusinessEnrollment["visualSettings"];
   } | null>(null);
   const [businessContext, setBusinessContext] = useState<BusinessEnrollment | null>(null);
@@ -92,6 +93,7 @@ function JoinRewards() {
             businessContext?.primaryColor ?? referralContext?.primaryColor ?? "#F6B900",
           secondary_color:
             businessContext?.secondaryColor ?? referralContext?.secondaryColor ?? "#FFE27A",
+          loyalty_mode: businessContext?.loyaltyMode ?? referralContext?.loyaltyMode ?? "points",
         }
       : null;
   const style =
@@ -103,6 +105,7 @@ function JoinRewards() {
             businessContext?.secondaryColor ?? referralContext?.secondaryColor ?? "#FFE27A",
         } as React.CSSProperties)
       : undefined;
+  const loyaltyMode = businessContext?.loyaltyMode ?? referralContext?.loyaltyMode ?? "points";
 
   if (!busy && error && !businessName) {
     return (
@@ -169,9 +172,13 @@ function JoinRewards() {
               </small>
             </div>
             <p>
-              {t(
-                "Create your private member wallet to view this business’s products, earn points, and redeem available rewards.",
-              )}
+              {loyaltyMode === "visits"
+                ? t(
+                    "Create your private member wallet to view this business’s products, record visits, and redeem available rewards.",
+                  )
+                : t(
+                    "Create your private member wallet to view this business’s products, earn points, and redeem available rewards.",
+                  )}
             </p>
             <form onSubmit={submit}>
               <label>

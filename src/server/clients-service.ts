@@ -12,6 +12,7 @@ import {
   publicVisualSettings,
   type PublicVisualSettings,
 } from "./experience-service.ts";
+import type { LoyaltyMode } from "./loyalty-settings-service.ts";
 
 const invitationLifetimeHours = 72;
 
@@ -30,6 +31,7 @@ export type ClientSummary = {
   previewPath: string;
   nfcPath: string;
   joinPath: string;
+  loyaltyMode: LoyaltyMode;
 };
 
 export type ClientBranding = {
@@ -42,6 +44,7 @@ export type ClientBranding = {
   previewPath: string;
   nfcPath: string;
   joinPath: string;
+  loyaltyMode: LoyaltyMode;
 };
 
 export type PublicClientExperience = {
@@ -51,8 +54,9 @@ export type PublicClientExperience = {
     logo_url: string | null;
     primary_color: string;
     secondary_color: string;
+    loyalty_mode: LoyaltyMode;
   };
-  rewards: Array<{ id: string; name: string; description: string; points: number }>;
+  rewards: Array<{ id: string; name: string; description: string; cost: number }>;
   products: Array<{
     id: string;
     name: string;
@@ -60,6 +64,7 @@ export type PublicClientExperience = {
     category: string;
     priceCents: number;
     pointsCost: number;
+    visitsCost: number;
     imageUrl: string | null;
     purchaseUrl: string | null;
   }>;
@@ -191,8 +196,9 @@ export async function listClients(user: SessionUser): Promise<ClientSummary[]> {
     has_logo: boolean;
     active: boolean;
     updated_at: Date;
+    loyalty_mode: LoyaltyMode;
   }>(
-    `SELECT id, name, created_at, logo_url, primary_color, secondary_color, active, updated_at,
+    `SELECT id, name, created_at, logo_url, primary_color, secondary_color, loyalty_mode, active, updated_at,
             (logo_data IS NOT NULL) AS has_logo
        FROM businesses
       WHERE id <> (SELECT business_id FROM platform_state WHERE singleton = true)
@@ -237,6 +243,7 @@ export async function listClients(user: SessionUser): Promise<ClientSummary[]> {
       previewPath: clientPath(business.id),
       nfcPath: clientPath(business.id),
       joinPath: joinPath(business.id),
+      loyaltyMode: business.loyalty_mode,
     });
   }
   return clients;
@@ -296,8 +303,15 @@ export async function createClient(
     ];
     for (const reward of rewards) {
       await client.query(
-        "INSERT INTO rewards(id,business_id,name,description,points_cost) VALUES ($1,$2,$3,$4,$5)",
-        [reward[0], businessId, reward[1], reward[2], reward[3]],
+        "INSERT INTO rewards(id,business_id,name,description,points_cost,visits_cost) VALUES ($1,$2,$3,$4,$5,$6)",
+        [
+          reward[0],
+          businessId,
+          reward[1],
+          reward[2],
+          reward[3],
+          Math.max(1, Math.ceil(Number(reward[3]) / 100)),
+        ],
       );
     }
     await client.query(
@@ -327,6 +341,7 @@ export async function createClient(
         previewPath: clientPath(businessId),
         nfcPath: clientPath(businessId),
         joinPath: joinPath(businessId),
+        loyaltyMode: "points",
       },
       activationPath: `/activate-client?token=${encodeURIComponent(invitationToken)}`,
     };
@@ -417,9 +432,10 @@ export async function getClientBranding(
     secondary_color: string;
     has_logo: boolean;
     updated_at: Date;
+    loyalty_mode: LoyaltyMode;
   }>(
     `SELECT b.id, b.name, COALESCE(l.name, 'Primary location') AS location_name,
-            b.logo_url, b.primary_color, b.secondary_color, b.updated_at,
+            b.logo_url, b.primary_color, b.secondary_color, b.updated_at, b.loyalty_mode,
             (b.logo_data IS NOT NULL) AS has_logo
        FROM businesses b
        LEFT JOIN locations l ON l.business_id = b.id
@@ -441,6 +457,7 @@ export async function getClientBranding(
     previewPath: clientPath(row.id),
     nfcPath: clientPath(row.id),
     joinPath: joinPath(row.id),
+    loyaltyMode: row.loyalty_mode,
   };
 }
 
@@ -619,9 +636,10 @@ export async function getPublicClientExperience(
     secondary_color: string;
     has_logo: boolean;
     updated_at: Date;
+    loyalty_mode: LoyaltyMode;
   }>(
     `SELECT b.id, b.name, COALESCE(l.name, 'Primary location') AS location_name,
-            b.logo_url, b.primary_color, b.secondary_color, b.updated_at,
+            b.logo_url, b.primary_color, b.secondary_color, b.updated_at, b.loyalty_mode,
             (b.logo_data IS NOT NULL) AS has_logo
        FROM businesses b
        LEFT JOIN locations l ON l.business_id = b.id
@@ -640,8 +658,9 @@ export async function getPublicClientExperience(
       name: string;
       description: string;
       points_cost: number;
+      visits_cost: number;
     }>(
-      `SELECT id, name, description, points_cost
+      `SELECT id, name, description, points_cost, visits_cost
          FROM rewards
         WHERE business_id = $1 AND active AND archived_at IS NULL
           AND (inventory_remaining IS NULL OR inventory_remaining > 0)
@@ -655,11 +674,12 @@ export async function getPublicClientExperience(
       category: string;
       price_cents: number;
       points_cost: number | null;
+      visits_cost: number | null;
       image_url: string | null;
       has_image: boolean;
       purchase_url: string | null;
     }>(
-      `SELECT id,name,description,category,price_cents,points_cost,image_url,purchase_url,
+      `SELECT id,name,description,category,price_cents,points_cost,visits_cost,image_url,purchase_url,
               (image_data IS NOT NULL) AS has_image
          FROM business_products
         WHERE business_id = $1 AND active = true AND archived_at IS NULL
@@ -675,12 +695,13 @@ export async function getPublicClientExperience(
       logo_url: row.has_logo ? clientLogoPath(row.id, row.updated_at) : row.logo_url,
       primary_color: row.primary_color,
       secondary_color: row.secondary_color,
+      loyalty_mode: row.loyalty_mode,
     },
     rewards: rewards.rows.map((reward) => ({
       id: reward.id,
       name: reward.name,
       description: reward.description,
-      points: reward.points_cost,
+      cost: row.loyalty_mode === "visits" ? reward.visits_cost : reward.points_cost,
     })),
     products: products.rows.map((item) => ({
       id: item.id,
@@ -689,6 +710,7 @@ export async function getPublicClientExperience(
       category: item.category,
       priceCents: Number(item.price_cents),
       pointsCost: item.points_cost === null ? 0 : Number(item.points_cost),
+      visitsCost: item.visits_cost === null ? 0 : Number(item.visits_cost),
       imageUrl: item.has_image
         ? `/api/public/products/${encodeURIComponent(item.id)}/image`
         : item.image_url,

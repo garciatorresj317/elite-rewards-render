@@ -7,6 +7,7 @@ export type ProductDraft = {
   category: string;
   priceCents: number;
   pointsCost: number;
+  visitsCost?: number;
   imageUrl: string | null;
   purchaseUrl: string | null;
   active: boolean;
@@ -56,6 +57,7 @@ function product(row: {
   category: string;
   price_cents: number;
   points_cost: number | null;
+  visits_cost: number | null;
   image_url: string | null;
   has_image: boolean;
   purchase_url: string | null;
@@ -71,6 +73,7 @@ function product(row: {
     category: row.category,
     priceCents: Number(row.price_cents),
     pointsCost: row.points_cost === null ? 0 : Number(row.points_cost),
+    visitsCost: row.visits_cost === null ? 0 : Number(row.visits_cost),
     imageUrl: row.has_image ? productImagePath(row.id) : row.image_url,
     purchaseUrl: row.purchase_url,
     active: row.active,
@@ -80,7 +83,7 @@ function product(row: {
   };
 }
 
-const fields = `id,name,description,category,price_cents,points_cost,image_url,purchase_url,
+const fields = `id,name,description,category,price_cents,points_cost,visits_cost,image_url,purchase_url,
   (image_data IS NOT NULL) AS has_image,active,archived_at,created_at,updated_at`;
 
 async function assertClientBusiness(businessId: string): Promise<void> {
@@ -126,9 +129,9 @@ async function createForBusiness(
   const productId = id("prd");
   const result = await getPool().query(
     `INSERT INTO business_products(
-       id,business_id,name,description,category,price_cents,points_cost,image_url,purchase_url,active,
+       id,business_id,name,description,category,price_cents,points_cost,visits_cost,image_url,purchase_url,active,
        created_by_user_id,updated_by_user_id
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$11)
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$12)
      RETURNING ${fields}`,
     [
       productId,
@@ -138,6 +141,7 @@ async function createForBusiness(
       input.category,
       input.priceCents,
       input.pointsCost,
+      input.visitsCost ?? Math.max(1, Math.ceil(input.pointsCost / 100)),
       input.imageUrl,
       input.purchaseUrl,
       input.active,
@@ -178,8 +182,8 @@ async function updateForBusiness(
 ): Promise<ManagedProduct> {
   const result = await getPool().query(
     `UPDATE business_products
-        SET name=$4,description=$5,category=$6,price_cents=$7,points_cost=$8,image_url=$9,purchase_url=$10,
-            active=$11,updated_by_user_id=$3,updated_at=now()
+        SET name=$4,description=$5,category=$6,price_cents=$7,points_cost=$8,visits_cost=$9,image_url=$10,purchase_url=$11,
+            active=$12,updated_by_user_id=$3,updated_at=now()
       WHERE id=$1 AND business_id=$2 AND archived_at IS NULL
       RETURNING ${fields}`,
     [
@@ -191,6 +195,7 @@ async function updateForBusiness(
       input.category,
       input.priceCents,
       input.pointsCost,
+      input.visitsCost ?? Math.max(1, Math.ceil(input.pointsCost / 100)),
       input.imageUrl,
       input.purchaseUrl,
       input.active,
@@ -357,6 +362,7 @@ export async function listPublicProducts(businessId: string): Promise<PublicProd
       category: item.category,
       priceCents: item.priceCents,
       pointsCost: item.pointsCost,
+      visitsCost: item.visitsCost,
       imageUrl: item.imageUrl,
       purchaseUrl: item.purchaseUrl,
     };

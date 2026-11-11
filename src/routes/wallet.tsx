@@ -56,17 +56,22 @@ function Wallet() {
   useEffect(() => {
     void load();
   }, [load]);
-  const redeem = async (rewardId: string, name: string, points: number) => {
+  const redeem = async (rewardId: string, name: string, cost: number) => {
     if (redeemingId !== null) return;
     if (
       !window.confirm(
-        t(
-          "Redeem {rewardName} for {count} points? This will deduct the points from your balance.",
-          {
-            rewardName: name,
-            count: points,
-          },
-        ),
+        data?.loyaltyMode === "visits"
+          ? t(
+              "Redeem {rewardName} for {count} visits? This will deduct the visits from your balance.",
+              {
+                rewardName: name,
+                count: cost,
+              },
+            )
+          : t(
+              "Redeem {rewardName} for {count} points? This will deduct the points from your balance.",
+              { rewardName: name, count: cost },
+            ),
       )
     )
       return;
@@ -108,10 +113,12 @@ function Wallet() {
         }
       />
     );
+  const unitLabel = data.loyaltyMode === "visits" ? t("visits") : t("points");
+  const shortUnitLabel = data.loyaltyMode === "visits" ? t("visits") : t("pts");
   const futureRewardPoints = data.rewards
-    .map((reward) => reward.points)
-    .filter((points) => points > data.points);
-  const readyReward = data.rewards.some((reward) => reward.points <= data.points),
+    .map((reward) => reward.cost)
+    .filter((cost) => cost > data.balance);
+  const readyReward = data.rewards.some((reward) => reward.cost <= data.balance),
     next = futureRewardPoints.length ? Math.min(...futureRewardPoints) : null;
   return (
     <div className={`wallet-page theme-${settings?.themeKey ?? "elite-signature"}`}>
@@ -146,8 +153,8 @@ function Wallet() {
           </div>
           <div className="points-orb">
             <small>{t("Available balance")}</small>
-            <strong>{formatNumber(data.points)}</strong>
-            <span>{t("points")}</span>
+            <strong>{formatNumber(data.balance)}</strong>
+            <span>{unitLabel}</span>
           </div>
         </section>
         <section className="next-reward-card">
@@ -162,9 +169,13 @@ function Wallet() {
                   ? t("New rewards are coming soon.")
                   : readyReward
                     ? t("A reward is ready.")
-                    : t("{count} points until your next reward", {
-                        count: (next ?? data.points) - data.points,
-                      })}
+                    : data.loyaltyMode === "visits"
+                      ? t("{count} visits until your next reward", {
+                          count: (next ?? data.balance) - data.balance,
+                        })
+                      : t("{count} points until your next reward", {
+                          count: (next ?? data.balance) - data.balance,
+                        })}
               </h2>
             </div>
           </div>
@@ -173,14 +184,14 @@ function Wallet() {
               <div className="reward-progress">
                 <span
                   style={{
-                    width: `${readyReward ? 100 : Math.min(100, (data.points / (next ?? 1)) * 100)}%`,
+                    width: `${readyReward ? 100 : Math.min(100, (data.balance / (next ?? 1)) * 100)}%`,
                   }}
                 />
               </div>
               <div className="reward-scale">
                 <span>0</span>
                 <span>
-                  {readyReward ? t("Reward ready") : t("{count} points", { count: next ?? 0 })}
+                  {readyReward ? t("Reward ready") : `${formatNumber(next ?? 0)} ${unitLabel}`}
                 </span>
               </div>
             </>
@@ -197,7 +208,7 @@ function Wallet() {
         </div>
         <section className="reward-grid">
           {data.rewards.map((reward, index) => {
-            const disabled = data.points < reward.points;
+            const disabled = data.balance < reward.cost;
             return (
               <article
                 className={`reward-card ${["champagne", "gold", "amber"][index % 3]}`}
@@ -207,13 +218,13 @@ function Wallet() {
                   <Gift />
                 </span>
                 <span className="reward-cost">
-                  {formatNumber(reward.points)} {t("pts")}
+                  {formatNumber(reward.cost)} {shortUnitLabel}
                 </span>
                 <h3>{reward.name}</h3>
                 <p>{reward.description}</p>
                 <button
                   disabled={disabled || redeemingId !== null}
-                  onClick={() => void redeem(reward.id, reward.name, reward.points)}
+                  onClick={() => void redeem(reward.id, reward.name, reward.cost)}
                 >
                   {t(
                     redeemingId === reward.id ? "Redeeming…" : disabled ? "Keep earning" : "Redeem",
@@ -259,9 +270,15 @@ function Wallet() {
                     }).format(product.priceCents / 100)}
                   </strong>
                 )}
-                {product.pointsCost > 0 && (
+                {(data.loyaltyMode === "visits" ? (product.visitsCost ?? 0) : product.pointsCost) >
+                  0 && (
                   <span className="product-points">
-                    {formatNumber(product.pointsCost)} {t("points")}
+                    {formatNumber(
+                      data.loyaltyMode === "visits"
+                        ? (product.visitsCost ?? 0)
+                        : product.pointsCost,
+                    )}{" "}
+                    {unitLabel}
                   </span>
                 )}
                 {product.purchaseUrl && (
@@ -359,8 +376,9 @@ function Wallet() {
                     <small>{formatDateTime(item.created_at)}</small>
                   </span>
                   <b>
-                    {item.pointsDelta > 0 ? "+" : ""}
-                    {formatNumber(item.pointsDelta)} {t("pts")}
+                    {item.unitsDelta > 0 ? "+" : ""}
+                    {formatNumber(item.unitsDelta)}{" "}
+                    {data.loyaltyMode === "visits" ? t("visits") : t("pts")}
                   </b>
                 </li>
               ))

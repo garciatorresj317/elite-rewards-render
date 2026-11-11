@@ -53,6 +53,28 @@ const es: Record<string, Translation> = {
   Member: "Miembro",
   "Good afternoon, Maya": "Buenas tardes, Maya",
   points: "puntos",
+  Visits: "Visitas",
+  "Visits recorded": "Visitas registradas",
+  "Record visits": "Registrar visitas",
+  "Post visits": "Registrar visitas",
+  "Visits cost": "Costo en visitas",
+  "Loyalty model": "Modelo de lealtad",
+  "Choose points or visits": "Elige puntos o visitas",
+  "Use points": "Usar puntos",
+  "Use visits": "Usar visitas",
+  "The rewards program now runs on visits.": "El programa ahora funciona con visitas.",
+  "The rewards program now runs on points.": "El programa ahora funciona con puntos.",
+  "Choose what this business awards and what members spend on rewards.":
+    "Elige lo que este negocio otorga y lo que los miembros usan para recompensas.",
+  "This controls balances, earning, reward costs, customer pages, and member wallets for this business.":
+    "Esto controla los saldos, la acumulación, los costos de recompensas, las páginas para clientes y las billeteras de miembros de este negocio.",
+  "Reward value not set": "Valor de recompensa sin configurar",
+  "{count} visits until your next reward": {
+    one: "Falta {count} visita para tu próxima recompensa",
+    other: "Faltan {count} visitas para tu próxima recompensa",
+  },
+  "Redeem {rewardName} for {count} visits? This will deduct the visits from your balance.":
+    "¿Canjear {rewardName} por {count} visitas? Esto descontará las visitas de tu saldo.",
   "160 points to go": "Faltan 160 puntos",
   "$15 reward": "Recompensa de $15",
   "Ready to use": "Lista para usar",
@@ -197,6 +219,10 @@ const es: Record<string, Translation> = {
   "Earn more every time you return.": "Gana más cada vez que regreses.",
   "Join {businessName} rewards, collect points, and unlock offers selected by this business.":
     "Únete a las recompensas de {businessName}, acumula puntos y desbloquea ofertas seleccionadas por este negocio.",
+  "Join {businessName} rewards, collect visits, and unlock offers selected by this business.":
+    "Únete a las recompensas de {businessName}, acumula visitas y desbloquea ofertas seleccionadas por este negocio.",
+  "Create your private member wallet to view this business’s products, record visits, and redeem available rewards.":
+    "Crea tu billetera privada de miembro para ver los productos de este negocio, registrar visitas y canjear recompensas disponibles.",
   "Open member wallet": "Abrir billetera de miembro",
   "NFC card destination": "Destino de la tarjeta NFC",
   "Available offers": "Ofertas disponibles",

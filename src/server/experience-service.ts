@@ -142,6 +142,7 @@ export async function getBusinessEnrollment(businessId: string): Promise<{
   primaryColor: string;
   secondaryColor: string;
   visualSettings: PublicVisualSettings;
+  loyaltyMode: "points" | "visits";
 }> {
   const result = await getPool().query<{
     id: string;
@@ -152,9 +153,10 @@ export async function getBusinessEnrollment(businessId: string): Promise<{
     secondary_color: string;
     has_logo: boolean;
     updated_at: Date;
+    loyalty_mode: "points" | "visits";
   }>(
     `SELECT b.id, b.name, l.name AS location_name, b.logo_url, b.primary_color,
-            b.secondary_color, b.updated_at, (b.logo_data IS NOT NULL) AS has_logo
+            b.secondary_color, b.updated_at, b.loyalty_mode, (b.logo_data IS NOT NULL) AS has_logo
        FROM businesses b
        JOIN locations l ON l.business_id = b.id
       WHERE b.id = $1
@@ -174,6 +176,7 @@ export async function getBusinessEnrollment(businessId: string): Promise<{
     primaryColor: row.primary_color,
     secondaryColor: row.secondary_color,
     visualSettings: publicVisualSettings(await getBusinessVisualSettings(row.id)),
+    loyaltyMode: row.loyalty_mode,
   };
 }
 
@@ -237,7 +240,7 @@ export async function joinBusinessRewards(input: {
       ],
     );
     await client.query(
-      "INSERT INTO member_balances(business_id,member_id,points) VALUES ($1,$2,0)",
+      "INSERT INTO member_balances(business_id,member_id,points,visits) VALUES ($1,$2,0,0)",
       [business.business_id, memberId],
     );
     await client.query(
@@ -535,6 +538,7 @@ export async function getReferralEnrollment(referralCodeValue: string): Promise<
   logoUrl: string | null;
   primaryColor: string;
   secondaryColor: string;
+  loyaltyMode: "points" | "visits";
   visualSettings: PublicVisualSettings;
 }> {
   const result = await getPool().query<{
@@ -545,11 +549,12 @@ export async function getReferralEnrollment(referralCodeValue: string): Promise<
     has_logo: boolean;
     primary_color: string;
     secondary_color: string;
+    loyalty_mode: "points" | "visits";
     updated_at: Date;
   }>(
     `SELECT b.id AS business_id, b.name AS business_name, l.name AS location_name,
             b.logo_url, (b.logo_data IS NOT NULL) AS has_logo, b.primary_color,
-            b.secondary_color, b.updated_at
+            b.secondary_color, b.loyalty_mode, b.updated_at
        FROM member_referral_links rfl
        JOIN businesses b ON b.id = rfl.business_id
        JOIN locations l ON l.id = rfl.location_id
@@ -567,6 +572,7 @@ export async function getReferralEnrollment(referralCodeValue: string): Promise<
     logoUrl: row.has_logo ? clientLogoPath(row.business_id, row.updated_at) : row.logo_url,
     primaryColor: row.primary_color,
     secondaryColor: row.secondary_color,
+    loyaltyMode: row.loyalty_mode,
     visualSettings: publicVisualSettings(await getBusinessVisualSettings(row.business_id)),
   };
 }
@@ -623,7 +629,7 @@ export async function joinWithReferral(input: {
       ],
     );
     await client.query(
-      "INSERT INTO member_balances(business_id,member_id,points) VALUES ($1,$2,0)",
+      "INSERT INTO member_balances(business_id,member_id,points,visits) VALUES ($1,$2,0,0)",
       [link.business_id, memberId],
     );
     await client.query(
