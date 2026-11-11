@@ -73,4 +73,11 @@ describe("user-friendly experience regression coverage", () => {
     assert.match(client, /\{data\.products\.length > 0 && \(/);
     assert.match(admin, /Enroll your first member/);
   });
+
+  it("keeps every sign-in control off the How It Works marketing page", async () => {
+    const home = await source("routes", "index.tsx");
+    assert.doesNotMatch(home, /to="\/login"/);
+    assert.doesNotMatch(home, /href="\/login/);
+    assert.doesNotMatch(home, /Member sign in|Business sign in|Sign in to Elite Rewards/);
+  });
 });

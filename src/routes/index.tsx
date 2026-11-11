@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   ArrowRight,
   BarChart3,
@@ -58,16 +58,7 @@ function Home() {
         <nav aria-label={t("Primary navigation")}>
           <a href="#how">{t("How it works")}</a>
           <a href="#features">{t("Features")}</a>
-          <a href="#access">{t("Access")}</a>
         </nav>
-        <div className="header-actions">
-          <a href="/login?access=member" className="text-link">
-            {t("Member sign in")}
-          </a>
-          <Link to="/login" className="button button-dark">
-            {t("Business sign in")}
-          </Link>
-        </div>
       </header>
       <main>
         <section className="hero container-wide">
@@ -84,11 +75,11 @@ function Home() {
               )}
             </p>
             <div className="hero-actions">
-              <Link to="/login" className="button button-primary">
-                {t("Open business dashboard")} <ArrowRight size={18} />
-              </Link>
-              <a href="/login?access=member" className="button button-ghost">
-                {t("Member sign in")}
+              <a href="#how" className="button button-primary">
+                {t("How it works")} <ArrowRight size={18} />
+              </a>
+              <a href="#features" className="button button-ghost">
+                {t("Features")}
               </a>
             </div>
             <div className="hero-proof">
@@ -196,7 +187,7 @@ function Home() {
             </article>
           ))}
         </section>
-        <section id="access" className="cta-panel container-wide">
+        <section className="cta-panel container-wide">
           <div>
             <span className="eyebrow light">
               <Sparkles size={14} /> {t("A better reason to return")}
@@ -204,13 +195,10 @@ function Home() {
             <h2>{t("Make every customer feel like a regular.")}</h2>
             <p>
               {t(
-                "Sign in to manage members, post eligible purchases, and redeem rewards from the authoritative Elite Rewards ledger.",
+                "Elite Rewards keeps member activity, eligible purchases, and redemptions organized in one authoritative rewards ledger.",
               )}
             </p>
           </div>
-          <Link to="/login" className="button button-light">
-            {t("Sign in to Elite Rewards")} <ArrowRight size={18} />
-          </Link>
         </section>
       </main>
       <footer className="site-footer container-wide">

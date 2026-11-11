@@ -88,6 +88,8 @@ const es: Record<string, Translation> = {
     "Haz que cada cliente se sienta como un cliente habitual.",
   "Sign in to manage members, post eligible purchases, and redeem rewards from the authoritative Elite Rewards ledger.":
     "Inicia sesión para administrar miembros, registrar compras elegibles y canjear recompensas desde el registro oficial de Elite Rewards.",
+  "Elite Rewards keeps member activity, eligible purchases, and redemptions organized in one authoritative rewards ledger.":
+    "Elite Rewards mantiene la actividad de miembros, las compras elegibles y los canjes organizados en un solo registro oficial de recompensas.",
   "Sign in to Elite Rewards": "Iniciar sesión en Elite Rewards",
   "Sign in to your member wallet": "Inicia sesión en tu billetera de miembro",
   "Use the member email and password created for this rewards program.":
