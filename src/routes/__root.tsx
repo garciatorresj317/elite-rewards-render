@@ -60,7 +60,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Elite Rewards" },
       { name: "description", content: "A modern rewards program for growing businesses." },
       { name: "author", content: "Elite Rewards" },
-      { name: "theme-color", content: "#050505" },
+      { name: "theme-color", content: "#020713" },
       { property: "og:type", content: "website" },
     ],
     links: [
@@ -69,7 +69,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@500;600;700;800;900&display=swap",
       },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
     ],
