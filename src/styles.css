@@ -12,6 +12,8 @@
   --gold-deep: #9a6200;
   --gold-line: rgba(236, 171, 26, 0.82);
   --gold-faint: rgba(236, 171, 26, 0.18);
+  --gold-border: rgba(236, 171, 26, 0.5);
+  --cream: #fff1b0;
   --text: #fffaf0;
   --muted: #c7bea8;
   --muted-low: #8f8774;
@@ -1275,6 +1277,40 @@ select:focus-visible {
     radial-gradient(circle at 18% 78%, rgba(246, 185, 0, .08), transparent 25rem),
     var(--black);
 }
+.auth-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(calc(100% - 48px), 1180px);
+  min-height: 114px;
+  margin: 0 auto;
+  border-bottom: 1px solid rgba(0, 196, 255, .32);
+}
+.auth-header::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--blue), var(--gold-bright), transparent);
+  box-shadow: 0 0 16px rgba(0, 189, 255, .42);
+}
+.auth-main { position: relative; z-index: 1; display: grid; place-items: start center; }
+.auth-icon {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  margin-bottom: 24px;
+  place-items: center;
+  border: 1px solid rgba(0, 216, 255, .55);
+  border-radius: 8px;
+  color: #07111f;
+  background: var(--gold-gradient);
+  box-shadow: 0 0 22px rgba(0, 183, 255, .22), inset 0 1px rgba(255,255,255,.48);
+}
 .auth-card { backdrop-filter: blur(20px) saturate(125%); }
 .auth-card input, .auth-card select, .award-modal input, .award-modal select,
 .award-modal textarea, .occasion-editor input, .occasion-editor textarea,
@@ -1380,6 +1416,11 @@ td { border-color: rgba(0, 184, 255, .12); }
     0 0 24px color-mix(in srgb, var(--client-primary, var(--gold)) 16%, transparent),
     inset 0 1px rgba(255,255,255,.08);
 }
+.business-brand strong, .client-public-hero h1, .client-public-actions > span,
+.client-public-rewards h2, .product-points {
+  color: color-mix(in srgb, var(--client-primary, var(--gold)) 44%, white);
+  text-shadow: 0 0 16px color-mix(in srgb, var(--client-primary, var(--gold)) 24%, transparent);
+}
 .client-public-page {
   background:
     radial-gradient(circle at 50% -20%, color-mix(in srgb, var(--client-primary) 25%, transparent), transparent 42%),
@@ -1423,6 +1464,7 @@ td { border-color: rgba(0, 184, 255, .12); }
   .metric-card, .client-card, .product-card, .status-card, .error-screen > div {
     clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
   }
+  .auth-header { width: calc(100% - 30px); min-height: 96px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1430,5 +1472,23 @@ td { border-color: rgba(0, 184, 255, .12); }
   .error-screen::before, .auth-page::before, .status-screen::before,
   .client-public-page::before, .hero-visual::before, .points-orb::before {
     animation: none !important;
+  }
+}
+
+.client-logo-upload:focus-within {
+  outline: 2px solid var(--cyan);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 1px rgba(20, 230, 255, .3), 0 0 22px rgba(0, 168, 255, .16);
+}
+
+@media (update: slow) {
+  .marketing-shell::before, .wallet-page::before, .admin-shell::before,
+  .error-screen::before, .auth-page::before, .status-screen::before,
+  .client-public-page::before, .hero-visual::before, .points-orb::before {
+    animation: none !important;
+  }
+  .marketing-shell::after, .wallet-page::after, .error-screen::after,
+  .auth-page::after, .status-screen::after, .client-public-page::after {
+    display: none;
   }
 }

@@ -30,6 +30,10 @@ describe("logo-derived futuristic platform theme", () => {
       assert.match(styles, new RegExp(selector.replace(".", "\\.")));
     }
     assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
+    assert.match(styles, /@media \(update: slow\)/);
+    assert.match(styles, /\.auth-header/);
+    assert.match(styles, /\.auth-icon/);
+    assert.match(styles, /\.client-logo-upload:focus-within/);
   });
 
   it("keeps tenant branding separate from the Elite platform logo", async () => {
