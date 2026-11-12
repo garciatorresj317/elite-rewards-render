@@ -1298,6 +1298,88 @@ function Admin() {
                   tr={tr}
                 />
               </section>
+              {!user.platformAdmin && (
+                <section className="panel dashboard-members-panel">
+                  <div className="panel-title dashboard-members-title">
+                    <div>
+                      <span>
+                        <Users />
+                      </span>
+                      <div>
+                        <h3>{tr("Your members", "Tus miembros")}</h3>
+                        <small>
+                          {members.length === 1
+                            ? tr("1 member in this rewards program", "1 miembro en este programa")
+                            : tr(
+                                `${formatNumber(members.length)} members in this rewards program`,
+                                `${formatNumber(members.length)} miembros en este programa`,
+                              )}
+                        </small>
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => setActive("Members")}>
+                      {tr("View all members", "Ver todos los miembros")}
+                    </button>
+                  </div>
+                  <div className="dashboard-member-preview">
+                    {members.slice(0, 6).map((member) => (
+                      <button
+                        type="button"
+                        key={member.id}
+                        disabled={member.status !== "active"}
+                        onClick={() => {
+                          if (member.status === "active") {
+                            setAward({ ...award, memberId: member.id });
+                            setModal(true);
+                          }
+                        }}
+                        aria-label={
+                          member.status === "active"
+                            ? tr(
+                                `Open ${member.name} to add ${data.business.loyalty_mode}`,
+                                `Abrir ${member.name} para agregar ${data.business.loyalty_mode === "visits" ? "visitas" : "puntos"}`,
+                              )
+                            : tr(`${member.name} is invited`, `${member.name} está invitado`)
+                        }
+                      >
+                        <span className="member-avatar">{initials(member.name)}</span>
+                        <span className="dashboard-member-details">
+                          <strong>{member.name}</strong>
+                          <small>{member.email}</small>
+                        </span>
+                        <span className="dashboard-member-balance">
+                          <strong>{formatNumber(member.units)}</strong>
+                          <small>
+                            {data.business.loyalty_mode === "visits"
+                              ? tr("visits", "visitas")
+                              : tr("points", "puntos")}
+                          </small>
+                        </span>
+                        <span className={`client-status ${member.status}`}>
+                          {localizeStatus(member.status, tr)}
+                        </span>
+                      </button>
+                    ))}
+                    {!members.length && (
+                      <div className="dashboard-members-empty">
+                        <UserPlus />
+                        <div>
+                          <strong>{tr("No members yet", "Aún no hay miembros")}</strong>
+                          <small>
+                            {tr(
+                              "Enroll your first member to start building the customer list.",
+                              "Inscribe a tu primer miembro para comenzar la lista de clientes.",
+                            )}
+                          </small>
+                        </div>
+                        <button type="button" onClick={() => setActive("Members")}>
+                          {tr("Enroll member", "Inscribir miembro")}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
               <section
                 className="quick-actions"
                 aria-label={tr("Quick actions", "Acciones rápidas")}

@@ -50,6 +50,24 @@ describe("user-friendly experience regression coverage", () => {
     assert.match(admin, /initialLoadFailed/);
   });
 
+  it("shows each business its tenant-scoped member directory from the dashboard", async () => {
+    const [admin, membersService] = await Promise.all([
+      source("routes", "admin.tsx"),
+      source("server", "members-service.ts"),
+    ]);
+    assert.match(admin, /!user\.platformAdmin && \(/);
+    assert.match(admin, /className="panel dashboard-members-panel"/);
+    assert.match(admin, /Your members/);
+    assert.match(admin, /members\.slice\(0, 6\)\.map/);
+    assert.match(admin, /View all members/);
+    assert.match(admin, /setActive\("Members"\)/);
+    assert.match(admin, /member\.email/);
+    assert.match(admin, /member\.units/);
+    assert.match(membersService, /WHERE u\.business_id = \$1 AND u\.role = 'member'/);
+    assert.match(membersService, /WHERE mi\.business_id = \$1/);
+    assert.match(membersService, /\[user\.businessId\]/);
+  });
+
   it("keeps the bilingual control at the bottom of every screen", async () => {
     const styles = await source("styles.css");
     const localeStart = styles.indexOf(".language-switcher {");

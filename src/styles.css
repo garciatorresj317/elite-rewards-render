@@ -424,6 +424,37 @@ textarea:focus-visible { outline: 3px solid var(--gold-bright); outline-offset: 
 .quick-actions span { display: grid; gap: 4px; }
 .quick-actions strong { color: var(--gold-pale); }
 .quick-actions small { color: var(--muted); line-height: 1.35; }
+.dashboard-members-panel { margin: 18px 0; padding: 0; overflow: hidden; }
+.dashboard-members-title { padding: 17px 18px; border-bottom: 1px solid rgba(0, 190, 255, .14); }
+.dashboard-members-title small { display: block; margin-top: 4px; color: var(--muted); }
+.dashboard-members-title > button {
+  min-height: 44px; padding: 0 13px; border: 1px solid rgba(0, 205, 255, .35); border-radius: 9px;
+  color: #bff6ff; background: rgba(0, 157, 255, .08); font-weight: 800;
+}
+.dashboard-members-title > button:hover { border-color: var(--cyan); background: rgba(0, 157, 255, .15); }
+.dashboard-member-preview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 16px; }
+.dashboard-member-preview > button {
+  min-width: 0; min-height: 72px; padding: 12px; display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 11px;
+  border: 1px solid rgba(0, 190, 255, .2); border-radius: 11px; color: var(--text);
+  background: linear-gradient(135deg, rgba(7, 23, 41, .9), rgba(3, 10, 22, .94)); text-align: left; cursor: pointer;
+}
+.dashboard-member-preview > button:hover { border-color: rgba(0, 217, 255, .62); background: rgba(0, 137, 255, .1); }
+.dashboard-member-preview > button:disabled { cursor: default; opacity: .82; }
+.dashboard-member-preview > button:disabled:hover { border-color: rgba(0, 190, 255, .2); background: linear-gradient(135deg, rgba(7, 23, 41, .9), rgba(3, 10, 22, .94)); }
+.dashboard-member-details, .dashboard-member-balance { min-width: 0; display: grid; gap: 4px; }
+.dashboard-member-details strong, .dashboard-member-details small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dashboard-member-details small, .dashboard-member-balance small { color: var(--muted); }
+.dashboard-member-balance { text-align: right; }
+.dashboard-member-balance strong { color: var(--gold-pale); font-variant-numeric: tabular-nums; }
+.dashboard-members-empty {
+  grid-column: 1 / -1; min-height: 96px; padding: 18px; display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px;
+  border: 1px dashed rgba(0, 190, 255, .3); border-radius: 11px; color: var(--cyan); background: rgba(0, 137, 255, .05);
+}
+.dashboard-members-empty > div { display: grid; gap: 4px; }
+.dashboard-members-empty small { color: var(--muted); }
+.dashboard-members-empty > button { min-height: 44px; padding: 0 14px; border: 1px solid var(--gold-bright); border-radius: 9px; color: #090600; background: var(--gold-gradient); font-weight: 800; cursor: pointer; }
 .demo-badge {
   display: inline-flex; margin-bottom: 8px; padding: 5px 9px; border: 1px solid var(--gold-line); border-radius: 99px;
   color: var(--gold-bright); background: rgba(246,185,0,.08); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
@@ -548,6 +579,7 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
   .admin-shell { grid-template-columns: 230px 1fr; }
   .search-box { display: none; }
   .quick-actions { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .dashboard-member-preview { grid-template-columns: 1fr; }
   .how-it-works-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
@@ -594,6 +626,13 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
   .brand-wordmark small { font-size: 7px; }
   .site-header .button { padding-inline: 13px; font-size: 11px; }
   .quick-actions { grid-template-columns: 1fr; }
+  .dashboard-members-title { align-items: stretch; }
+  .dashboard-members-title > button { width: 100%; }
+  .dashboard-member-preview { padding: 12px; }
+  .dashboard-member-preview > button { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .dashboard-member-preview > button .client-status { grid-column: 2 / -1; justify-self: start; }
+  .dashboard-members-empty { grid-template-columns: auto minmax(0, 1fr); }
+  .dashboard-members-empty > button { grid-column: 1 / -1; width: 100%; }
   .hero-actions { flex-direction: column; }
   .hero-actions .button { width: 100%; }
   .hero-visual { min-height: 460px; }
