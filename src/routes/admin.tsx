@@ -21,6 +21,7 @@ import {
   Search,
   ShieldCheck,
   Store,
+  Trash2,
   Trophy,
   Users,
   UserPlus,
@@ -163,6 +164,7 @@ function Admin() {
   const [clientRewards, setClientRewards] = useState<ManagedReward[]>([]);
   const [clientRewardEditingId, setClientRewardEditingId] = useState<string | null>(null);
   const [clientProducts, setClientProducts] = useState<ManagedProduct[]>([]);
+  const [selectedClientProductIds, setSelectedClientProductIds] = useState<string[]>([]);
   const [clientProductEditingId, setClientProductEditingId] = useState<string | null>(null);
   const [clientProductDraft, setClientProductDraft] = useState<ProductDraft>({
     name: "",
@@ -208,6 +210,8 @@ function Admin() {
   const [memberActivationPath, setMemberActivationPath] = useState("");
   const [managedRewards, setManagedRewards] = useState<ManagedReward[]>([]);
   const [managedProducts, setManagedProducts] = useState<ManagedProduct[]>([]);
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [productDeleteBusy, setProductDeleteBusy] = useState(false);
   const [productModal, setProductModal] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [productForm, setProductForm] = useState<ProductDraft>({
@@ -446,6 +450,7 @@ function Admin() {
     });
     setClientRewards([]);
     setClientProducts([]);
+    setSelectedClientProductIds([]);
     setClientVisualSettings(null);
     setClientRewardEditingId(null);
     setClientProductEditingId(null);
@@ -779,6 +784,47 @@ function Admin() {
     setClientProductDraft(emptyProductForm());
     setNotice(tr("Client product archived.", "Se archivó el producto del cliente."));
   };
+  const deleteSelectedClientProducts = async (productIds = selectedClientProductIds) => {
+    if (!clientEditor || !productIds.length) return;
+    const names = clientProducts
+      .filter((product) => productIds.includes(product.id))
+      .map((product) => product.name);
+    const confirmed = window.confirm(
+      tr(
+        productIds.length === 1
+          ? `Permanently delete ${names[0] ?? "this product"}? This cannot be undone.`
+          : `Permanently delete ${productIds.length} products? This cannot be undone.`,
+        productIds.length === 1
+          ? `¿Eliminar permanentemente ${names[0] ?? "este producto"}? Esta acción no se puede deshacer.`
+          : `¿Eliminar permanentemente ${productIds.length} productos? Esta acción no se puede deshacer.`,
+      ),
+    );
+    if (!confirmed) return;
+    setError("");
+    try {
+      setProductDeleteBusy(true);
+      const result = await api.deleteClientProducts(clientEditor.id, productIds);
+      setClientProducts((current) => current.filter((product) => !productIds.includes(product.id)));
+      setSelectedClientProductIds([]);
+      if (clientProductEditingId && productIds.includes(clientProductEditingId)) {
+        setClientProductEditingId(null);
+        setClientProductImage(null);
+        setClientProductDraft(emptyProductForm());
+      }
+      setNotice(
+        result.deleted === 1
+          ? tr("Product permanently deleted.", "Producto eliminado permanentemente.")
+          : tr(
+              `${result.deleted} products permanently deleted.`,
+              `${result.deleted} productos eliminados permanentemente.`,
+            ),
+      );
+    } catch {
+      setError(tr("Product deletion failed", "No se pudieron eliminar los productos"));
+    } finally {
+      setProductDeleteBusy(false);
+    }
+  };
   const openNewProduct = () => {
     setEditingProductId(null);
     setProductImage(null);
@@ -840,6 +886,45 @@ function Admin() {
     setProductModal(false);
     setNotice(tr("Product archived.", "Se archivó el producto."));
     await load();
+  };
+  const deleteManagedProducts = async (productIds = selectedProductIds) => {
+    if (!productIds.length) return;
+    const names = managedProducts
+      .filter((product) => productIds.includes(product.id))
+      .map((product) => product.name);
+    const confirmed = window.confirm(
+      tr(
+        productIds.length === 1
+          ? `Permanently delete ${names[0] ?? "this product"}? This cannot be undone.`
+          : `Permanently delete ${productIds.length} products? This cannot be undone.`,
+        productIds.length === 1
+          ? `¿Eliminar permanentemente ${names[0] ?? "este producto"}? Esta acción no se puede deshacer.`
+          : `¿Eliminar permanentemente ${productIds.length} productos? Esta acción no se puede deshacer.`,
+      ),
+    );
+    if (!confirmed) return;
+    setError("");
+    try {
+      setProductDeleteBusy(true);
+      const result = await api.deleteProducts(productIds);
+      setManagedProducts((current) =>
+        current.filter((product) => !productIds.includes(product.id)),
+      );
+      setSelectedProductIds([]);
+      if (editingProductId && productIds.includes(editingProductId)) setProductModal(false);
+      setNotice(
+        result.deleted === 1
+          ? tr("Product permanently deleted.", "Producto eliminado permanentemente.")
+          : tr(
+              `${result.deleted} products permanently deleted.`,
+              `${result.deleted} productos eliminados permanentemente.`,
+            ),
+      );
+    } catch {
+      setError(tr("Product deletion failed", "No se pudieron eliminar los productos"));
+    } finally {
+      setProductDeleteBusy(false);
+    }
   };
   const emptyRewardForm = (): RewardDraft => ({
     name: "",
@@ -1649,6 +1734,36 @@ function Admin() {
                   <Plus /> {tr("Add product", "Agregar producto")}
                 </button>
               </div>
+              {managedProducts.length > 0 && user.role === "owner" && (
+                <div className="product-bulk-actions">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={selectedProductIds.length === managedProducts.length}
+                      onChange={(event) =>
+                        setSelectedProductIds(
+                          event.target.checked ? managedProducts.map((product) => product.id) : [],
+                        )
+                      }
+                    />
+                    <span>{tr("Select all products", "Seleccionar todos los productos")}</span>
+                  </label>
+                  <button
+                    type="button"
+                    className="danger-button"
+                    disabled={!selectedProductIds.length || productDeleteBusy}
+                    onClick={() => void deleteManagedProducts()}
+                  >
+                    <Trash2 size={16} />
+                    {selectedProductIds.length
+                      ? tr(
+                          `Delete selected (${selectedProductIds.length})`,
+                          `Eliminar seleccionados (${selectedProductIds.length})`,
+                        )
+                      : tr("Delete selected", "Eliminar seleccionados")}
+                  </button>
+                </div>
+              )}
               <div className="product-grid admin-product-grid">
                 {managedProducts.map((product) => (
                   <article
@@ -1663,6 +1778,22 @@ function Admin() {
                       </span>
                     )}
                     <div>
+                      {user.role === "owner" && (
+                        <label className="product-select">
+                          <input
+                            type="checkbox"
+                            checked={selectedProductIds.includes(product.id)}
+                            onChange={(event) =>
+                              setSelectedProductIds((current) =>
+                                event.target.checked
+                                  ? [...current, product.id]
+                                  : current.filter((id) => id !== product.id),
+                              )
+                            }
+                          />
+                          <span>{tr("Select product", "Seleccionar producto")}</span>
+                        </label>
+                      )}
                       {product.category && <small>{product.category}</small>}
                       <h3>{product.name}</h3>
                       <p>{product.description}</p>
@@ -1690,13 +1821,25 @@ function Admin() {
                           {tr("Reward value not set", "Valor de recompensa sin configurar")}
                         </small>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => openProduct(product)}
-                        disabled={Boolean(product.archivedAt)}
-                      >
-                        <Pencil size={16} /> {tr("Edit product", "Editar producto")}
-                      </button>
+                      <div className="product-card-actions">
+                        <button
+                          type="button"
+                          onClick={() => openProduct(product)}
+                          disabled={Boolean(product.archivedAt)}
+                        >
+                          <Pencil size={16} /> {tr("Edit product", "Editar producto")}
+                        </button>
+                        {user.role === "owner" && (
+                          <button
+                            type="button"
+                            className="product-delete-action"
+                            disabled={productDeleteBusy}
+                            onClick={() => void deleteManagedProducts([product.id])}
+                          >
+                            <Trash2 size={16} /> {tr("Delete product", "Eliminar producto")}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </article>
                 ))}
@@ -2304,31 +2447,87 @@ function Admin() {
                   {tr("Member-facing product catalog", "Catálogo de productos para miembros")}
                 </h3>
               </div>
-              <div className="client-reward-list">
-                {clientProducts.map((product) => (
+              {clientProducts.length > 0 && (
+                <div className="product-bulk-actions client-product-bulk-actions">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={selectedClientProductIds.length === clientProducts.length}
+                      onChange={(event) =>
+                        setSelectedClientProductIds(
+                          event.target.checked ? clientProducts.map((product) => product.id) : [],
+                        )
+                      }
+                    />
+                    <span>{tr("Select all products", "Seleccionar todos los productos")}</span>
+                  </label>
                   <button
                     type="button"
-                    key={product.id}
-                    onClick={() => editClientProduct(product)}
-                    disabled={Boolean(product.archivedAt)}
+                    className="danger-button"
+                    disabled={!selectedClientProductIds.length || productDeleteBusy}
+                    onClick={() => void deleteSelectedClientProducts()}
                   >
-                    <span>
-                      <strong>{product.name}</strong>
-                      <small>
-                        {(clientEditor.loyaltyMode === "visits"
-                          ? (product.visitsCost ?? 0)
-                          : product.pointsCost) > 0
-                          ? `${formatNumber(clientEditor.loyaltyMode === "visits" ? (product.visitsCost ?? 0) : product.pointsCost)} ${clientEditor.loyaltyMode === "visits" ? tr("visits", "visitas") : tr("points", "puntos")}`
-                          : tr("Reward value not set", "Valor de recompensa sin configurar")}
-                      </small>
-                    </span>
-                    <span className={`client-status ${product.active ? "active" : "invited"}`}>
-                      {localizeStatus(
-                        product.archivedAt ? "archived" : product.active ? "active" : "hidden",
-                        tr,
-                      )}
-                    </span>
+                    <Trash2 size={16} />
+                    {selectedClientProductIds.length
+                      ? tr(
+                          `Delete selected (${selectedClientProductIds.length})`,
+                          `Eliminar seleccionados (${selectedClientProductIds.length})`,
+                        )
+                      : tr("Delete selected", "Eliminar seleccionados")}
                   </button>
+                </div>
+              )}
+              <div className="client-reward-list">
+                {clientProducts.map((product) => (
+                  <div className="client-product-row" key={product.id}>
+                    <label className="product-select client-product-select">
+                      <input
+                        type="checkbox"
+                        checked={selectedClientProductIds.includes(product.id)}
+                        onChange={(event) =>
+                          setSelectedClientProductIds((current) =>
+                            event.target.checked
+                              ? [...current, product.id]
+                              : current.filter((id) => id !== product.id),
+                          )
+                        }
+                      />
+                      <span className="sr-only">
+                        {tr(`Select ${product.name}`, `Seleccionar ${product.name}`)}
+                      </span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => editClientProduct(product)}
+                      disabled={Boolean(product.archivedAt)}
+                    >
+                      <span>
+                        <strong>{product.name}</strong>
+                        <small>
+                          {(clientEditor.loyaltyMode === "visits"
+                            ? (product.visitsCost ?? 0)
+                            : product.pointsCost) > 0
+                            ? `${formatNumber(clientEditor.loyaltyMode === "visits" ? (product.visitsCost ?? 0) : product.pointsCost)} ${clientEditor.loyaltyMode === "visits" ? tr("visits", "visitas") : tr("points", "puntos")}`
+                            : tr("Reward value not set", "Valor de recompensa sin configurar")}
+                        </small>
+                      </span>
+                      <span className={`client-status ${product.active ? "active" : "invited"}`}>
+                        {localizeStatus(
+                          product.archivedAt ? "archived" : product.active ? "active" : "hidden",
+                          tr,
+                        )}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="product-row-delete"
+                      disabled={productDeleteBusy}
+                      onClick={() => void deleteSelectedClientProducts([product.id])}
+                      aria-label={tr(`Delete ${product.name}`, `Eliminar ${product.name}`)}
+                    >
+                      <Trash2 size={17} />
+                    </button>
+                  </div>
                 ))}
               </div>
               <button
@@ -2350,6 +2549,12 @@ function Admin() {
                 onSubmit={saveClientProduct}
                 editing={Boolean(clientProductEditingId)}
                 onArchive={archiveSelectedClientProduct}
+                onDelete={() =>
+                  clientProductEditingId
+                    ? deleteSelectedClientProducts([clientProductEditingId])
+                    : Promise.resolve()
+                }
+                deleteBusy={productDeleteBusy}
                 loyaltyMode={clientEditor.loyaltyMode}
               />
             </div>
@@ -2742,6 +2947,10 @@ function Admin() {
               onSubmit={submitProduct}
               editing={Boolean(editingProductId)}
               onArchive={archiveCurrentProduct}
+              onDelete={() =>
+                editingProductId ? deleteManagedProducts([editingProductId]) : Promise.resolve()
+              }
+              deleteBusy={productDeleteBusy}
               loyaltyMode={data.business.loyalty_mode}
             />
           </div>
@@ -3139,6 +3348,8 @@ function ProductEditorFields({
   onSubmit,
   editing,
   onArchive,
+  onDelete,
+  deleteBusy = false,
   loyaltyMode = "points",
 }: {
   draft: ProductDraft;
@@ -3149,6 +3360,8 @@ function ProductEditorFields({
   onSubmit: (event: FormEvent) => void | Promise<void>;
   editing: boolean;
   onArchive: () => void | Promise<void>;
+  onDelete: () => void | Promise<void>;
+  deleteBusy?: boolean;
   loyaltyMode?: "points" | "visits";
 }) {
   const selectedImagePreview = useMemo(
@@ -3297,9 +3510,19 @@ function ProductEditorFields({
       </label>
       <div className="reward-editor-actions">
         {editing && (
-          <button type="button" className="danger-button" onClick={() => void onArchive()}>
-            {tr("Archive", "Archivar")}
-          </button>
+          <>
+            <button type="button" className="danger-button" onClick={() => void onArchive()}>
+              {tr("Archive", "Archivar")}
+            </button>
+            <button
+              type="button"
+              className="danger-button permanent-delete-button"
+              disabled={deleteBusy}
+              onClick={() => void onDelete()}
+            >
+              <Trash2 size={16} /> {tr("Delete permanently", "Eliminar permanentemente")}
+            </button>
+          </>
         )}
         <button className="admin-primary">
           {editing

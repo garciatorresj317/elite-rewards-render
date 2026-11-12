@@ -60,6 +60,8 @@ import {
   archiveProduct,
   createClientProduct,
   createProduct,
+  deleteClientProducts,
+  deleteProducts,
   getManagedClientProductImage,
   getManagedProductImage,
   getProductImage,
@@ -194,6 +196,16 @@ export function productInput(payload: Record<string, unknown>) {
     purchaseUrl: optionalHttpsUrl(payload["purchaseUrl"], "Purchase link"),
     active: payload["active"],
   };
+}
+
+function productIdsInput(payload: Record<string, unknown>): string[] {
+  const values = payload["productIds"];
+  if (!Array.isArray(values) || !values.length || values.length > 100)
+    throw Object.assign(new Error("Choose between 1 and 100 products"), { status: 400 });
+  const productIds = values.map((value) => text(value, "Product", 8, 120));
+  if (new Set(productIds).size !== productIds.length)
+    throw Object.assign(new Error("Duplicate products are not allowed"), { status: 400 });
+  return productIds;
 }
 
 function safeEqual(left: string, right: string): boolean {
@@ -682,6 +694,24 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
         201,
       );
     }
+    const clientProductDeleteMatch = url.pathname.match(
+      /^\/api\/admin\/clients\/([^/]+)\/products\/delete$/,
+    );
+    if (clientProductDeleteMatch && request.method === "POST") {
+      requirePlatformAdmin(user);
+      const businessId = text(
+        decodeURIComponent(clientProductDeleteMatch[1] ?? ""),
+        "Client",
+        8,
+        120,
+      );
+      const deleted = await deleteClientProducts(
+        user,
+        businessId,
+        productIdsInput(await body(request)),
+      );
+      return json({ ok: true, deleted });
+    }
     const clientProductMatch = url.pathname.match(
       /^\/api\/admin\/clients\/([^/]+)\/products\/([^/]+)$/,
     );
@@ -828,6 +858,11 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
     if (url.pathname === "/api/admin/products" && request.method === "POST") {
       requireRole(user, ["owner"]);
       return json({ product: await createProduct(user, productInput(await body(request))) }, 201);
+    }
+    if (url.pathname === "/api/admin/products/delete" && request.method === "POST") {
+      requireRole(user, ["owner"]);
+      const deleted = await deleteProducts(user, productIdsInput(await body(request)));
+      return json({ ok: true, deleted });
     }
     const productMatch = url.pathname.match(/^\/api\/admin\/products\/([^/]+)$/);
     if (productMatch && request.method === "PUT") {

@@ -77,4 +77,25 @@ describe("client customization placement", () => {
     assert.match(loader, /appearanceResult\.status === "fulfilled"/);
     assert.doesNotMatch(loader, /Client customization failed to load/);
   });
+
+  it("provides confirmed bilingual single and bulk product deletion in both admin workflows", async () => {
+    const [admin, apiClient, service] = await Promise.all([
+      readFile(join(process.cwd(), "src", "routes", "admin.tsx"), "utf8"),
+      readFile(join(process.cwd(), "src", "lib", "api-client.ts"), "utf8"),
+      readFile(join(process.cwd(), "src", "server", "products-service.ts"), "utf8"),
+    ]);
+    assert.match(admin, /Select all products/);
+    assert.match(admin, /Seleccionar todos los productos/);
+    assert.match(admin, /Delete selected/);
+    assert.match(admin, /Eliminar seleccionados/);
+    assert.match(admin, /Delete product/);
+    assert.match(admin, /Eliminar producto/);
+    assert.match(admin, /Delete permanently/);
+    assert.match(admin, /Eliminar permanentemente/);
+    assert.match(admin, /This cannot be undone/);
+    assert.match(apiClient, /deleteClientProducts/);
+    assert.match(apiClient, /deleteProducts/);
+    assert.match(service, /WHERE business_id=\$1 AND id IN/);
+    assert.match(service, /business\.products\.deleted/);
+  });
 });

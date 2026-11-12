@@ -285,6 +285,73 @@ export async function archiveClientProduct(
   return archiveForBusiness(user, businessId, productId);
 }
 
+async function deleteForBusiness(
+  user: SessionUser,
+  businessId: string,
+  productIds: string[],
+): Promise<number> {
+  const uniqueProductIds = [...new Set(productIds)];
+  if (!uniqueProductIds.length || uniqueProductIds.length > 100)
+    throw Object.assign(new Error("Choose between 1 and 100 products"), { status: 400 });
+
+  const connection = await getPool().connect();
+  const placeholders = uniqueProductIds.map((_, index) => `$${index + 2}`).join(",");
+  const parameters = [businessId, ...uniqueProductIds];
+  try {
+    await connection.query("BEGIN");
+    const existing = await connection.query<{ id: string; name: string }>(
+      `SELECT id,name FROM business_products
+        WHERE business_id=$1 AND id IN (${placeholders})
+        FOR UPDATE`,
+      parameters,
+    );
+    if (existing.rowCount !== uniqueProductIds.length)
+      throw Object.assign(new Error("One or more products were not found"), { status: 404 });
+
+    await connection.query(
+      `DELETE FROM business_products
+        WHERE business_id=$1 AND id IN (${placeholders})`,
+      parameters,
+    );
+    await connection.query(
+      `INSERT INTO audit_events(id,business_id,actor_user_id,action,target_type,target_id,metadata)
+       VALUES ($1,$2,$3,'business.products.deleted','business_product_batch',$4,$5)`,
+      [
+        id("aud"),
+        businessId,
+        user.id,
+        uniqueProductIds.length === 1 ? uniqueProductIds[0] : "multiple",
+        JSON.stringify({
+          count: uniqueProductIds.length,
+          products: existing.rows.map((item) => ({ id: item.id, name: item.name })),
+        }),
+      ],
+    );
+    await connection.query("COMMIT");
+    return uniqueProductIds.length;
+  } catch (error) {
+    await connection.query("ROLLBACK");
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+export async function deleteProducts(user: SessionUser, productIds: string[]): Promise<number> {
+  requireBusinessOwner(user);
+  return deleteForBusiness(user, user.businessId, productIds);
+}
+
+export async function deleteClientProducts(
+  user: SessionUser,
+  businessId: string,
+  productIds: string[],
+): Promise<number> {
+  requirePlatformAdmin(user);
+  await assertClientBusiness(businessId);
+  return deleteForBusiness(user, businessId, productIds);
+}
+
 function validateProductImage(input: ProductImageInput): void {
   if (!input.data.length || input.data.length > PRODUCT_IMAGE_MAX_BYTES)
     throw Object.assign(

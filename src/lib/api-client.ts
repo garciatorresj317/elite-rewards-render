@@ -175,6 +175,11 @@ export const api = {
       `/api/admin/clients/${encodeURIComponent(businessId)}/products/${encodeURIComponent(productId)}`,
       { method: "DELETE", body: "{}" },
     ),
+  deleteClientProducts: (businessId: string, productIds: string[]) =>
+    request<{ ok: boolean; deleted: number }>(
+      `/api/admin/clients/${encodeURIComponent(businessId)}/products/delete`,
+      { method: "POST", body: JSON.stringify({ productIds }) },
+    ),
   loyaltySettings: () => request<LoyaltySettings>("/api/admin/loyalty-settings"),
   updateLoyaltySettings: (loyaltyMode: LoyaltyMode) =>
     request<LoyaltySettings>("/api/admin/loyalty-settings", {
@@ -248,6 +253,11 @@ export const api = {
     request<{ ok: boolean }>(`/api/admin/products/${encodeURIComponent(productId)}`, {
       method: "DELETE",
       body: "{}",
+    }),
+  deleteProducts: (productIds: string[]) =>
+    request<{ ok: boolean; deleted: number }>("/api/admin/products/delete", {
+      method: "POST",
+      body: JSON.stringify({ productIds }),
     }),
   memberInvitation: (token: string) =>
     request<{

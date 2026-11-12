@@ -10,6 +10,8 @@ import {
   archiveClientProduct,
   createClientProduct,
   createProduct,
+  deleteClientProducts,
+  deleteProducts,
   getManagedClientProductImage,
   getManagedProductImage,
   getProductImage,
@@ -207,6 +209,46 @@ describe("tenant product catalogs", () => {
       () => listClientProducts(platformOwner, "biz_platform"),
       /Client not found/,
     );
+  });
+
+  it("permanently deletes one or more products only inside the authorized tenant", async () => {
+    const first = await createProduct(clientOwner, { ...draft, name: "Delete One" });
+    const second = await createProduct(clientOwner, { ...draft, name: "Delete Two" });
+    const other = await createClientProduct(platformOwner, "biz_other", {
+      ...draft,
+      name: "Keep Other Tenant Product",
+    });
+
+    await assert.rejects(() => deleteProducts(otherOwner, [first.id]), /not found/i);
+    assert.equal(await deleteProducts(clientOwner, [first.id, second.id]), 2);
+    assert.equal(
+      (await listManagedProducts(clientOwner)).some((product) =>
+        [first.id, second.id].includes(product.id),
+      ),
+      false,
+    );
+    assert.equal((await listClientProducts(platformOwner, "biz_other"))[0]?.id, other.id);
+
+    const clientProduct = await createClientProduct(platformOwner, "biz_other", {
+      ...draft,
+      name: "Platform Deleted Product",
+    });
+    await assert.rejects(
+      () => deleteClientProducts(clientOwner, "biz_other", [clientProduct.id]),
+      /Platform administrator/,
+    );
+    assert.equal(await deleteClientProducts(platformOwner, "biz_other", [clientProduct.id]), 1);
+    assert.equal(
+      (await listClientProducts(platformOwner, "biz_other")).some(
+        (product) => product.id === clientProduct.id,
+      ),
+      false,
+    );
+
+    const audit = await pool.query<{ metadata: { count: number } }>(
+      "SELECT metadata FROM audit_events WHERE action='business.products.deleted'",
+    );
+    assert.ok(audit.rows.some((row) => Number(row.metadata.count) === 2));
   });
 
   it("enforces product price, points, and visits limits in the database", async () => {
