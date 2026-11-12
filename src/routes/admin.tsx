@@ -231,6 +231,7 @@ function Admin() {
   const [activationPath, setActivationPath] = useState("");
   const [memberModal, setMemberModal] = useState(false);
   const [memberActivationPath, setMemberActivationPath] = useState("");
+  const [memberInvitationBusy, setMemberInvitationBusy] = useState(false);
   const [managedRewards, setManagedRewards] = useState<ManagedReward[]>([]);
   const [managedProducts, setManagedProducts] = useState<ManagedProduct[]>([]);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
@@ -728,6 +729,7 @@ function Admin() {
   const submitMember = async (event: FormEvent) => {
     event.preventDefault();
     setError("");
+    setMemberInvitationBusy(true);
     try {
       const result = await api.createMember(memberForm);
       setMembers((current) => [result.member, ...current]);
@@ -735,7 +737,24 @@ function Admin() {
       setNotice(tr(`${result.member.name} was enrolled.`, `Se inscribió a ${result.member.name}.`));
       setMemberForm({ name: "", email: "" });
     } catch (cause) {
-      setError(tr("Member enrollment failed", "No se pudo inscribir al miembro"));
+      const message = cause instanceof Error ? cause.message : "";
+      if (message === "An account already uses this email")
+        setError(
+          tr(
+            "An account already uses this email.",
+            "Ya existe una cuenta con este correo electrónico.",
+          ),
+        );
+      else if (message === "Another rewards program already invited this email")
+        setError(
+          tr(
+            "Another rewards program already invited this email.",
+            "Otro programa de recompensas ya invitó a este correo electrónico.",
+          ),
+        );
+      else setError(message || tr("Member enrollment failed", "No se pudo inscribir al miembro"));
+    } finally {
+      setMemberInvitationBusy(false);
     }
   };
   const emptyProductForm = (): ProductDraft => ({
@@ -2969,8 +2988,10 @@ function Admin() {
                     }
                   />
                 </label>
-                <button className="admin-primary full">
-                  {tr("Create member invitation", "Crear invitación de miembro")}
+                <button className="admin-primary full" disabled={memberInvitationBusy}>
+                  {memberInvitationBusy
+                    ? tr("Creating invitation…", "Creando invitación…")
+                    : tr("Create member invitation", "Crear invitación de miembro")}
                 </button>
               </>
             )}

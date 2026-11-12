@@ -202,40 +202,89 @@ export async function createMemberInvitation(
       [locationId, user.businessId],
     );
     if (!location.rowCount) throw Object.assign(new Error("Location not found"), { status: 404 });
-    const existing = await client.query(
-      `SELECT 1 FROM users WHERE lower(email) = lower($1)
-       UNION ALL
-       SELECT 1 FROM member_invitations
-        WHERE lower(member_email) = lower($1) AND accepted_at IS NULL AND expires_at > now()
-       LIMIT 1`,
+    // Expired invitations still satisfy the database's pending-email unique index. Remove them
+    // before issuing a replacement so an expired link cannot turn a valid enrollment into a 500.
+    await client.query(
+      `DELETE FROM member_invitations
+        WHERE lower(member_email) = lower($1)
+          AND accepted_at IS NULL
+          AND expires_at <= now()`,
       [input.email],
     );
-    if (existing.rowCount)
-      throw Object.assign(new Error("An active user or invitation already uses this email"), {
+    const existingUser = await client.query(
+      "SELECT 1 FROM users WHERE lower(email) = lower($1) LIMIT 1",
+      [input.email],
+    );
+    if (existingUser.rowCount)
+      throw Object.assign(new Error("An account already uses this email"), { status: 409 });
+
+    const pendingInvitation = await client.query<{ id: string; business_id: string }>(
+      `SELECT id, business_id
+         FROM member_invitations
+        WHERE lower(member_email) = lower($1)
+          AND accepted_at IS NULL
+          AND expires_at > now()
+        FOR UPDATE`,
+      [input.email],
+    );
+    const pending = pendingInvitation.rows[0];
+    if (pending && pending.business_id !== user.businessId)
+      throw Object.assign(new Error("Another rewards program already invited this email"), {
         status: 409,
       });
-    await client.query(
-      `INSERT INTO member_invitations(id,business_id,location_id,member_name,member_email,token_hash,expires_at,created_by_user_id)
-       VALUES ($1,$2,$3,$4,$5,$6,now() + interval '${invitationLifetimeHours} hours',$7)`,
-      [
-        invitationId,
-        user.businessId,
-        locationId,
-        input.name,
-        input.email,
-        tokenHash(invitationToken),
-        user.id,
-      ],
-    );
+
+    const savedInvitationId = pending?.id ?? invitationId;
+    if (pending) {
+      await client.query(
+        `UPDATE member_invitations
+            SET location_id = $2,
+                member_name = $3,
+                member_email = $4,
+                token_hash = $5,
+                expires_at = now() + interval '${invitationLifetimeHours} hours',
+                created_by_user_id = $6,
+                created_at = now()
+          WHERE id = $1`,
+        [
+          savedInvitationId,
+          locationId,
+          input.name,
+          input.email,
+          tokenHash(invitationToken),
+          user.id,
+        ],
+      );
+    } else {
+      await client.query(
+        `INSERT INTO member_invitations(id,business_id,location_id,member_name,member_email,token_hash,expires_at,created_by_user_id)
+         VALUES ($1,$2,$3,$4,$5,$6,now() + interval '${invitationLifetimeHours} hours',$7)`,
+        [
+          savedInvitationId,
+          user.businessId,
+          locationId,
+          input.name,
+          input.email,
+          tokenHash(invitationToken),
+          user.id,
+        ],
+      );
+    }
     await client.query(
       `INSERT INTO audit_events(id,business_id,actor_user_id,action,target_type,target_id,metadata)
-       VALUES ($1,$2,$3,'member.invited','member_invitation',$4,$5)`,
-      [id("aud"), user.businessId, user.id, invitationId, JSON.stringify({ email: input.email })],
+       VALUES ($1,$2,$3,$4,'member_invitation',$5,$6)`,
+      [
+        id("aud"),
+        user.businessId,
+        user.id,
+        pending ? "member.invitation_reissued" : "member.invited",
+        savedInvitationId,
+        JSON.stringify({ email: input.email }),
+      ],
     );
     await client.query("COMMIT");
     return {
       member: {
-        id: invitationId,
+        id: savedInvitationId,
         name: input.name,
         email: input.email,
         memberCode: null,

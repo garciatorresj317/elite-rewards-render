@@ -124,6 +124,70 @@ describe("member enrollment", () => {
     );
   });
 
+  it("reissues a current invitation for the same business and invalidates the old link", async () => {
+    const first = await createMemberInvitation(owner, {
+      name: "Current Invite",
+      email: "reissue@example.com",
+    });
+    const oldToken = new URL(`https://elite.test${first.activationPath}`).searchParams.get("token");
+    assert.ok(oldToken);
+
+    const replacement = await createMemberInvitation(owner, {
+      name: "Updated Invite",
+      email: "REISSUE@example.com",
+    });
+    const newToken = new URL(`https://elite.test${replacement.activationPath}`).searchParams.get(
+      "token",
+    );
+    assert.ok(newToken);
+    assert.equal(replacement.member.id, first.member.id);
+    await assert.rejects(() => getMemberInvitation(oldToken), /invalid or expired/);
+    assert.equal((await getMemberInvitation(newToken)).memberName, "Updated Invite");
+    const invitations = await pool.query(
+      "SELECT count(*)::int AS count FROM member_invitations WHERE lower(member_email) = 'reissue@example.com' AND accepted_at IS NULL",
+    );
+    assert.equal(Number(invitations.rows[0]?.count), 1);
+  });
+
+  it("replaces an expired invitation instead of failing the pending-email unique index", async () => {
+    const expired = await createMemberInvitation(owner, {
+      name: "Expired Invite",
+      email: "expired@example.com",
+    });
+    await pool.query(
+      "UPDATE member_invitations SET expires_at = now() - interval '1 hour' WHERE id = $1",
+      [expired.member.id],
+    );
+
+    const replacement = await createMemberInvitation(owner, {
+      name: "Replacement Invite",
+      email: "expired@example.com",
+    });
+    assert.notEqual(replacement.member.id, expired.member.id);
+    const invitations = await pool.query(
+      "SELECT id FROM member_invitations WHERE lower(member_email) = 'expired@example.com'",
+    );
+    assert.deepEqual(
+      invitations.rows.map((row) => row.id),
+      [replacement.member.id],
+    );
+  });
+
+  it("does not let another business replace a current invitation", async () => {
+    await createMemberInvitation(owner, {
+      name: "First Business Invite",
+      email: "pending-elsewhere@example.com",
+    });
+    await assert.rejects(
+      () =>
+        createMemberInvitation(otherOwner, {
+          name: "Other Business Invite",
+          email: "pending-elsewhere@example.com",
+        }),
+      /Another rewards program already invited this email/,
+    );
+  });
+
   it("rejects a location outside the business", async () => {
     await assert.rejects(
       () =>
