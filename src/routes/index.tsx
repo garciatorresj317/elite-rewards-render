@@ -252,6 +252,9 @@ function Home() {
         <div className="site-footer-copy">
           <p>{t("Thoughtful loyalty tools for growing businesses.")}</p>
           <p>{t("Trade Marked and Registered LLC")}</p>
+          <p className="site-footer-contact">
+            {t("Interested? Contact Mike at")} <a href="tel:+14074051726">407-405-1726</a>
+          </p>
         </div>
         <span>© 2026 Elite Rewards</span>
       </footer>

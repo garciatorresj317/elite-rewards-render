@@ -118,6 +118,18 @@ describe("user-friendly experience regression coverage", () => {
     );
   });
 
+  it("shows Mike's tap-to-call contact beneath the How It Works footer details", async () => {
+    const [home, i18n] = await Promise.all([
+      source("routes", "index.tsx"),
+      source("i18n", "index.tsx"),
+    ]);
+    assert.match(
+      home,
+      /Trade Marked and Registered LLC[\s\S]*Interested\? Contact Mike at[\s\S]*href="tel:\+14074051726"[\s\S]*407-405-1726/,
+    );
+    assert.match(i18n, /"Interested\? Contact Mike at": "¿Te interesa\? Comunícate con Mike al"/);
+  });
+
   it("details branding, loyalty modes, referrals, and team benefits on How It Works", async () => {
     const [home, i18n] = await Promise.all([
       source("routes", "index.tsx"),
