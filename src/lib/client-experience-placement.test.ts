@@ -111,6 +111,7 @@ describe("client customization placement", () => {
     assert.match(admin, /client page and member wallets/);
     assert.match(admin, /clientOnly: true/);
     assert.match(admin, /!section\.clientOnly \|\| !user\.platformAdmin/);
+    assert.match(admin, /!user\.platformAdmin && \(\s*<section\s*className="quick-actions"/);
     assert.match(database, /017_repair_platform_product_tenant\.sql/);
     assert.match(repairMigration, /business\.product\.tenant\.repaired/);
     assert.match(repairMigration, /biz_18fedc53-78d9-46bc-a8b0-8eb375154399/);
