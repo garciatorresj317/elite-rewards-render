@@ -159,15 +159,15 @@ function optionalHttpsUrl(value: unknown, name: string): string | null {
   return parsed.toString();
 }
 
-function productInput(payload: Record<string, unknown>) {
+export function productInput(payload: Record<string, unknown>) {
   if (typeof payload["active"] !== "boolean")
     throw Object.assign(new Error("Active status is required"), { status: 400 });
   return {
     name: text(payload["name"], "Product name", 2, 120),
     description: text(payload["description"] ?? "", "Description", 0, 1000),
     category: text(payload["category"] ?? "", "Category", 0, 80),
-    priceCents: integer(payload["priceCents"], "Price", 0, 100_000_000),
-    pointsCost: integer(payload["pointsCost"], "Points", 1, 1_000_000),
+    priceCents: integer(payload["priceCents"], "Price", 0, 9_999_900),
+    pointsCost: integer(payload["pointsCost"], "Points", 0, 99_999),
     visitsCost: integer(payload["visitsCost"], "Visits", 1, 1_000_000),
     imageUrl: optionalHttpsUrl(payload["imageUrl"], "Product image"),
     purchaseUrl: optionalHttpsUrl(payload["purchaseUrl"], "Purchase link"),

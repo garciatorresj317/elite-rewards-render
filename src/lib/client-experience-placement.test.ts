@@ -43,6 +43,11 @@ describe("client customization placement", () => {
     assert.match(admin, /Choose product image from files/);
     assert.match(admin, /Elegir imagen del producto desde archivos/);
     assert.match(admin, /accept="image\/png,image\/jpeg,image\/webp"/);
+    assert.match(admin, /Price \(\$0–\$99,999\)/);
+    assert.match(admin, /Points \(0–99,999\)/);
+    assert.match(admin, /max="99999"/);
+    assert.doesNotMatch(admin, /Product image URL/);
+    assert.match(admin, /Product details were saved, but the image upload failed/);
     assert.match(admin, /loyaltyMode === "visits" \? draft\.visitsCost : draft\.pointsCost/);
     assert.match(admin, /Choose points or visits/);
     assert.match(admin, /Use visits/);

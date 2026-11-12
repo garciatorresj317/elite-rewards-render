@@ -33,7 +33,12 @@ import { BusinessBrand } from "@/components/BusinessBrand";
 import { ExperienceBackdrop } from "@/components/ExperienceTheme";
 import { useI18n } from "@/i18n";
 import { themeCatalog } from "@/lib/theme-catalog";
-import { CLIENT_LOGO_MAX_BYTES, CLIENT_LOGO_MAX_MEGABYTES } from "@/lib/upload-limits";
+import {
+  CLIENT_LOGO_MAX_BYTES,
+  CLIENT_LOGO_MAX_MEGABYTES,
+  PRODUCT_IMAGE_MAX_BYTES,
+  PRODUCT_IMAGE_MAX_MEGABYTES,
+} from "@/lib/upload-limits";
 import {
   api,
   type ClientBrandingDraft,
@@ -707,10 +712,12 @@ function Admin() {
     event.preventDefault();
     if (!clientEditor) return;
     setError("");
+    let savedProductId: string | null = null;
     try {
       const saved = clientProductEditingId
         ? await api.updateClientProduct(clientEditor.id, clientProductEditingId, clientProductDraft)
         : await api.createClientProduct(clientEditor.id, clientProductDraft);
+      savedProductId = saved.product.id;
       if (clientProductImage)
         await api.uploadClientProductImage(clientEditor.id, saved.product.id, clientProductImage);
       setClientProducts((await api.clientProducts(clientEditor.id)).products);
@@ -721,7 +728,18 @@ function Admin() {
         tr("Client product catalog updated.", "Se actualizó el catálogo de productos del cliente."),
       );
     } catch {
-      setError(tr("Client product update failed", "No se pudo actualizar el producto del cliente"));
+      setError(
+        savedProductId && clientProductImage
+          ? tr(
+              "Product details were saved, but the image upload failed. Try the image again.",
+              "Los datos del producto se guardaron, pero falló la carga de la imagen. Intenta cargarla de nuevo.",
+            )
+          : tr("Client product update failed", "No se pudo actualizar el producto del cliente"),
+      );
+      if (savedProductId) {
+        setClientProductEditingId(savedProductId);
+        setClientProducts((await api.clientProducts(clientEditor.id)).products);
+      }
     }
   };
   const editClientProduct = (product: ManagedProduct) => {
@@ -773,10 +791,12 @@ function Admin() {
   const submitProduct = async (event: FormEvent) => {
     event.preventDefault();
     setError("");
+    let savedProductId: string | null = null;
     try {
       const saved = editingProductId
         ? await api.updateProduct(editingProductId, productForm)
         : await api.createProduct(productForm);
+      savedProductId = saved.product.id;
       if (productImage) await api.uploadProductImage(saved.product.id, productImage);
       setProductModal(false);
       setNotice(
@@ -787,7 +807,18 @@ function Admin() {
       );
       await load();
     } catch {
-      setError(tr("Product update failed", "No se pudo actualizar el producto"));
+      setError(
+        savedProductId && productImage
+          ? tr(
+              "Product details were saved, but the image upload failed. Try the image again.",
+              "Los datos del producto se guardaron, pero falló la carga de la imagen. Intenta cargarla de nuevo.",
+            )
+          : tr("Product update failed", "No se pudo actualizar el producto"),
+      );
+      if (savedProductId) {
+        setEditingProductId(savedProductId);
+        await load();
+      }
     }
   };
   const archiveCurrentProduct = async () => {
@@ -3094,6 +3125,16 @@ function ProductEditorFields({
   onArchive: () => void | Promise<void>;
   loyaltyMode?: "points" | "visits";
 }) {
+  const selectedImagePreview = useMemo(
+    () => (imageFile ? URL.createObjectURL(imageFile) : null),
+    [imageFile],
+  );
+  useEffect(
+    () => () => {
+      if (selectedImagePreview) URL.revokeObjectURL(selectedImagePreview);
+    },
+    [selectedImagePreview],
+  );
   return (
     <form className="client-reward-form product-editor-form" onSubmit={onSubmit}>
       <label>
@@ -3124,36 +3165,51 @@ function ProductEditorFields({
           />
         </label>
         <label>
-          {tr("Price", "Precio")}
+          {tr("Price ($0–$99,999)", "Precio ($0–$99,999)")}
           <input
             type="number"
             min="0"
-            max="1000000"
+            max="99999"
             step="0.01"
             value={draft.priceCents / 100}
             onChange={(event) =>
               setDraft({
                 ...draft,
-                priceCents: Math.max(0, Math.round(Number(event.target.value) * 100)),
+                priceCents: Math.min(
+                  9_999_900,
+                  Math.max(0, Math.round(Number(event.target.value) * 100)),
+                ),
               })
             }
           />
         </label>
         <label>
-          {loyaltyMode === "visits" ? tr("Visits", "Visitas") : tr("Points", "Puntos")}
+          {loyaltyMode === "visits"
+            ? tr("Visits", "Visitas")
+            : tr("Points (0–99,999)", "Puntos (0–99,999)")}
           <input
             required
             type="number"
-            min="1"
-            max="1000000"
+            min={loyaltyMode === "visits" ? 1 : 0}
+            max={loyaltyMode === "visits" ? 1_000_000 : 99_999}
             step="1"
             value={loyaltyMode === "visits" ? draft.visitsCost : draft.pointsCost}
             onChange={(event) =>
               setDraft({
                 ...draft,
                 ...(loyaltyMode === "visits"
-                  ? { visitsCost: Math.max(1, Math.round(Number(event.target.value))) }
-                  : { pointsCost: Math.max(1, Math.round(Number(event.target.value))) }),
+                  ? {
+                      visitsCost: Math.min(
+                        1_000_000,
+                        Math.max(1, Math.round(Number(event.target.value))),
+                      ),
+                    }
+                  : {
+                      pointsCost: Math.min(
+                        99_999,
+                        Math.max(0, Math.round(Number(event.target.value))),
+                      ),
+                    }),
               })
             }
           />
@@ -3164,7 +3220,23 @@ function ProductEditorFields({
         <input
           type="file"
           accept="image/png,image/jpeg,image/webp"
-          onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
+          onChange={(event) => {
+            const file = event.target.files?.[0] ?? null;
+            if (file && file.size > PRODUCT_IMAGE_MAX_BYTES) {
+              event.currentTarget.setCustomValidity(
+                tr(
+                  `Product images must be ${PRODUCT_IMAGE_MAX_MEGABYTES} MB or smaller.`,
+                  `Las imágenes de productos deben tener ${PRODUCT_IMAGE_MAX_MEGABYTES} MB o menos.`,
+                ),
+              );
+              event.currentTarget.reportValidity();
+              event.currentTarget.value = "";
+              setImageFile(null);
+              return;
+            }
+            event.currentTarget.setCustomValidity("");
+            setImageFile(file);
+          }}
         />
         <small>
           {imageFile
@@ -3174,10 +3246,17 @@ function ProductEditorFields({
                   "Current image will remain unless replaced.",
                   "La imagen actual permanecerá salvo que se reemplace.",
                 )
-              : tr("PNG, JPEG, or WebP up to 4 MB.", "PNG, JPEG o WebP de hasta 4 MB.")}
+              : tr(
+                  `PNG, JPEG, or WebP up to ${PRODUCT_IMAGE_MAX_MEGABYTES} MB.`,
+                  `PNG, JPEG o WebP de hasta ${PRODUCT_IMAGE_MAX_MEGABYTES} MB.`,
+                )}
         </small>
-        {draft.imageUrl && !imageFile && (
-          <img className="product-image-preview" src={draft.imageUrl} alt={draft.name} />
+        {(selectedImagePreview || draft.imageUrl) && (
+          <img
+            className="product-image-preview"
+            src={selectedImagePreview ?? draft.imageUrl ?? undefined}
+            alt={draft.name || tr("Selected product", "Producto seleccionado")}
+          />
         )}
       </label>
       <label>

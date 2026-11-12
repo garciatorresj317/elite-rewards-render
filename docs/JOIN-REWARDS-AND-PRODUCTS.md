@@ -20,7 +20,8 @@ Products are intentionally separate from redeemable rewards:
 
 - Business owners manage their catalog under **Admin → Products**.
 - The sole Elite Rewards platform administrator can manage each client’s catalog under **Admin → Clients → Customize client**.
-- Product fields include name, description, category, price, optional HTTPS image/details links, visibility, and archive state.
+- Product fields include name, description, category, a $0–$99,999 price, a 0–99,999 points value, an optional details link, visibility, and archive state.
+- Product images are chosen from local PNG, JPEG, or WebP files up to 4 MB and stored durably in PostgreSQL; existing legacy image links remain visible until replaced.
 - Published products appear on the public client/NFC page and the authenticated member page.
 - Products never consume points, decrement reward inventory, or enter the rewards ledger.
 - Every read and write is tenant-scoped; platform-admin client operations reject the Elite platform tenant.

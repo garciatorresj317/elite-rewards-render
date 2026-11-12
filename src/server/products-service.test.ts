@@ -86,8 +86,12 @@ describe("tenant product catalogs", () => {
       "009_public_enrollment_and_products.sql",
       "010_client_suspension.sql",
       "011_product_images_and_points.sql",
+      "015_product_value_limits.sql",
     ]) {
-      await pool.query(await readFile(join(process.cwd(), "migrations", file), "utf8"));
+      const sql = await readFile(join(process.cwd(), "migrations", file), "utf8");
+      await pool.query(
+        file === "015_product_value_limits.sql" ? sql.replaceAll(" NOT VALID", "") : sql,
+      );
     }
     await pool.query("ALTER TABLE businesses ADD COLUMN logo_url text");
     await pool.query(
@@ -167,5 +171,32 @@ describe("tenant product catalogs", () => {
       () => listClientProducts(platformOwner, "biz_platform"),
       /Client not found/,
     );
+  });
+
+  it("enforces product price, points, and visits limits in the database", async () => {
+    await pool.query(`INSERT INTO business_products(
+      id,business_id,name,description,category,price_cents,points_cost,visits_cost,
+      active,created_by_user_id,updated_by_user_id
+    ) VALUES ('prd_limits','biz_client','Boundary Product','','',9999900,99999,99999,true,'usr_client','usr_client')`);
+    await assert.rejects(
+      () =>
+        pool.query(`INSERT INTO business_products(
+          id,business_id,name,description,category,price_cents,points_cost,visits_cost,
+          active,created_by_user_id,updated_by_user_id
+        ) VALUES ('prd_price_high','biz_client','Price Too High','','',9999901,100,1,true,'usr_client','usr_client')`),
+      /business_products_price_cents_check/,
+    );
+    await assert.rejects(
+      () =>
+        pool.query(`INSERT INTO business_products(
+          id,business_id,name,description,category,price_cents,points_cost,visits_cost,
+          active,created_by_user_id,updated_by_user_id
+        ) VALUES ('prd_points_high','biz_client','Points Too High','','',0,100000,1,true,'usr_client','usr_client')`),
+      /business_products_points_cost_check/,
+    );
+    await pool.query(`INSERT INTO business_products(
+      id,business_id,name,description,category,price_cents,points_cost,visits_cost,
+      active,created_by_user_id,updated_by_user_id
+    ) VALUES ('prd_visits_preserved','biz_client','Visits Preserved','','',0,100,1000000,true,'usr_client','usr_client')`);
   });
 });
