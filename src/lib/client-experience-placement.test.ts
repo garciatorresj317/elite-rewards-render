@@ -103,7 +103,10 @@ describe("client customization placement", () => {
     const [admin, database, repairMigration] = await Promise.all([
       readFile(join(process.cwd(), "src", "routes", "admin.tsx"), "utf8"),
       readFile(join(process.cwd(), "src", "server", "database.ts"), "utf8"),
-      readFile(join(process.cwd(), "migrations", "017_repair_platform_product_tenant.sql"), "utf8"),
+      readFile(
+        join(process.cwd(), "migrations", "018_repair_best_budz_product_visibility.sql"),
+        "utf8",
+      ),
     ]);
     assert.match(admin, /const publishedDraft = \{ \.\.\.clientProductDraft, active: true \}/);
     assert.match(admin, /publishingRequired/);
@@ -112,9 +115,9 @@ describe("client customization placement", () => {
     assert.match(admin, /clientOnly: true/);
     assert.match(admin, /!section\.clientOnly \|\| !user\.platformAdmin/);
     assert.match(admin, /!user\.platformAdmin && \(\s*<section\s*className="quick-actions"/);
-    assert.match(database, /017_repair_platform_product_tenant\.sql/);
-    assert.match(repairMigration, /business\.product\.tenant\.repaired/);
+    assert.match(database, /018_repair_best_budz_product_visibility\.sql/);
+    assert.match(repairMigration, /business\.product\.visibility\.repaired/);
     assert.match(repairMigration, /biz_18fedc53-78d9-46bc-a8b0-8eb375154399/);
-    assert.match(repairMigration, /UPDATE business_products/);
+    assert.match(repairMigration, /archived_at IS NULL/);
   });
 });

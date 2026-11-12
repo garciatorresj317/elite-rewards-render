@@ -13,10 +13,11 @@ async function database(includeBestBudz: boolean) {
   const pool = new adapter.Pool() as unknown as pg.Pool;
   await pool.query(`
     CREATE TABLE businesses (id text PRIMARY KEY);
-    CREATE TABLE platform_state (singleton boolean PRIMARY KEY, business_id text NOT NULL REFERENCES businesses(id));
     CREATE TABLE business_products (
       id text PRIMARY KEY,
       business_id text NOT NULL REFERENCES businesses(id),
+      active boolean NOT NULL DEFAULT true,
+      archived_at timestamptz,
       updated_at timestamptz NOT NULL DEFAULT now()
     );
     CREATE TABLE audit_events (
@@ -29,7 +30,7 @@ async function database(includeBestBudz: boolean) {
       metadata jsonb NOT NULL DEFAULT '{}'::jsonb
     );
     INSERT INTO businesses(id) VALUES ('biz_platform');
-    INSERT INTO platform_state(singleton,business_id) VALUES (true,'biz_platform');
+
   `);
   if (includeBestBudz) await pool.query("INSERT INTO businesses(id) VALUES ($1)", [bestBudzId]);
   return pool;
@@ -38,17 +39,18 @@ async function database(includeBestBudz: boolean) {
 async function applyRepair(pool: pg.Pool) {
   await pool.query(
     await readFile(
-      join(process.cwd(), "migrations", "017_repair_platform_product_tenant.sql"),
+      join(process.cwd(), "migrations", "018_repair_best_budz_product_visibility.sql"),
       "utf8",
     ),
   );
 }
 
-describe("platform product tenant repair", () => {
-  it("moves orphaned platform products into the reported Best Budz customer catalog", async () => {
+describe("Best Budz product visibility repair", () => {
+  it("publishes a hidden current Best Budz product without changing its tenant", async () => {
     const pool = await database(true);
     await pool.query(
-      "INSERT INTO business_products(id,business_id) VALUES ('prd_robot','biz_platform')",
+      "INSERT INTO business_products(id,business_id,active) VALUES ('prd_robot',$1,false)",
+      [bestBudzId],
     );
     await applyRepair(pool);
 
@@ -56,24 +58,41 @@ describe("platform product tenant repair", () => {
       "SELECT business_id FROM business_products WHERE id='prd_robot'",
     );
     assert.equal(product.rows[0]?.business_id, bestBudzId);
+    assert.equal(
+      (
+        await pool.query<{ active: boolean }>(
+          "SELECT active FROM business_products WHERE id='prd_robot'",
+        )
+      ).rows[0]?.active,
+      true,
+    );
     const audit = await pool.query<{ action: string }>(
       "SELECT action FROM audit_events WHERE target_id='prd_robot'",
     );
-    assert.equal(audit.rows[0]?.action, "business.product.tenant.repaired");
+    assert.equal(audit.rows[0]?.action, "business.product.visibility.repaired");
     await pool.end();
   });
 
-  it("does not move data when the reported Best Budz tenant is absent", async () => {
-    const pool = await database(false);
+  it("does not publish archived Best Budz products", async () => {
+    const pool = await database(true);
     await pool.query(
-      "INSERT INTO business_products(id,business_id) VALUES ('prd_unassigned','biz_platform')",
+      "INSERT INTO business_products(id,business_id,active,archived_at) VALUES ('prd_archived',$1,false,now())",
+      [bestBudzId],
     );
     await applyRepair(pool);
 
     const product = await pool.query<{ business_id: string }>(
-      "SELECT business_id FROM business_products WHERE id='prd_unassigned'",
+      "SELECT business_id FROM business_products WHERE id='prd_archived'",
     );
-    assert.equal(product.rows[0]?.business_id, "biz_platform");
+    assert.equal(product.rows[0]?.business_id, bestBudzId);
+    assert.equal(
+      (
+        await pool.query<{ active: boolean }>(
+          "SELECT active FROM business_products WHERE id='prd_archived'",
+        )
+      ).rows[0]?.active,
+      false,
+    );
     assert.equal((await pool.query("SELECT id FROM audit_events")).rowCount, 0);
     await pool.end();
   });
