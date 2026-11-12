@@ -98,4 +98,22 @@ describe("client customization placement", () => {
     assert.match(service, /WHERE business_id=\$1 AND id IN/);
     assert.match(service, /business\.products\.deleted/);
   });
+
+  it("publishes Elite-managed client products to the customer and member catalogs", async () => {
+    const [admin, database, repairMigration] = await Promise.all([
+      readFile(join(process.cwd(), "src", "routes", "admin.tsx"), "utf8"),
+      readFile(join(process.cwd(), "src", "server", "database.ts"), "utf8"),
+      readFile(join(process.cwd(), "migrations", "017_repair_platform_product_tenant.sql"), "utf8"),
+    ]);
+    assert.match(admin, /const publishedDraft = \{ \.\.\.clientProductDraft, active: true \}/);
+    assert.match(admin, /publishingRequired/);
+    assert.match(admin, /Published for customers/);
+    assert.match(admin, /client page and member wallets/);
+    assert.match(admin, /clientOnly: true/);
+    assert.match(admin, /!section\.clientOnly \|\| !user\.platformAdmin/);
+    assert.match(database, /017_repair_platform_product_tenant\.sql/);
+    assert.match(repairMigration, /business\.product\.tenant\.repaired/);
+    assert.match(repairMigration, /biz_18fedc53-78d9-46bc-a8b0-8eb375154399/);
+    assert.match(repairMigration, /UPDATE business_products/);
+  });
 });

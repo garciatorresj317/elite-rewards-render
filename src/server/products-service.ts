@@ -137,38 +137,48 @@ async function createForBusiness(
   input: ProductDraft,
 ): Promise<ManagedProduct> {
   const productId = id("prd");
-  const result = await getPool().query(
-    `INSERT INTO business_products(
-       id,business_id,name,description,category,price_cents,points_cost,visits_cost,image_url,purchase_url,active,
-       created_by_user_id,updated_by_user_id
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$12)
-     RETURNING ${fields}`,
-    [
-      productId,
-      businessId,
-      input.name,
-      input.description,
-      input.category,
-      input.priceCents,
-      input.pointsCost,
-      input.visitsCost ?? Math.max(1, Math.ceil(input.pointsCost / 100)),
-      input.imageUrl,
-      input.purchaseUrl,
-      input.active,
-      user.id,
-    ],
-  );
-  await getPool().query(
-    `INSERT INTO audit_events(id,business_id,actor_user_id,action,target_type,target_id,metadata)
-     VALUES ($1,$2,$3,'business.product.created','business_product',$4,$5)`,
-    [id("aud"), businessId, user.id, productId, JSON.stringify({ name: input.name })],
-  );
-  return product(
-    result.rows[0],
-    user.platformAdmin
-      ? (createdProductId) => managedClientProductImagePath(businessId, createdProductId)
-      : managedProductImagePath,
-  );
+  const connection = await getPool().connect();
+  try {
+    await connection.query("BEGIN");
+    const result = await connection.query(
+      `INSERT INTO business_products(
+         id,business_id,name,description,category,price_cents,points_cost,visits_cost,image_url,purchase_url,active,
+         created_by_user_id,updated_by_user_id
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$12)
+       RETURNING ${fields}`,
+      [
+        productId,
+        businessId,
+        input.name,
+        input.description,
+        input.category,
+        input.priceCents,
+        input.pointsCost,
+        input.visitsCost ?? Math.max(1, Math.ceil(input.pointsCost / 100)),
+        input.imageUrl,
+        input.purchaseUrl,
+        input.active,
+        user.id,
+      ],
+    );
+    await connection.query(
+      `INSERT INTO audit_events(id,business_id,actor_user_id,action,target_type,target_id,metadata)
+       VALUES ($1,$2,$3,'business.product.created','business_product',$4,$5)`,
+      [id("aud"), businessId, user.id, productId, JSON.stringify({ name: input.name })],
+    );
+    await connection.query("COMMIT");
+    return product(
+      result.rows[0],
+      user.platformAdmin
+        ? (createdProductId) => managedClientProductImagePath(businessId, createdProductId)
+        : managedProductImagePath,
+    );
+  } catch (error) {
+    await connection.query("ROLLBACK");
+    throw error;
+  } finally {
+    connection.release();
+  }
 }
 
 export async function createProduct(

@@ -70,22 +70,45 @@ const sections = [
     icon: KeyRound,
     platformOnly: true,
   },
-  { id: "Members", en: "Members", es: "Miembros", icon: Users, platformOnly: false },
+  {
+    id: "Members",
+    en: "Members",
+    es: "Miembros",
+    icon: Users,
+    platformOnly: false,
+    clientOnly: true,
+  },
   {
     id: "Transactions",
     en: "Transactions",
     es: "Transacciones",
     icon: ReceiptText,
     platformOnly: false,
+    clientOnly: true,
   },
-  { id: "Rewards", en: "Rewards", es: "Recompensas", icon: Trophy, platformOnly: false },
-  { id: "Products", en: "Products", es: "Productos", icon: PackageOpen, platformOnly: false },
+  {
+    id: "Rewards",
+    en: "Rewards",
+    es: "Recompensas",
+    icon: Trophy,
+    platformOnly: false,
+    clientOnly: true,
+  },
+  {
+    id: "Products",
+    en: "Products",
+    es: "Productos",
+    icon: PackageOpen,
+    platformOnly: false,
+    clientOnly: true,
+  },
   {
     id: "Appearance",
     en: "Appearance",
     es: "Apariencia",
     icon: Palette,
     platformOnly: false,
+    clientOnly: true,
   },
 ] as const;
 
@@ -732,9 +755,10 @@ function Admin() {
     setError("");
     let savedProductId: string | null = null;
     try {
+      const publishedDraft = { ...clientProductDraft, active: true };
       const saved = clientProductEditingId
-        ? await api.updateClientProduct(clientEditor.id, clientProductEditingId, clientProductDraft)
-        : await api.createClientProduct(clientEditor.id, clientProductDraft);
+        ? await api.updateClientProduct(clientEditor.id, clientProductEditingId, publishedDraft)
+        : await api.createClientProduct(clientEditor.id, publishedDraft);
       savedProductId = saved.product.id;
       if (clientProductImage)
         await api.uploadClientProductImage(clientEditor.id, saved.product.id, clientProductImage);
@@ -743,7 +767,10 @@ function Admin() {
       setClientProductImage(null);
       setClientProductDraft(emptyProductForm());
       setNotice(
-        tr("Client product catalog updated.", "Se actualizó el catálogo de productos del cliente."),
+        tr(
+          "Product published to the client page and member wallets.",
+          "Producto publicado en la página del cliente y las billeteras de miembros.",
+        ),
       );
     } catch {
       setError(
@@ -1115,7 +1142,11 @@ function Admin() {
         </div>
         <nav>
           {sections
-            .filter((section) => !section.platformOnly || user.platformAdmin)
+            .filter(
+              (section) =>
+                (!section.platformOnly || user.platformAdmin) &&
+                (!("clientOnly" in section) || !section.clientOnly || !user.platformAdmin),
+            )
             .map(({ id, en, es, icon: Icon }) => (
               <button
                 className={active === id ? "active" : ""}
@@ -2556,6 +2587,7 @@ function Admin() {
                 }
                 deleteBusy={productDeleteBusy}
                 loyaltyMode={clientEditor.loyaltyMode}
+                publishingRequired
               />
             </div>
             <div className="client-reward-manager">
@@ -3351,6 +3383,7 @@ function ProductEditorFields({
   onDelete,
   deleteBusy = false,
   loyaltyMode = "points",
+  publishingRequired = false,
 }: {
   draft: ProductDraft;
   setDraft: (draft: ProductDraft) => void;
@@ -3363,6 +3396,7 @@ function ProductEditorFields({
   onDelete: () => void | Promise<void>;
   deleteBusy?: boolean;
   loyaltyMode?: "points" | "visits";
+  publishingRequired?: boolean;
 }) {
   const selectedImagePreview = useMemo(
     () => (imageFile ? URL.createObjectURL(imageFile) : null),
@@ -3498,16 +3532,31 @@ function ProductEditorFields({
           />
         )}
       </label>
-      <label className="reward-active-check">
-        <input
-          type="checkbox"
-          checked={draft.active}
-          onChange={(event) => setDraft({ ...draft, active: event.target.checked })}
-        />
-        <span>
-          <strong>{tr("Visible to members", "Visible para miembros")}</strong>
-        </span>
-      </label>
+      {publishingRequired ? (
+        <div className="reward-active-check product-publish-assurance">
+          <Check size={18} aria-hidden="true" />
+          <span>
+            <strong>{tr("Published for customers", "Publicado para clientes")}</strong>
+            <small>
+              {tr(
+                "Saving publishes this product on the client page and in member wallets.",
+                "Al guardar, este producto se publica en la página del cliente y en las billeteras de miembros.",
+              )}
+            </small>
+          </span>
+        </div>
+      ) : (
+        <label className="reward-active-check">
+          <input
+            type="checkbox"
+            checked={draft.active}
+            onChange={(event) => setDraft({ ...draft, active: event.target.checked })}
+          />
+          <span>
+            <strong>{tr("Visible to members", "Visible para miembros")}</strong>
+          </span>
+        </label>
+      )}
       <div className="reward-editor-actions">
         {editing && (
           <>

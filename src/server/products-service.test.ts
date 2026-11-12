@@ -211,6 +211,24 @@ describe("tenant product catalogs", () => {
     );
   });
 
+  it("publishes a platform-managed client product to that client's customer catalog only", async () => {
+    const created = await createClientProduct(platformOwner, "biz_other", {
+      ...draft,
+      name: "Best Budz customer product",
+      active: true,
+    });
+
+    assert.ok(
+      (await listPublicProducts("biz_other")).some((item) => item.id === created.id),
+      "the client product should be visible in the matching customer catalog",
+    );
+    assert.equal(
+      (await listPublicProducts("biz_client")).some((item) => item.id === created.id),
+      false,
+      "the client product must not leak into another business catalog",
+    );
+  });
+
   it("permanently deletes one or more products only inside the authorized tenant", async () => {
     const first = await createProduct(clientOwner, { ...draft, name: "Delete One" });
     const second = await createProduct(clientOwner, { ...draft, name: "Delete Two" });
