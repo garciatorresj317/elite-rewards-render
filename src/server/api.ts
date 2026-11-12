@@ -60,6 +60,8 @@ import {
   archiveProduct,
   createClientProduct,
   createProduct,
+  getManagedClientProductImage,
+  getManagedProductImage,
   getProductImage,
   listClientProducts,
   listManagedProducts,
@@ -68,7 +70,7 @@ import {
   updateProductImage,
   updateProduct,
 } from "./products-service.ts";
-import { CLIENT_LOGO_MAX_BYTES } from "../lib/upload-limits.ts";
+import { CLIENT_LOGO_MAX_BYTES, PRODUCT_IMAGE_MAX_BYTES } from "../lib/upload-limits.ts";
 import {
   completePasswordReset,
   getPasswordResetStatus,
@@ -91,6 +93,25 @@ const jsonHeaders = {
 
 function json(body: unknown, status = 200, headers: HeadersInit = {}): Response {
   return new Response(JSON.stringify(body), { status, headers: { ...jsonHeaders, ...headers } });
+}
+
+function productImageResponse(
+  request: Request,
+  image: { mime: string; data: Buffer } | null,
+  cacheControl: string,
+): Response {
+  if (!image) return json({ error: "Product image not found" }, 404);
+  const etag = `"${createHash("sha256").update(image.data).digest("base64url")}"`;
+  if (request.headers.get("if-none-match") === etag)
+    return new Response(null, { status: 304, headers: { etag } });
+  return new Response(new Uint8Array(image.data), {
+    headers: {
+      "content-type": image.mime,
+      "cache-control": cacheControl,
+      etag,
+      "x-content-type-options": "nosniff",
+    },
+  });
 }
 
 async function imageUpload(
@@ -423,19 +444,11 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
         8,
         120,
       );
-      const image = await getProductImage(productId);
-      if (!image) return json({ error: "Product image not found" }, 404);
-      const etag = `"${createHash("sha256").update(image.data).digest("base64url")}"`;
-      if (request.headers.get("if-none-match") === etag)
-        return new Response(null, { status: 304, headers: { etag } });
-      return new Response(new Uint8Array(image.data), {
-        headers: {
-          "content-type": image.mime,
-          "cache-control": "public, max-age=3600, must-revalidate",
-          etag,
-          "x-content-type-options": "nosniff",
-        },
-      });
+      return productImageResponse(
+        request,
+        await getProductImage(productId),
+        "public, max-age=3600, must-revalidate",
+      );
     }
     const user = await getSessionUser(request);
     if (url.pathname === "/api/auth/session" && request.method === "GET") return json({ user });
@@ -714,9 +727,29 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
           user,
           businessId,
           productId,
-          await imageUpload(request, "Product image", 4_194_304),
+          await imageUpload(request, "Product image", PRODUCT_IMAGE_MAX_BYTES),
         ),
       });
+    }
+    if (clientProductImageMatch && request.method === "GET") {
+      requirePlatformAdmin(user);
+      const businessId = text(
+        decodeURIComponent(clientProductImageMatch[1] ?? ""),
+        "Client",
+        8,
+        120,
+      );
+      const productId = text(
+        decodeURIComponent(clientProductImageMatch[2] ?? ""),
+        "Product",
+        8,
+        120,
+      );
+      return productImageResponse(
+        request,
+        await getManagedClientProductImage(user, businessId, productId),
+        "private, no-cache",
+      );
     }
     if (url.pathname === "/api/admin/members" && request.method === "GET") {
       requireRole(user, ["owner", "staff"]);
@@ -818,9 +851,18 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
         product: await updateProductImage(
           user,
           productId,
-          await imageUpload(request, "Product image", 4_194_304),
+          await imageUpload(request, "Product image", PRODUCT_IMAGE_MAX_BYTES),
         ),
       });
+    }
+    if (productImageMatch && request.method === "GET") {
+      requireRole(user, ["owner", "staff"]);
+      const productId = text(decodeURIComponent(productImageMatch[1] ?? ""), "Product", 8, 120);
+      return productImageResponse(
+        request,
+        await getManagedProductImage(user, productId),
+        "private, no-cache",
+      );
     }
     if (url.pathname === "/api/admin/award" && request.method === "POST") {
       requireRole(user, ["owner", "staff"]);

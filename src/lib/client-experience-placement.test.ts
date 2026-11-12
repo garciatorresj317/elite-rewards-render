@@ -34,15 +34,19 @@ describe("client customization placement", () => {
   });
 
   it("keeps product image upload and configurable points or visits controls in both admin product workflows", async () => {
-    const [admin, clientPage, wallet] = await Promise.all([
+    const [admin, clientPage, wallet, uploadLimits] = await Promise.all([
       readFile(join(process.cwd(), "src", "routes", "admin.tsx"), "utf8"),
       readFile(join(process.cwd(), "src", "routes", "clients.$clientId.tsx"), "utf8"),
       readFile(join(process.cwd(), "src", "routes", "wallet.tsx"), "utf8"),
+      readFile(join(process.cwd(), "src", "lib", "upload-limits.ts"), "utf8"),
     ]);
     assert.equal((admin.match(/<ProductEditorFields/g) ?? []).length, 2);
     assert.match(admin, /Choose product image from files/);
     assert.match(admin, /Elegir imagen del producto desde archivos/);
     assert.match(admin, /accept="image\/png,image\/jpeg,image\/webp"/);
+    assert.match(admin, /className="product-image-preview"/);
+    assert.match(admin, /selectedImagePreview \?\? draft\.imageUrl/);
+    assert.match(uploadLimits, /PRODUCT_IMAGE_MAX_MEGABYTES = 10/);
     assert.match(admin, /Price \(\$0–\$99,999\)/);
     assert.match(admin, /Points \(0–99,999\)/);
     assert.match(admin, /max="99999"/);

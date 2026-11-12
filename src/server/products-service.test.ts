@@ -10,6 +10,8 @@ import {
   archiveClientProduct,
   createClientProduct,
   createProduct,
+  getManagedClientProductImage,
+  getManagedProductImage,
   getProductImage,
   listClientProducts,
   listManagedProducts,
@@ -87,6 +89,7 @@ describe("tenant product catalogs", () => {
       "010_client_suspension.sql",
       "011_product_images_and_points.sql",
       "015_product_value_limits.sql",
+      "016_product_image_10mb.sql",
     ]) {
       const sql = await readFile(join(process.cwd(), "migrations", file), "utf8");
       await pool.query(
@@ -142,8 +145,17 @@ describe("tenant product catalogs", () => {
       mime: "image/webp",
       data: webp,
     });
-    assert.equal(imageProduct.imageUrl, `/api/public/products/${created.id}/image`);
+    assert.equal(imageProduct.imageUrl, `/api/admin/products/${created.id}/image`);
     assert.deepEqual(await getProductImage(created.id), { mime: "image/webp", data: webp });
+    assert.deepEqual(await getManagedProductImage(clientOwner, created.id), {
+      mime: "image/webp",
+      data: webp,
+    });
+    assert.deepEqual(await getManagedClientProductImage(platformOwner, "biz_client", created.id), {
+      mime: "image/webp",
+      data: webp,
+    });
+    assert.equal(await getManagedProductImage(otherOwner, created.id), null);
     await assert.rejects(
       () =>
         updateProductImage(otherOwner, created.id, {
@@ -153,6 +165,30 @@ describe("tenant product catalogs", () => {
       /Product not found/,
     );
     await assert.rejects(() => updateProduct(otherOwner, created.id, draft), /Product not found/);
+  });
+
+  it("accepts product images above 4 MB through 10 MB and rejects larger files", async () => {
+    const created = await createProduct(clientOwner, {
+      ...draft,
+      name: "Large Product Image",
+      imageUrl: null,
+    });
+    const largerThanFourMb = Buffer.alloc(4 * 1024 * 1024 + 16, 0x20);
+    largerThanFourMb.write("RIFF", 0, "ascii");
+    largerThanFourMb.write("WEBP", 8, "ascii");
+    const updated = await updateProductImage(clientOwner, created.id, {
+      mime: "image/webp",
+      data: largerThanFourMb,
+    });
+    assert.equal(updated.imageUrl, `/api/admin/products/${created.id}/image`);
+
+    const tooLarge = Buffer.alloc(10 * 1024 * 1024 + 1, 0x20);
+    tooLarge.write("RIFF", 0, "ascii");
+    tooLarge.write("WEBP", 8, "ascii");
+    await assert.rejects(
+      () => updateProductImage(clientOwner, created.id, { mime: "image/webp", data: tooLarge }),
+      /10 MB or smaller/,
+    );
   });
 
   it("lets only the platform administrator manage a client catalog", async () => {

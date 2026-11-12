@@ -1,5 +1,6 @@
 import type { SessionUser } from "./auth.ts";
 import { getPool, id } from "./database.ts";
+import { PRODUCT_IMAGE_MAX_BYTES, PRODUCT_IMAGE_MAX_MEGABYTES } from "../lib/upload-limits.ts";
 
 export type ProductDraft = {
   name: string;
@@ -37,8 +38,12 @@ export type ProductImageInput = {
   data: Buffer;
 };
 
-const productImagePath = (productId: string) =>
+const publicProductImagePath = (productId: string) =>
   `/api/public/products/${encodeURIComponent(productId)}/image`;
+const managedProductImagePath = (productId: string) =>
+  `/api/admin/products/${encodeURIComponent(productId)}/image`;
+const managedClientProductImagePath = (businessId: string, productId: string) =>
+  `/api/admin/clients/${encodeURIComponent(businessId)}/products/${encodeURIComponent(productId)}/image`;
 
 function requireBusinessOwner(user: SessionUser): void {
   if (user.role !== "owner")
@@ -50,22 +55,25 @@ function requirePlatformAdmin(user: SessionUser): void {
     throw Object.assign(new Error("Platform administrator access required"), { status: 403 });
 }
 
-function product(row: {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  price_cents: number;
-  points_cost: number | null;
-  visits_cost: number | null;
-  image_url: string | null;
-  has_image: boolean;
-  purchase_url: string | null;
-  active: boolean;
-  archived_at: Date | null;
-  created_at: Date;
-  updated_at: Date;
-}): ManagedProduct {
+function product(
+  row: {
+    id: string;
+    name: string;
+    description: string;
+    category: string;
+    price_cents: number;
+    points_cost: number | null;
+    visits_cost: number | null;
+    image_url: string | null;
+    has_image: boolean;
+    purchase_url: string | null;
+    active: boolean;
+    archived_at: Date | null;
+    created_at: Date;
+    updated_at: Date;
+  },
+  imagePath: (productId: string) => string = publicProductImagePath,
+): ManagedProduct {
   return {
     id: row.id,
     name: row.name,
@@ -74,7 +82,7 @@ function product(row: {
     priceCents: Number(row.price_cents),
     pointsCost: row.points_cost === null ? 0 : Number(row.points_cost),
     visitsCost: row.visits_cost === null ? 0 : Number(row.visits_cost),
-    imageUrl: row.has_image ? productImagePath(row.id) : row.image_url,
+    imageUrl: row.has_image ? imagePath(row.id) : row.image_url,
     purchaseUrl: row.purchase_url,
     active: row.active,
     archivedAt: row.archived_at?.toISOString() ?? null,
@@ -104,7 +112,7 @@ export async function listManagedProducts(user: SessionUser): Promise<ManagedPro
       WHERE business_id = $1 ORDER BY archived_at NULLS FIRST, created_at DESC, id`,
     [user.businessId],
   );
-  return result.rows.map(product);
+  return result.rows.map((row) => product(row, managedProductImagePath));
 }
 
 export async function listClientProducts(
@@ -118,7 +126,9 @@ export async function listClientProducts(
       WHERE business_id = $1 ORDER BY archived_at NULLS FIRST, created_at DESC, id`,
     [businessId],
   );
-  return result.rows.map(product);
+  return result.rows.map((row) =>
+    product(row, (productId) => managedClientProductImagePath(businessId, productId)),
+  );
 }
 
 async function createForBusiness(
@@ -153,7 +163,12 @@ async function createForBusiness(
      VALUES ($1,$2,$3,'business.product.created','business_product',$4,$5)`,
     [id("aud"), businessId, user.id, productId, JSON.stringify({ name: input.name })],
   );
-  return product(result.rows[0]);
+  return product(
+    result.rows[0],
+    user.platformAdmin
+      ? (createdProductId) => managedClientProductImagePath(businessId, createdProductId)
+      : managedProductImagePath,
+  );
 }
 
 export async function createProduct(
@@ -208,7 +223,12 @@ async function updateForBusiness(
      VALUES ($1,$2,$3,'business.product.updated','business_product',$4,$5)`,
     [id("aud"), businessId, user.id, productId, JSON.stringify({ name: input.name })],
   );
-  return product(row);
+  return product(
+    row,
+    user.platformAdmin
+      ? (updatedProductId) => managedClientProductImagePath(businessId, updatedProductId)
+      : managedProductImagePath,
+  );
 }
 
 export async function updateProduct(
@@ -266,8 +286,11 @@ export async function archiveClientProduct(
 }
 
 function validateProductImage(input: ProductImageInput): void {
-  if (!input.data.length || input.data.length > 4_194_304)
-    throw Object.assign(new Error("Product image must be 4 MB or smaller"), { status: 400 });
+  if (!input.data.length || input.data.length > PRODUCT_IMAGE_MAX_BYTES)
+    throw Object.assign(
+      new Error(`Product image must be ${PRODUCT_IMAGE_MAX_MEGABYTES} MB or smaller`),
+      { status: 400 },
+    );
   const signatures: Record<ProductImageInput["mime"], (data: Buffer) => boolean> = {
     "image/png": (data) => data.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex")),
     "image/jpeg": (data) => data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff,
@@ -308,7 +331,12 @@ async function updateImageForBusiness(
       JSON.stringify({ mime: input.mime, bytes: input.data.length }),
     ],
   );
-  return product(row);
+  return product(
+    row,
+    user.platformAdmin
+      ? (updatedProductId) => managedClientProductImagePath(businessId, updatedProductId)
+      : managedProductImagePath,
+  );
 }
 
 export async function updateProductImage(
@@ -341,6 +369,35 @@ export async function getProductImage(
       WHERE p.id=$1 AND p.active=true AND p.archived_at IS NULL AND b.active=true
         AND b.id<>(SELECT business_id FROM platform_state WHERE singleton=true)`,
     [productId],
+  );
+  const row = result.rows[0];
+  return row?.image_mime && row.image_data ? { mime: row.image_mime, data: row.image_data } : null;
+}
+
+export async function getManagedProductImage(
+  user: SessionUser,
+  productId: string,
+): Promise<{ mime: string; data: Buffer } | null> {
+  if (user.role !== "owner" && user.role !== "staff")
+    throw Object.assign(new Error("Business administrator access required"), { status: 403 });
+  const result = await getPool().query<{ image_mime: string | null; image_data: Buffer | null }>(
+    `SELECT image_mime,image_data FROM business_products WHERE id=$1 AND business_id=$2`,
+    [productId, user.businessId],
+  );
+  const row = result.rows[0];
+  return row?.image_mime && row.image_data ? { mime: row.image_mime, data: row.image_data } : null;
+}
+
+export async function getManagedClientProductImage(
+  user: SessionUser,
+  businessId: string,
+  productId: string,
+): Promise<{ mime: string; data: Buffer } | null> {
+  requirePlatformAdmin(user);
+  await assertClientBusiness(businessId);
+  const result = await getPool().query<{ image_mime: string | null; image_data: Buffer | null }>(
+    `SELECT image_mime,image_data FROM business_products WHERE id=$1 AND business_id=$2`,
+    [productId, businessId],
   );
   const row = result.rows[0];
   return row?.image_mime && row.image_data ? { mime: row.image_mime, data: row.image_data } : null;
