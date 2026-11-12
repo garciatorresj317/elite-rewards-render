@@ -10,6 +10,7 @@ import {
   RefreshCcw,
   Share2,
   Sparkles,
+  Phone,
   Users,
 } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
@@ -252,10 +253,21 @@ function Home() {
         <div className="site-footer-copy">
           <p>{t("Thoughtful loyalty tools for growing businesses.")}</p>
           <p>{t("Trade Marked and Registered LLC")}</p>
-          <p className="site-footer-contact">
-            {t("Interested? Contact Mike at")} <a href="tel:+14074051726">407-405-1726</a>
-          </p>
         </div>
+        <a
+          className="site-footer-contact"
+          href="tel:+14074051726"
+          aria-label={t("Call Mike at 407-405-1726")}
+        >
+          <span className="site-footer-contact-icon" aria-hidden="true">
+            <Phone size={22} />
+          </span>
+          <span>
+            <small>{t("Interested? Contact Mike")}</small>
+            <strong>407-405-1726</strong>
+            <em>{t("Tap to call")}</em>
+          </span>
+        </a>
         <span>© 2026 Elite Rewards</span>
       </footer>
     </div>

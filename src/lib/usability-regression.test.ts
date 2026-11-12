@@ -125,9 +125,10 @@ describe("user-friendly experience regression coverage", () => {
     ]);
     assert.match(
       home,
-      /Trade Marked and Registered LLC[\s\S]*Interested\? Contact Mike at[\s\S]*href="tel:\+14074051726"[\s\S]*407-405-1726/,
+      /Trade Marked and Registered LLC[\s\S]*className="site-footer-contact"[\s\S]*href="tel:\+14074051726"[\s\S]*Interested\? Contact Mike[\s\S]*407-405-1726[\s\S]*Tap to call/,
     );
-    assert.match(i18n, /"Interested\? Contact Mike at": "¿Te interesa\? Comunícate con Mike al"/);
+    assert.match(i18n, /"Interested\? Contact Mike": "¿Te interesa\? Comunícate con Mike"/);
+    assert.match(i18n, /"Tap to call": "Toca para llamar"/);
   });
 
   it("details branding, loyalty modes, referrals, and team benefits on How It Works", async () => {

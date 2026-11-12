@@ -268,16 +268,29 @@ textarea:focus-visible { outline: 3px solid var(--gold-bright); outline-offset: 
 .cta-panel > div { max-width: 760px; }
 .cta-panel p { color: var(--muted); line-height: 1.7; }
 .site-footer {
-  min-height: 135px; border-top: 1px solid var(--gold-line); display: flex; align-items: center; justify-content: space-between; gap: 25px;
-  color: var(--muted-low); font-size: 12px;
+  min-height: 170px; padding-block: 24px; border-top: 1px solid var(--gold-line); display: grid;
+  grid-template-columns: minmax(150px,1fr) minmax(250px,1fr) minmax(280px,1fr) minmax(120px,1fr);
+  align-items: center; gap: 25px; color: var(--muted-low); font-size: 12px;
 }
 .site-footer-copy { display: grid; gap: 6px; text-align: center; }
 .site-footer-copy p { margin: 0; }
-.site-footer-contact a {
-  color: var(--gold); font-weight: 800; text-decoration: none; white-space: nowrap;
+.site-footer-contact {
+  min-height: 92px; padding: 16px 20px; display: flex; align-items: center; gap: 15px; color: var(--cream);
+  text-decoration: none; border: 1px solid rgba(246,185,0,.5); border-radius: 16px;
+  background: radial-gradient(circle at 15% 0, rgba(0,212,255,.13), transparent 36%), linear-gradient(135deg, rgba(246,185,0,.16), rgba(2,8,17,.92));
+  box-shadow: 0 0 28px rgba(246,185,0,.14), inset 0 0 22px rgba(0,212,255,.04);
+  transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
 }
-.site-footer-contact a:hover { text-decoration: underline; }
-.site-footer-contact a:focus-visible { outline: 2px solid var(--cyan); outline-offset: 4px; border-radius: 3px; }
+.site-footer-contact:hover { transform: translateY(-2px); border-color: var(--cyan); box-shadow: 0 0 34px rgba(0,212,255,.16), 0 0 30px rgba(246,185,0,.18); }
+.site-footer-contact:focus-visible { outline: 3px solid var(--cyan); outline-offset: 4px; }
+.site-footer-contact-icon {
+  width: 48px; height: 48px; flex: 0 0 48px; display: grid; place-items: center; color: #02060c;
+  border-radius: 50%; background: var(--gold-gradient); box-shadow: 0 0 20px rgba(246,185,0,.32);
+}
+.site-footer-contact > span:last-child { min-width: 0; display: grid; gap: 3px; }
+.site-footer-contact small { color: var(--gold-pale); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.site-footer-contact strong { color: #fff; font: 800 clamp(22px,2.2vw,30px)/1 var(--serif); letter-spacing: .025em; white-space: nowrap; }
+.site-footer-contact em { color: var(--cyan); font-size: 11px; font-style: normal; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .site-footer .brand-wordmark strong { font-size: 16px; }
 
 /* Member wallet */
@@ -543,7 +556,8 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
   .team-benefits { grid-template-columns: 1fr; }
   .section { padding-top: 80px; }
   .cta-panel { align-items: flex-start; flex-direction: column; padding: 35px 28px; }
-  .site-footer { padding-block: 28px; flex-direction: column; text-align: center; }
+  .site-footer { padding-block: 28px; grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .site-footer-contact { width: min(100%, 420px); text-align: left; }
   .member-summary { grid-template-columns: 1fr; text-align: center; }
   .points-orb { margin-inline: auto; }
   .admin-shell { display: block; }
@@ -1583,6 +1597,8 @@ td { border-color: rgba(0, 184, 255, .12); }
   .trust-strip { padding-inline: 12px; }
   .trust-strip p { letter-spacing: .12em; line-height: 1.5; }
   .site-footer { padding-bottom: 76px; }
+  .site-footer-contact { padding: 15px; }
+  .site-footer-contact strong { font-size: clamp(23px,8vw,29px); }
 
   .wallet-header { gap: 10px; }
   .wallet-header .business-brand { max-width: 56%; }

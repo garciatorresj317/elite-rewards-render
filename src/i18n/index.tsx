@@ -159,7 +159,9 @@ const es: Record<string, Translation> = {
   "Thoughtful loyalty tools for growing businesses.":
     "Herramientas de lealtad bien diseñadas para negocios en crecimiento.",
   "Trade Marked and Registered LLC": "Marca registrada y LLC registrada",
-  "Interested? Contact Mike at": "¿Te interesa? Comunícate con Mike al",
+  "Interested? Contact Mike": "¿Te interesa? Comunícate con Mike",
+  "Call Mike at 407-405-1726": "Llama a Mike al 407-405-1726",
+  "Tap to call": "Toca para llamar",
   "Back to site": "Volver al sitio",
   "Secure access": "Acceso seguro",
   "Use your business or member account. Rewards balances are stored in the production ledger.":
