@@ -42,10 +42,10 @@ describe("user-friendly experience regression coverage", () => {
   it("adds dashboard quick actions and limits transaction search to relevant sections", async () => {
     const admin = await source("routes", "admin.tsx");
     assert.match(admin, /className="quick-actions"/);
-    assert.match(admin, /setActive\("Members"\)/);
-    assert.match(admin, /setActive\("Rewards"\)/);
-    assert.match(admin, /setActive\("Products"\)/);
-    assert.match(admin, /setActive\("Appearance"\)/);
+    assert.match(admin, /setActive\(user\.platformAdmin \? "Clients" : "Members"\)/);
+    assert.match(admin, /setActive\(user\.platformAdmin \? "Clients" : "Rewards"\)/);
+    assert.match(admin, /setActive\(user\.platformAdmin \? "Clients" : "Products"\)/);
+    assert.match(admin, /setActive\(user\.platformAdmin \? "Clients" : "Appearance"\)/);
     assert.match(admin, /active === "Dashboard" \|\| active === "Transactions"/);
     assert.match(admin, /initialLoadFailed/);
   });

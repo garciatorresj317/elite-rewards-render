@@ -114,7 +114,8 @@ describe("client customization placement", () => {
     assert.match(admin, /client page and member wallets/);
     assert.match(admin, /clientOnly: true/);
     assert.match(admin, /!section\.clientOnly \|\| !user\.platformAdmin/);
-    assert.match(admin, /!user\.platformAdmin && \(\s*<section\s*className="quick-actions"/);
+    assert.match(admin, /setActive\(user\.platformAdmin \? "Clients" : "Products"\)/);
+    assert.match(admin, /Choose a client to update its catalog/);
     assert.match(database, /018_repair_best_budz_product_visibility\.sql/);
     assert.match(repairMigration, /business\.product\.visibility\.repaired/);
     assert.match(repairMigration, /biz_18fedc53-78d9-46bc-a8b0-8eb375154399/);

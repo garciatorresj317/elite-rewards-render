@@ -1279,55 +1279,85 @@ function Admin() {
                   tr={tr}
                 />
               </section>
-              {!user.platformAdmin && (
-                <section
-                  className="quick-actions"
-                  aria-label={tr("Quick actions", "Acciones rápidas")}
+              <section
+                className="quick-actions"
+                aria-label={tr("Quick actions", "Acciones rápidas")}
+              >
+                <button
+                  type="button"
+                  onClick={() => setActive(user.platformAdmin ? "Clients" : "Members")}
                 >
-                  <button type="button" onClick={() => setActive("Members")}>
-                    <UserPlus />
-                    <span>
-                      <strong>{tr("Add a member", "Agregar un miembro")}</strong>
-                      <small>
-                        {tr(
-                          "Enroll a customer or award points",
-                          "Inscribe a un cliente u otorga puntos",
-                        )}
-                      </small>
-                    </span>
-                  </button>
-                  <button type="button" onClick={() => setActive("Rewards")}>
-                    <Gift />
-                    <span>
-                      <strong>{tr("Manage rewards", "Administrar recompensas")}</strong>
-                      <small>
-                        {tr(
-                          "Create and publish member offers",
-                          "Crea y publica ofertas para miembros",
-                        )}
-                      </small>
-                    </span>
-                  </button>
-                  <button type="button" onClick={() => setActive("Products")}>
-                    <PackageOpen />
-                    <span>
-                      <strong>{tr("Manage products", "Administrar productos")}</strong>
-                      <small>
-                        {tr("Update the customer catalog", "Actualiza el catálogo para clientes")}
-                      </small>
-                    </span>
-                  </button>
-                  <button type="button" onClick={() => setActive("Appearance")}>
-                    <Palette />
-                    <span>
-                      <strong>{tr("Customize appearance", "Personalizar apariencia")}</strong>
-                      <small>
-                        {tr("Change themes and live messages", "Cambia temas y mensajes en vivo")}
-                      </small>
-                    </span>
-                  </button>
-                </section>
-              )}
+                  <UserPlus />
+                  <span>
+                    <strong>{tr("Add a member", "Agregar un miembro")}</strong>
+                    <small>
+                      {user.platformAdmin
+                        ? tr(
+                            "Choose a client to manage its members",
+                            "Elige un cliente para administrar sus miembros",
+                          )
+                        : tr(
+                            "Enroll a customer or award points",
+                            "Inscribe a un cliente u otorga puntos",
+                          )}
+                    </small>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActive(user.platformAdmin ? "Clients" : "Rewards")}
+                >
+                  <Gift />
+                  <span>
+                    <strong>{tr("Manage rewards", "Administrar recompensas")}</strong>
+                    <small>
+                      {user.platformAdmin
+                        ? tr(
+                            "Choose a client to manage its rewards",
+                            "Elige un cliente para administrar sus recompensas",
+                          )
+                        : tr(
+                            "Create and publish member offers",
+                            "Crea y publica ofertas para miembros",
+                          )}
+                    </small>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActive(user.platformAdmin ? "Clients" : "Products")}
+                >
+                  <PackageOpen />
+                  <span>
+                    <strong>{tr("Manage products", "Administrar productos")}</strong>
+                    <small>
+                      {user.platformAdmin
+                        ? tr(
+                            "Choose a client to update its catalog",
+                            "Elige un cliente para actualizar su catálogo",
+                          )
+                        : tr("Update the customer catalog", "Actualiza el catálogo para clientes")}
+                    </small>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActive(user.platformAdmin ? "Clients" : "Appearance")}
+                >
+                  <Palette />
+                  <span>
+                    <strong>{tr("Customize appearance", "Personalizar apariencia")}</strong>
+                    <small>
+                      {user.platformAdmin
+                        ? tr(
+                            "Choose a client to customize its branding",
+                            "Elige un cliente para personalizar su marca",
+                          )
+                        : tr("Change themes and live messages", "Cambia temas y mensajes en vivo")}
+                    </small>
+                  </span>
+                </button>
+              </section>
               <TransactionTable
                 transactions={visible}
                 loyaltyMode={data.business.loyalty_mode}
