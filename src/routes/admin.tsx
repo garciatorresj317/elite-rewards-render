@@ -319,6 +319,19 @@ function Admin() {
   useEffect(() => {
     document.title = tr("Business dashboard | Elite Rewards", "Panel del negocio | Elite Rewards");
   }, [tr]);
+  useEffect(() => {
+    if (!mobile) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobile(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [mobile]);
   const submitAward = async (event: FormEvent) => {
     event.preventDefault();
     setError("");
@@ -982,6 +995,14 @@ function Admin() {
           <Check size={18} />
           {notice}
         </div>
+      )}
+      {mobile && (
+        <button
+          type="button"
+          className="admin-mobile-scrim"
+          onClick={() => setMobile(false)}
+          aria-label={tr("Close menu", "Cerrar menú")}
+        />
       )}
       <aside className={`admin-sidebar ${mobile ? "open" : ""}`}>
         <div className="sidebar-top">
@@ -3051,7 +3072,12 @@ function TransactionTable({
           <h3>{tr("Transactions", "Transacciones")}</h3>
         </div>
       </div>
-      <div className="table-wrap">
+      <div
+        className="table-wrap"
+        tabIndex={0}
+        role="region"
+        aria-label={tr("Scrollable transaction table", "Tabla desplazable de transacciones")}
+      >
         <table>
           <thead>
             <tr>

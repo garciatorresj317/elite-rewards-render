@@ -81,6 +81,23 @@ describe("user-friendly experience regression coverage", () => {
     assert.doesNotMatch(home, /Member sign in|Business sign in|Sign in to Elite Rewards/);
   });
 
+  it("keeps portrait-phone layouts fitted, touchable, and dismissible", async () => {
+    const [styles, admin] = await Promise.all([
+      source("styles.css"),
+      source("routes", "admin.tsx"),
+    ]);
+    assert.match(styles, /@media \(max-width: 430px\)/);
+    assert.match(styles, /\.container-wide, \.container-mid \{ width: calc\(100% - 24px\); \}/);
+    assert.match(styles, /\.admin-mobile-scrim[\s\S]*position: fixed; z-index: 29; inset: 0/);
+    assert.match(styles, /\.modal-backdrop \{ align-items: end; padding: 10px; \}/);
+    assert.match(styles, /\.language-switcher \{ right: 50%; transform: translateX\(50%\); \}/);
+    assert.match(admin, /className="admin-mobile-scrim"/);
+    assert.match(admin, /onClick=\{\(\) => setMobile\(false\)\}/);
+    assert.match(admin, /document\.body\.style\.overflow = "hidden"/);
+    assert.match(admin, /event\.key === "Escape"/);
+    assert.match(admin, /aria-label=\{tr\([\s\S]*"Scrollable transaction table"/);
+  });
+
   it("shows the registered LLC notice beneath the How It Works footer message", async () => {
     const home = await source("routes", "index.tsx");
     assert.match(
