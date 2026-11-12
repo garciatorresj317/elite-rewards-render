@@ -3259,15 +3259,6 @@ function ProductEditorFields({
           />
         )}
       </label>
-      <label>
-        {tr("Purchase or details URL", "URL de compra o detalles")}
-        <input
-          type="url"
-          placeholder="https://"
-          value={draft.purchaseUrl ?? ""}
-          onChange={(event) => setDraft({ ...draft, purchaseUrl: event.target.value || null })}
-        />
-      </label>
       <label className="reward-active-check">
         <input
           type="checkbox"
