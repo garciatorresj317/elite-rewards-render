@@ -289,7 +289,17 @@ textarea:focus-visible { outline: 3px solid var(--gold-bright); outline-offset: 
 }
 .site-footer-contact > span:last-child { min-width: 0; display: grid; gap: 3px; }
 .site-footer-contact small { color: var(--gold-pale); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.site-footer-contact strong { color: #fff; font: 800 clamp(22px,2.2vw,30px)/1 var(--serif); letter-spacing: .025em; white-space: nowrap; }
+.site-footer-contact-number {
+  max-width: 100%;
+  color: #fff;
+  font-family: var(--sans);
+  font-size: clamp(22px, 2.05vw, 30px);
+  font-weight: 800;
+  font-variant-numeric: lining-nums tabular-nums;
+  line-height: 1;
+  letter-spacing: -.035em;
+  white-space: nowrap;
+}
 .site-footer-contact em { color: var(--cyan); font-size: 11px; font-style: normal; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .site-footer .brand-wordmark strong { font-size: 16px; }
 
@@ -1598,7 +1608,7 @@ td { border-color: rgba(0, 184, 255, .12); }
   .trust-strip p { letter-spacing: .12em; line-height: 1.5; }
   .site-footer { padding-bottom: 76px; }
   .site-footer-contact { padding: 15px; }
-  .site-footer-contact strong { font-size: clamp(23px,8vw,29px); }
+  .site-footer-contact-number { font-size: clamp(22px, 7.4vw, 28px); }
 
   .wallet-header { gap: 10px; }
   .wallet-header .business-brand { max-width: 56%; }

@@ -264,7 +264,7 @@ function Home() {
           </span>
           <span>
             <small>{t("Interested? Contact Mike")}</small>
-            <strong>407-405-1726</strong>
+            <strong className="site-footer-contact-number">407-405-1726</strong>
             <em>{t("Tap to call")}</em>
           </span>
         </a>
