@@ -89,6 +89,18 @@ describe("user-friendly experience regression coverage", () => {
     assert.match(styles, /@media \(max-width: 430px\)/);
     assert.match(styles, /\.container-wide, \.container-mid \{ width: calc\(100% - 24px\); \}/);
     assert.match(styles, /\.admin-mobile-scrim[\s\S]*position: fixed; z-index: 29; inset: 0/);
+    const themedSurfaceRule = styles.indexOf(
+      ".admin-sidebar, .admin-main, .wallet-header, .wallet-layout, .themed-surface-content",
+    );
+    const mobileSidebarFix = styles.indexOf(
+      ".admin-sidebar { position: fixed; height: 100dvh; }",
+      themedSurfaceRule,
+    );
+    assert.ok(themedSurfaceRule >= 0, "expected the themed-surface stacking rule");
+    assert.ok(
+      mobileSidebarFix > themedSurfaceRule,
+      "the portrait sidebar override must follow the shared position rule so it stays out of flow",
+    );
     assert.match(styles, /\.modal-backdrop \{ align-items: end; padding: 10px; \}/);
     assert.match(styles, /\.language-switcher \{ right: 50%; transform: translateX\(50%\); \}/);
     assert.match(admin, /className="admin-mobile-scrim"/);
