@@ -85,6 +85,9 @@ describe("platform client management", () => {
       await readFile(join(process.cwd(), "migrations", "002_platform_clients.sql"), "utf8"),
     );
     await pool.query(
+      await readFile(join(process.cwd(), "migrations", "003_member_enrollment.sql"), "utf8"),
+    );
+    await pool.query(
       await readFile(
         join(process.cwd(), "migrations", "004_referrals_and_visual_themes.sql"),
         "utf8",

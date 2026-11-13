@@ -61,6 +61,8 @@ describe("user-friendly experience regression coverage", () => {
     assert.match(admin, /members\.slice\(0, 6\)\.map/);
     assert.match(admin, /View all members/);
     assert.match(admin, /setActive\("Members"\)/);
+    assert.match(admin, /window\.setInterval\(\(\) => void refreshMembers\(\), 30_000\)/);
+    assert.match(admin, /window\.addEventListener\("focus", onFocus\)/);
     assert.match(admin, /member\.email/);
     assert.match(admin, /member\.units/);
     assert.match(membersService, /WHERE u\.business_id = \$1 AND u\.role = 'member'/);

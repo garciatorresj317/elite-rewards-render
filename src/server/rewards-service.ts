@@ -4,6 +4,7 @@ import { getPool, id } from "./database.ts";
 import type { SessionUser } from "./auth.ts";
 import { clientLogoPath } from "./business-branding.ts";
 import type { LoyaltyMode } from "./loyalty-settings-service.ts";
+import { countBusinessMembers } from "./member-count.ts";
 
 export type PublicReward = { id: string; name: string; description: string; cost: number };
 
@@ -35,15 +36,14 @@ export async function getDashboard(user: SessionUser) {
   const mode: LoyaltyMode = businessRow?.loyalty_mode ?? "points";
   const units = unitColumn(mode);
   const cost = rewardCostColumn(mode);
-  const [totals, transactions, members, rewards] = await Promise.all([
+  const [memberCount, totals, transactions, members, rewards] = await Promise.all([
+    countBusinessMembers(database, user.businessId),
     database.query<{
-      members: string;
       units_awarded: string;
       rewards_redeemed: string;
       eligible_sales_cents: string;
     }>(
       `SELECT
-       (SELECT count(*) FROM users WHERE business_id=$1 AND role='member' AND active) AS members,
        COALESCE(sum(CASE WHEN entry_type='earn' AND loyalty_mode=$2 THEN ${units}_delta ELSE 0 END),0) AS units_awarded,
        count(*) FILTER (WHERE entry_type='redeem') AS rewards_redeemed,
        COALESCE(sum(CASE WHEN entry_type='earn' THEN amount_cents ELSE 0 END),0) AS eligible_sales_cents
@@ -103,7 +103,7 @@ export async function getDashboard(user: SessionUser) {
           points_per_dollar: 1,
         },
     metrics: {
-      members: Number(total?.members ?? 0),
+      members: memberCount,
       unitsAwarded: Number(total?.units_awarded ?? 0),
       rewardsRedeemed: Number(total?.rewards_redeemed ?? 0),
       eligibleSalesCents: Number(total?.eligible_sales_cents ?? 0),

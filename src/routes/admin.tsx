@@ -356,6 +356,28 @@ function Admin() {
     void load();
   }, [load]);
   useEffect(() => {
+    if (!user || user.platformAdmin) return;
+    const refreshMembers = async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const [dashboard, memberResult] = await Promise.all([api.dashboard(), api.members()]);
+        setData(dashboard);
+        setMembers(memberResult.members);
+      } catch {
+        // The normal load and retry states handle session or network failures.
+      }
+    };
+    const interval = window.setInterval(() => void refreshMembers(), 30_000);
+    const onFocus = () => void refreshMembers();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [user]);
+  useEffect(() => {
     document.title = tr("Business dashboard | Elite Rewards", "Panel del negocio | Elite Rewards");
   }, [tr]);
   useEffect(() => {
@@ -779,7 +801,22 @@ function Admin() {
     setMemberInvitationBusy(true);
     try {
       const result = await api.createMember(memberForm);
-      setMembers((current) => [result.member, ...current]);
+      const memberAlreadyListed = members.some((member) => member.id === result.member.id);
+      setMembers((current) => [
+        result.member,
+        ...current.filter((item) => item.id !== result.member.id),
+      ]);
+      setData((current) =>
+        current
+          ? {
+              ...current,
+              metrics: {
+                ...current.metrics,
+                members: current.metrics.members + (memberAlreadyListed ? 0 : 1),
+              },
+            }
+          : current,
+      );
       setMemberActivationPath(result.activationPath);
       setNotice(tr(`${result.member.name} was enrolled.`, `Se inscribió a ${result.member.name}.`));
       setMemberForm({ name: "", email: "" });

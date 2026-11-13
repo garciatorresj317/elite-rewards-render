@@ -6,6 +6,7 @@ import { DataType, newDb } from "pg-mem";
 import type pg from "pg";
 import type { SessionUser } from "./auth.ts";
 import { closeDatabase, setDatabasePoolForTests } from "./database.ts";
+import { countBusinessMembers } from "./member-count.ts";
 import {
   activateMember,
   createMemberInvitation,
@@ -91,6 +92,19 @@ describe("member enrollment", () => {
     assert.equal(invitation.memberEmail, "member@example.com");
     assert.equal((await listMembers(owner))[0]?.status, "invited");
     assert.equal((await listMembers(otherOwner)).length, 0);
+    assert.equal(await countBusinessMembers(pool, owner.businessId), 1);
+    const invitedAudit = await pool.query<{
+      action: string;
+      business_id: string;
+      target_id: string;
+    }>("SELECT action,business_id,target_id FROM audit_events WHERE target_id = $1", [
+      result.member.id,
+    ]);
+    assert.deepEqual(invitedAudit.rows[0], {
+      action: "member.invited",
+      business_id: owner.businessId,
+      target_id: result.member.id,
+    });
 
     const activated = await activateMember(token, "member-secure-password");
     assert.ok(activated.sessionToken);
@@ -107,6 +121,12 @@ describe("member enrollment", () => {
     );
     assert.equal(Number(balance.rows[0]?.points), 0);
     assert.equal((await listMembers(owner))[0]?.status, "active");
+    assert.equal(await countBusinessMembers(pool, owner.businessId), 1);
+    const activatedAudit = await pool.query<{ count: string }>(
+      "SELECT count(*) AS count FROM audit_events WHERE business_id = $1 AND action = 'member.activated' AND target_id = (SELECT id FROM users WHERE email = 'member@example.com')",
+      [owner.businessId],
+    );
+    assert.equal(Number(activatedAudit.rows[0]?.count), 1);
     await assert.rejects(
       () => activateMember(token, "member-secure-password"),
       /invalid or expired/,
@@ -141,6 +161,7 @@ describe("member enrollment", () => {
     );
     assert.ok(newToken);
     assert.equal(replacement.member.id, first.member.id);
+    assert.equal(await countBusinessMembers(pool, owner.businessId), 2);
     await assert.rejects(() => getMemberInvitation(oldToken), /invalid or expired/);
     assert.equal((await getMemberInvitation(newToken)).memberName, "Updated Invite");
     const invitations = await pool.query(

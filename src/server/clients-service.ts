@@ -14,6 +14,7 @@ import {
   type PublicVisualSettings,
 } from "./experience-service.ts";
 import type { LoyaltyMode } from "./loyalty-settings-service.ts";
+import { countBusinessMembers } from "./member-count.ts";
 
 const invitationLifetimeHours = 72;
 
@@ -222,10 +223,7 @@ export async function listClients(user: SessionUser): Promise<ClientSummary[]> {
         "SELECT owner_name, owner_email FROM client_invitations WHERE business_id = $1 ORDER BY created_at DESC, id DESC LIMIT 1",
         [business.id],
       ),
-      database.query<{ count: string }>(
-        "SELECT count(*) AS count FROM users WHERE business_id = $1 AND role = 'member' AND active",
-        [business.id],
-      ),
+      countBusinessMembers(database, business.id),
     ]);
     const businessOwner = owner.rows[0];
     const pendingInvitation = invitation.rows[0];
@@ -236,7 +234,7 @@ export async function listClients(user: SessionUser): Promise<ClientSummary[]> {
       ownerName: businessOwner?.name ?? pendingInvitation?.owner_name ?? "Owner pending",
       ownerEmail: businessOwner?.email ?? pendingInvitation?.owner_email ?? "",
       status: business.active ? (businessOwner ? "active" : "invited") : "suspended",
-      members: Number(members.rows[0]?.count ?? 0),
+      members,
       createdAt: business.created_at.toISOString(),
       logoUrl: business.has_logo
         ? clientLogoPath(business.id, business.updated_at)

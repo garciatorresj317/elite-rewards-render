@@ -6,6 +6,7 @@ import { DataType, newDb } from "pg-mem";
 import type pg from "pg";
 import { closeDatabase, setDatabasePoolForTests } from "./database.ts";
 import { getBusinessEnrollment, joinBusinessRewards } from "./experience-service.ts";
+import { countBusinessMembers } from "./member-count.ts";
 
 describe("business Join Rewards enrollment", () => {
   let pool: pg.Pool;
@@ -28,6 +29,7 @@ describe("business Join Rewards enrollment", () => {
     for (const file of [
       "001_production_rewards.sql",
       "002_platform_clients.sql",
+      "003_member_enrollment.sql",
       "004_referrals_and_visual_themes.sql",
       "005_automatic_holiday_themes.sql",
       "006_editable_rewards.sql",
@@ -79,6 +81,13 @@ describe("business Join Rewards enrollment", () => {
     );
     assert.equal(result.rows[0]?.business_id, "biz_client");
     assert.equal(Number(result.rows[0]?.points), 0);
+    assert.equal(await countBusinessMembers(pool, "biz_client"), 1);
+    const audit = await pool.query<{ action: string; business_id: string; target_id: string }>(
+      "SELECT action,business_id,target_id FROM audit_events WHERE action = 'member.self_enrolled'",
+    );
+    assert.equal(audit.rows[0]?.action, "member.self_enrolled");
+    assert.equal(audit.rows[0]?.business_id, "biz_client");
+    assert.ok(audit.rows[0]?.target_id);
     await assert.rejects(
       () =>
         joinBusinessRewards({

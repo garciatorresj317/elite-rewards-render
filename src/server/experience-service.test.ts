@@ -6,6 +6,7 @@ import { DataType, newDb } from "pg-mem";
 import type pg from "pg";
 import type { SessionUser } from "./auth.ts";
 import { closeDatabase, setDatabasePoolForTests } from "./database.ts";
+import { countBusinessMembers } from "./member-count.ts";
 import {
   getBusinessVisualSettings,
   getClientVisualSettings,
@@ -133,6 +134,12 @@ describe("referrals and visual experiences", () => {
     assert.equal(Number(account.rows[0]?.points), 0);
     assert.equal(account.rows[0]?.referrer_member_id, member.id);
     assert.equal((await getOrCreateReferralLink(member)).referralCount, 1);
+    assert.equal(await countBusinessMembers(pool, "biz_one"), 2);
+    const audit = await pool.query<{ business_id: string; target_id: string }>(
+      "SELECT business_id,target_id FROM audit_events WHERE action = 'member.referral.joined'",
+    );
+    assert.equal(audit.rows[0]?.business_id, "biz_one");
+    assert.ok(audit.rows[0]?.target_id);
   });
 
   it("isolates referral enrollment by the link business and rejects duplicate email", async () => {
