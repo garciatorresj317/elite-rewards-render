@@ -1,6 +1,7 @@
 import type { SessionUser } from "./auth.ts";
 import { getPool, id } from "./database.ts";
 import { PRODUCT_IMAGE_MAX_BYTES, PRODUCT_IMAGE_MAX_MEGABYTES } from "../lib/upload-limits.ts";
+import { HIGH_RES_IMAGE_VERSION, normalizeUploadedImage } from "./image-processing.ts";
 
 export type ProductDraft = {
   name: string;
@@ -388,12 +389,24 @@ async function updateImageForBusiness(
   input: ProductImageInput,
 ): Promise<ManagedProduct> {
   validateProductImage(input);
+  const processed = await normalizeUploadedImage(input, PRODUCT_IMAGE_MAX_BYTES, "Product image");
   const result = await getPool().query(
     `UPDATE business_products
-        SET image_data=$4,image_mime=$5,image_url=NULL,updated_by_user_id=$3,updated_at=now()
+        SET image_data=$4,image_mime=$5,image_url=NULL,
+            image_width=$6,image_height=$7,image_processing_version=$8,
+            updated_by_user_id=$3,updated_at=now()
       WHERE id=$1 AND business_id=$2 AND archived_at IS NULL
       RETURNING ${fields}`,
-    [productId, businessId, user.id, input.data, input.mime],
+    [
+      productId,
+      businessId,
+      user.id,
+      processed.data,
+      processed.mime,
+      processed.width,
+      processed.height,
+      HIGH_RES_IMAGE_VERSION,
+    ],
   );
   const row = result.rows[0];
   if (!row) throw Object.assign(new Error("Product not found"), { status: 404 });
@@ -405,7 +418,17 @@ async function updateImageForBusiness(
       businessId,
       user.id,
       productId,
-      JSON.stringify({ mime: input.mime, bytes: input.data.length }),
+      JSON.stringify({
+        mime: processed.mime,
+        bytes: processed.data.length,
+        width: processed.width,
+        height: processed.height,
+        sourceMime: input.mime,
+        sourceBytes: input.data.length,
+        sourceWidth: processed.sourceWidth,
+        sourceHeight: processed.sourceHeight,
+        processingVersion: HIGH_RES_IMAGE_VERSION,
+      }),
     ],
   );
   return product(

@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { DataType, newDb } from "pg-mem";
 import type pg from "pg";
+import sharp from "sharp";
 import { CLIENT_LOGO_MAX_BYTES } from "../lib/upload-limits.ts";
 import { authenticate, getSessionUser, type SessionUser } from "./auth.ts";
 import {
@@ -127,6 +128,14 @@ describe("platform client management", () => {
       await readFile(join(process.cwd(), "migrations", "012_client_logo_10mb.sql"), "utf8"),
     );
     await pool.query(
+      (
+        await readFile(
+          join(process.cwd(), "migrations", "019_high_resolution_uploaded_images.sql"),
+          "utf8",
+        )
+      ).replaceAll(" NOT VALID", ""),
+    );
+    await pool.query(
       "CREATE TABLE platform_administrator(singleton boolean PRIMARY KEY, user_id text NOT NULL UNIQUE REFERENCES users(id))",
     );
     await pool.query(
@@ -229,16 +238,35 @@ describe("platform client management", () => {
   it("stores validated file-uploaded logos and exposes the branded NFC destination", async () => {
     const client = (await listClients(platformOwner)).find((item) => item.name === "Big Smoke");
     assert.ok(client);
-    // Use an ASCII-only WebP signature because pg-mem's bytea adapter rewrites non-UTF-8
-    // bytes; real PostgreSQL preserves the uploaded Buffer exactly.
-    const webp = Buffer.from("RIFF0000WEBPVP8 ", "ascii");
+    const webp = await sharp({
+      create: { width: 400, height: 200, channels: 4, background: "#F6B900" },
+    })
+      .webp()
+      .toBuffer();
     const saved = await updateClientLogo(platformOwner, client.id, {
       mime: "image/webp",
       data: webp,
     });
     assert.match(saved.logoUrl ?? "", new RegExp(`^/api/public/clients/${client.id}/logo\\?v=`));
-    assert.deepEqual(await getClientLogo(client.id), { mime: "image/webp", data: webp });
-    const png = Buffer.from("89504e470d0a1a0a00000000", "hex");
+    const storedLogo = await getClientLogo(client.id);
+    assert.equal(storedLogo?.mime, "image/webp");
+    const storedDimensions = await pool.query<{
+      logo_width: number;
+      logo_height: number;
+      logo_processing_version: number;
+    }>("SELECT logo_width,logo_height,logo_processing_version FROM businesses WHERE id=$1", [
+      client.id,
+    ]);
+    assert.deepEqual(storedDimensions.rows[0], {
+      logo_width: 2048,
+      logo_height: 1024,
+      logo_processing_version: 1,
+    });
+    const png = await sharp({
+      create: { width: 64, height: 64, channels: 4, background: "#FFFFFF" },
+    })
+      .png()
+      .toBuffer();
     const publicPage = await getPublicClientExperience(client.id);
     assert.equal(publicPage.business.business_name, "Big Smoke");
     assert.equal(publicPage.business.logo_url, saved.logoUrl);
@@ -268,22 +296,42 @@ describe("platform client management", () => {
       /does not match/,
     );
 
-    const largerThanTwoMegabytes = Buffer.alloc(2_097_153, 0x20);
-    Buffer.from("RIFF0000WEBP", "ascii").copy(largerThanTwoMegabytes);
+    const largerThanTwoMegabytes = await sharp({
+      create: { width: 1200, height: 1200, channels: 4, background: "#66ABF0" },
+    })
+      .png({ compressionLevel: 0 })
+      .toBuffer();
     await updateClientLogo(platformOwner, client.id, {
-      mime: "image/webp",
+      mime: "image/png",
       data: largerThanTwoMegabytes,
     });
-    assert.equal((await getClientLogo(client.id))?.data.length, largerThanTwoMegabytes.length);
+    assert.equal((await getClientLogo(client.id))?.mime, "image/webp");
 
-    const secondWebp = Buffer.from("RIFF0000WEBPVP8 replacement", "ascii");
+    const secondWebp = await sharp({
+      create: { width: 320, height: 640, channels: 4, background: "#11FF88" },
+    })
+      .webp()
+      .toBuffer();
     await new Promise((resolve) => setTimeout(resolve, 5));
     const replaced = await updateClientLogo(platformOwner, client.id, {
       mime: "image/webp",
       data: secondWebp,
     });
     assert.notEqual(replaced.logoUrl, saved.logoUrl);
-    assert.deepEqual(await getClientLogo(client.id), { mime: "image/webp", data: secondWebp });
+    const replacement = await getClientLogo(client.id);
+    assert.equal(replacement?.mime, "image/webp");
+    const replacementDimensions = await pool.query<{
+      logo_width: number;
+      logo_height: number;
+      logo_processing_version: number;
+    }>("SELECT logo_width,logo_height,logo_processing_version FROM businesses WHERE id=$1", [
+      client.id,
+    ]);
+    assert.deepEqual(replacementDimensions.rows[0], {
+      logo_width: 1024,
+      logo_height: 2048,
+      logo_processing_version: 1,
+    });
 
     const largerThanTenMegabytes = Buffer.alloc(CLIENT_LOGO_MAX_BYTES + 1, 0x20);
     Buffer.from("RIFF0000WEBP", "ascii").copy(largerThanTenMegabytes);

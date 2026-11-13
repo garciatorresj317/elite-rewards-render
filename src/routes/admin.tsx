@@ -662,8 +662,8 @@ function Admin() {
       );
       setNotice(
         tr(
-          `${clientEditor.name} logo was uploaded.`,
-          `Se cargó el logotipo de ${clientEditor.name}.`,
+          `${clientEditor.name} logo was enhanced and uploaded in high resolution.`,
+          `El logotipo de ${clientEditor.name} se mejoró y se cargó en alta resolución.`,
         ),
       );
     } catch (cause) {
@@ -795,8 +795,12 @@ function Admin() {
       setClientProductDraft(emptyProductForm());
       setNotice(
         tr(
-          "Product published to the client page and member wallets.",
-          "Producto publicado en la página del cliente y las billeteras de miembros.",
+          clientProductImage
+            ? "Product published with a high-resolution image to the client page and member wallets."
+            : "Product published to the client page and member wallets.",
+          clientProductImage
+            ? "Producto publicado con una imagen de alta resolución en la página del cliente y las billeteras de miembros."
+            : "Producto publicado en la página del cliente y las billeteras de miembros.",
         ),
       );
     } catch (cause) {
@@ -918,8 +922,12 @@ function Admin() {
       setProductModal(false);
       setNotice(
         tr(
-          "Business product catalog updated.",
-          "Se actualizó el catálogo de productos del negocio.",
+          productImage
+            ? "Business product catalog updated with a high-resolution image."
+            : "Business product catalog updated.",
+          productImage
+            ? "Se actualizó el catálogo de productos con una imagen de alta resolución."
+            : "Se actualizó el catálogo de productos del negocio.",
         ),
       );
       await load();
@@ -2416,8 +2424,8 @@ function Admin() {
                 {logoUploading
                   ? tr("Uploading logo…", "Cargando logotipo…")
                   : tr(
-                      `PNG, JPEG, or WebP · maximum ${CLIENT_LOGO_MAX_MEGABYTES} MB`,
-                      `PNG, JPEG o WebP · máximo ${CLIENT_LOGO_MAX_MEGABYTES} MB`,
+                      `PNG, JPEG, or WebP · maximum ${CLIENT_LOGO_MAX_MEGABYTES} MB · automatically enhanced to high resolution`,
+                      `PNG, JPEG o WebP · máximo ${CLIENT_LOGO_MAX_MEGABYTES} MB · mejorado automáticamente a alta resolución`,
                     )}
               </small>
             </label>
@@ -3667,8 +3675,8 @@ function ProductEditorFields({
                   "La imagen actual permanecerá salvo que se reemplace.",
                 )
               : tr(
-                  `PNG, JPEG, or WebP up to ${PRODUCT_IMAGE_MAX_MEGABYTES} MB.`,
-                  `PNG, JPEG o WebP de hasta ${PRODUCT_IMAGE_MAX_MEGABYTES} MB.`,
+                  `PNG, JPEG, or WebP up to ${PRODUCT_IMAGE_MAX_MEGABYTES} MB. Automatically enhanced to high resolution.`,
+                  `PNG, JPEG o WebP de hasta ${PRODUCT_IMAGE_MAX_MEGABYTES} MB. Se mejora automáticamente a alta resolución.`,
                 )}
         </small>
         {(selectedImagePreview || draft.imageUrl) && (

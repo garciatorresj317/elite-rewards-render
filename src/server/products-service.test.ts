@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { DataType, newDb } from "pg-mem";
 import type pg from "pg";
+import sharp from "sharp";
 import type { SessionUser } from "./auth.ts";
 import { closeDatabase, setDatabasePoolForTests } from "./database.ts";
 import {
@@ -98,6 +99,17 @@ describe("tenant product catalogs", () => {
         file === "015_product_value_limits.sql" ? sql.replaceAll(" NOT VALID", "") : sql,
       );
     }
+    await pool.query(
+      "ALTER TABLE businesses ADD COLUMN logo_data bytea, ADD COLUMN logo_mime text",
+    );
+    await pool.query(
+      (
+        await readFile(
+          join(process.cwd(), "migrations", "019_high_resolution_uploaded_images.sql"),
+          "utf8",
+        )
+      ).replaceAll(" NOT VALID", ""),
+    );
     await pool.query("ALTER TABLE businesses ADD COLUMN logo_url text");
     await pool.query(
       "ALTER TABLE businesses ADD COLUMN primary_color text NOT NULL DEFAULT '#F6B900'",
@@ -140,23 +152,41 @@ describe("tenant product catalogs", () => {
     });
     assert.equal(updated.name, "Updated Product");
     assert.equal((await listPublicProducts(clientOwner.businessId))[0]?.pointsCost, 750);
-    // Use an ASCII-only WebP signature because pg-mem's bytea adapter rewrites non-UTF-8
-    // bytes; real PostgreSQL preserves the uploaded Buffer exactly.
-    const webp = Buffer.from("RIFF0000WEBPVP8 ", "ascii");
+    const webp = await sharp({
+      create: { width: 320, height: 400, channels: 4, background: "#22C55E" },
+    })
+      .webp()
+      .toBuffer();
     const imageProduct = await updateProductImage(clientOwner, created.id, {
       mime: "image/webp",
       data: webp,
     });
     assert.equal(imageProduct.imageUrl, `/api/admin/products/${created.id}/image`);
-    assert.deepEqual(await getProductImage(created.id), { mime: "image/webp", data: webp });
-    assert.deepEqual(await getManagedProductImage(clientOwner, created.id), {
-      mime: "image/webp",
-      data: webp,
+    const publicImage = await getProductImage(created.id);
+    assert.equal(publicImage?.mime, "image/webp");
+    const dimensions = await pool.query<{
+      image_width: number;
+      image_height: number;
+      image_processing_version: number;
+    }>(
+      "SELECT image_width,image_height,image_processing_version FROM business_products WHERE id=$1",
+      [created.id],
+    );
+    assert.deepEqual(dimensions.rows[0], {
+      image_width: 1638,
+      image_height: 2048,
+      image_processing_version: 1,
     });
-    assert.deepEqual(await getManagedClientProductImage(platformOwner, "biz_client", created.id), {
-      mime: "image/webp",
-      data: webp,
-    });
+    assert.equal(
+      (await getManagedProductImage(clientOwner, created.id))?.data.equals(publicImage!.data),
+      true,
+    );
+    assert.equal(
+      (await getManagedClientProductImage(platformOwner, "biz_client", created.id))?.data.equals(
+        publicImage!.data,
+      ),
+      true,
+    );
     assert.equal(await getManagedProductImage(otherOwner, created.id), null);
     await assert.rejects(
       () =>
@@ -169,20 +199,37 @@ describe("tenant product catalogs", () => {
     await assert.rejects(() => updateProduct(otherOwner, created.id, draft), /Product not found/);
   });
 
-  it("accepts product images above 4 MB through 10 MB and rejects larger files", async () => {
+  it("enhances valid product images and rejects uploads larger than 10 MB", async () => {
     const created = await createProduct(clientOwner, {
       ...draft,
       name: "Large Product Image",
       imageUrl: null,
     });
-    const largerThanFourMb = Buffer.alloc(4 * 1024 * 1024 + 16, 0x20);
-    largerThanFourMb.write("RIFF", 0, "ascii");
-    largerThanFourMb.write("WEBP", 8, "ascii");
+    const validImage = await sharp({
+      create: { width: 1024, height: 512, channels: 3, background: "#112233" },
+    })
+      .png()
+      .toBuffer();
     const updated = await updateProductImage(clientOwner, created.id, {
-      mime: "image/webp",
-      data: largerThanFourMb,
+      mime: "image/png",
+      data: validImage,
     });
     assert.equal(updated.imageUrl, `/api/admin/products/${created.id}/image`);
+    const enhanced = await getProductImage(created.id);
+    assert.equal(enhanced?.mime, "image/webp");
+    const dimensions = await pool.query<{
+      image_width: number;
+      image_height: number;
+      image_processing_version: number;
+    }>(
+      "SELECT image_width,image_height,image_processing_version FROM business_products WHERE id=$1",
+      [created.id],
+    );
+    assert.deepEqual(dimensions.rows[0], {
+      image_width: 2048,
+      image_height: 1024,
+      image_processing_version: 1,
+    });
 
     const tooLarge = Buffer.alloc(10 * 1024 * 1024 + 1, 0x20);
     tooLarge.write("RIFF", 0, "ascii");
@@ -190,6 +237,14 @@ describe("tenant product catalogs", () => {
     await assert.rejects(
       () => updateProductImage(clientOwner, created.id, { mime: "image/webp", data: tooLarge }),
       /10 MB or smaller/,
+    );
+    await assert.rejects(
+      () =>
+        updateProductImage(clientOwner, created.id, {
+          mime: "image/webp",
+          data: Buffer.from("RIFF0000WEBPVP8 ", "ascii"),
+        }),
+      /could not be decoded/,
     );
   });
 

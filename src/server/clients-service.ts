@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { createSession, hashPassword, newUserId, type SessionUser } from "./auth.ts";
 import { getPool, id } from "./database.ts";
+import { HIGH_RES_IMAGE_VERSION, normalizeUploadedImage } from "./image-processing.ts";
 import { CLIENT_LOGO_MAX_BYTES, CLIENT_LOGO_MAX_MEGABYTES } from "../lib/upload-limits.ts";
 import {
   clientLogoPath,
@@ -545,12 +546,22 @@ export async function updateClientLogo(
     throw Object.assign(new Error("Logo file content does not match its image type"), {
       status: 400,
     });
+  const processed = await normalizeUploadedImage(input, CLIENT_LOGO_MAX_BYTES, "Logo");
   const result = await getPool().query(
     `UPDATE businesses
-        SET logo_data = $2, logo_mime = $3, logo_url = NULL, updated_at = now()
+        SET logo_data = $2, logo_mime = $3, logo_url = NULL,
+            logo_width = $4, logo_height = $5, logo_processing_version = $6,
+            updated_at = now()
       WHERE id = $1
         AND id <> (SELECT business_id FROM platform_state WHERE singleton = true)`,
-    [businessId, input.data, input.mime],
+    [
+      businessId,
+      processed.data,
+      processed.mime,
+      processed.width,
+      processed.height,
+      HIGH_RES_IMAGE_VERSION,
+    ],
   );
   if (!result.rowCount) throw Object.assign(new Error("Client not found"), { status: 404 });
   await getPool().query(
@@ -560,7 +571,17 @@ export async function updateClientLogo(
       id("aud"),
       businessId,
       user.id,
-      JSON.stringify({ mime: input.mime, bytes: input.data.length }),
+      JSON.stringify({
+        mime: processed.mime,
+        bytes: processed.data.length,
+        width: processed.width,
+        height: processed.height,
+        sourceMime: input.mime,
+        sourceBytes: input.data.length,
+        sourceWidth: processed.sourceWidth,
+        sourceHeight: processed.sourceHeight,
+        processingVersion: HIGH_RES_IMAGE_VERSION,
+      }),
     ],
   );
   return getClientBranding(user, businessId);
@@ -579,6 +600,9 @@ export async function resetClientBranding(
           SET logo_data = NULL,
               logo_mime = NULL,
               logo_url = NULL,
+              logo_width = NULL,
+              logo_height = NULL,
+              logo_processing_version = 0,
               primary_color = $2,
               secondary_color = $3,
               updated_at = now()
