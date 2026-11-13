@@ -51,6 +51,27 @@ describe("user-friendly experience regression coverage", () => {
     assert.match(admin, /initialLoadFailed/);
   });
 
+  it("shows the live total-client count only on the Elite platform dashboard", async () => {
+    const [admin, service, client, styles] = await Promise.all([
+      source("routes", "admin.tsx"),
+      source("server", "rewards-service.ts"),
+      source("lib", "api-client.ts"),
+      source("styles.css"),
+    ]);
+    assert.match(admin, /user\.platformAdmin && \([\s\S]*Total clients[\s\S]*Total de clientes/);
+    assert.match(admin, /data\.metrics\.totalClients \?\? 0/);
+    assert.match(
+      service,
+      /WHERE id <> \(SELECT business_id FROM platform_state WHERE singleton = true\)/,
+    );
+    assert.match(service, /user\.platformAdmin[\s\S]*totalClients/);
+    assert.match(client, /totalClients: number \| null/);
+    assert.match(
+      styles,
+      /\.metrics-grid\.platform-metrics-grid \{ grid-template-columns: repeat\(5/,
+    );
+  });
+
   it("shows each business its tenant-scoped member directory from the dashboard", async () => {
     const [admin, membersService] = await Promise.all([
       source("routes", "admin.tsx"),

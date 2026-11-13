@@ -1359,7 +1359,17 @@ function Admin() {
                     : tr("Enroll your first member", "Inscribe a tu primer miembro")}
                 </button>
               </section>
-              <section className="metrics-grid">
+              <section
+                className={`metrics-grid${user.platformAdmin ? " platform-metrics-grid" : ""}`}
+              >
+                {user.platformAdmin && (
+                  <Metric
+                    icon={Building2}
+                    label={tr("Total clients", "Total de clientes")}
+                    value={formatNumber(data.metrics.totalClients ?? 0)}
+                    tr={tr}
+                  />
+                )}
                 <Metric
                   icon={Users}
                   label={tr("Total members", "Total de miembros")}

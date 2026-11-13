@@ -36,7 +36,14 @@ export async function getDashboard(user: SessionUser) {
   const mode: LoyaltyMode = businessRow?.loyalty_mode ?? "points";
   const units = unitColumn(mode);
   const cost = rewardCostColumn(mode);
-  const [memberCount, totals, transactions, members, rewards] = await Promise.all([
+  const [totalClients, memberCount, totals, transactions, members, rewards] = await Promise.all([
+    user.platformAdmin
+      ? database.query<{ count: string }>(
+          `SELECT count(*) AS count
+             FROM businesses
+            WHERE id <> (SELECT business_id FROM platform_state WHERE singleton = true)`,
+        )
+      : Promise.resolve(null),
     countBusinessMembers(database, user.businessId),
     database.query<{
       units_awarded: string;
@@ -103,6 +110,7 @@ export async function getDashboard(user: SessionUser) {
           points_per_dollar: 1,
         },
     metrics: {
+      totalClients: totalClients ? Number(totalClients.rows[0]?.count ?? 0) : null,
       members: memberCount,
       unitsAwarded: Number(total?.units_awarded ?? 0),
       rewardsRedeemed: Number(total?.rewards_redeemed ?? 0),

@@ -6,7 +6,7 @@ import { DataType, newDb } from "pg-mem";
 import type pg from "pg";
 import { hashPassword } from "./auth.ts";
 import { closeDatabase, setDatabasePoolForTests } from "./database.ts";
-import { awardPoints, getWallet, redeemReward } from "./rewards-service.ts";
+import { awardPoints, getDashboard, getWallet, redeemReward } from "./rewards-service.ts";
 import type { SessionUser } from "./auth.ts";
 
 const businessId = "biz_test";
@@ -67,6 +67,9 @@ describe("production rewards ledger", () => {
       await readFile(join(process.cwd(), "migrations", "002_platform_clients.sql"), "utf8"),
     );
     await pool.query(
+      await readFile(join(process.cwd(), "migrations", "003_member_enrollment.sql"), "utf8"),
+    );
+    await pool.query(
       await readFile(join(process.cwd(), "migrations", "006_editable_rewards.sql"), "utf8"),
     );
     await pool.query(
@@ -102,6 +105,12 @@ describe("production rewards ledger", () => {
       "INSERT INTO businesses(id,name,points_per_dollar) VALUES ($1,'Test Business',5)",
       [businessId],
     );
+    await pool.query("INSERT INTO platform_state(singleton,business_id) VALUES (true,$1)", [
+      businessId,
+    ]);
+    await pool.query(
+      "INSERT INTO businesses(id,name,active,suspended_at) VALUES ('biz_client_active','Active Client',true,NULL),('biz_client_suspended','Suspended Client',false,now())",
+    );
     await pool.query("INSERT INTO locations(id,business_id,name) VALUES ($1,$2,'Test Location')", [
       locationId,
       businessId,
@@ -126,6 +135,14 @@ describe("production rewards ledger", () => {
   });
   after(async () => {
     await closeDatabase();
+  });
+
+  it("reports every non-platform business as a client only to the platform administrator", async () => {
+    assert.equal((await getDashboard(owner)).metrics.totalClients, 2);
+    assert.equal(
+      (await getDashboard({ ...owner, platformAdmin: false })).metrics.totalClients,
+      null,
+    );
   });
 
   it("awards server-calculated points once for the same idempotency key", async () => {

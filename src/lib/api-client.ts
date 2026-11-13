@@ -351,6 +351,7 @@ export type LoyaltySettings = { loyaltyMode: LoyaltyMode; pointsPerDollar: numbe
 export type DashboardData = {
   business: BusinessContext;
   metrics: {
+    totalClients: number | null;
     members: number;
     unitsAwarded: number;
     rewardsRedeemed: number;
