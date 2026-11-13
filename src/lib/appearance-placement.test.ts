@@ -30,7 +30,7 @@ describe("Appearance navigation placement", () => {
     assert.match(adminSource, /active === "Customization" && user\.platformAdmin/);
     assert.doesNotMatch(adminSource, /api\.updateVisualSettings\(visualDraft\)/);
     assert.match(adminSource, /api\.updateClientVisualSettings/);
-    assert.match(adminSource, /Publish client appearance/);
+    assert.match(adminSource, /Publish client customization/);
     assert.match(adminSource, /name="client-appearance-theme"/);
     assert.match(adminSource, /Only Elite Rewards administrators can publish/);
     assert.equal((adminSource.match(/className="client-appearance-manager"/g) ?? []).length, 1);

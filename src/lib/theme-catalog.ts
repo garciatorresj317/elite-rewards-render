@@ -7,6 +7,7 @@ export const themeCatalog: Array<{
   description: string;
   image: string;
   liveImage?: string;
+  live?: boolean;
 }> = [
   {
     key: "elite-signature",
@@ -53,5 +54,37 @@ export const themeCatalog: Array<{
     category: "Event",
     description: "A flexible celebration scene for local events and special dates.",
     image: "/themes/community-event.webp",
+  },
+  {
+    key: "cosmic-neon",
+    name: "Cosmic Neon",
+    category: "Live style",
+    description: "Electric cyan and violet energy for modern, high-impact brands.",
+    image: "/themes/cosmic-neon.webp",
+    live: true,
+  },
+  {
+    key: "royal-purple",
+    name: "Royal Purple",
+    category: "Live style",
+    description: "Deep violet, polished gold, and a premium nightlife atmosphere.",
+    image: "/themes/royal-purple.webp",
+    live: true,
+  },
+  {
+    key: "ocean-glow",
+    name: "Ocean Glow",
+    category: "Live style",
+    description: "Aqua light, deep blue depth, and a clean luminous finish.",
+    image: "/themes/ocean-glow.webp",
+    live: true,
+  },
+  {
+    key: "sunset-energy",
+    name: "Sunset Energy",
+    category: "Live style",
+    description: "Warm amber, magenta, and red light for bold customer experiences.",
+    image: "/themes/sunset-energy.webp",
+    live: true,
   },
 ];

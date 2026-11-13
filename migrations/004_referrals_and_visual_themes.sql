@@ -35,7 +35,7 @@ CREATE INDEX IF NOT EXISTS request_rate_limits_window_idx
 
 CREATE TABLE IF NOT EXISTS business_visual_settings (
   business_id text PRIMARY KEY REFERENCES businesses(id) ON DELETE CASCADE,
-  theme_key text NOT NULL DEFAULT 'elite-signature' CHECK (theme_key IN ('elite-signature', 'mlk-day', 'remembrance-911', 'winter-holiday', 'spring-celebration', 'community-event')),
+  theme_key text NOT NULL DEFAULT 'elite-signature' CONSTRAINT business_visual_settings_theme_key_check CHECK (theme_key IN ('elite-signature', 'mlk-day', 'remembrance-911', 'winter-holiday', 'spring-celebration', 'community-event', 'cosmic-neon', 'royal-purple', 'ocean-glow', 'sunset-energy')),
   occasion_title text NOT NULL DEFAULT '' CHECK (char_length(occasion_title) <= 80),
   occasion_message text NOT NULL DEFAULT '' CHECK (char_length(occasion_message) <= 220),
   updated_by_user_id text REFERENCES users(id) ON DELETE SET NULL,

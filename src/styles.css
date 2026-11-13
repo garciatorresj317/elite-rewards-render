@@ -772,6 +772,7 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
   content: ""; position: absolute; inset: 0;
   background: linear-gradient(110deg, rgba(0,0,0,.84), rgba(0,0,0,.48) 48%, rgba(0,0,0,.78));
 }
+.experience-wallpaper.is-live-theme { opacity: .5; filter: saturate(1.08) contrast(1.08); }
 .experience-wallpaper.is-automatic-live-theme { opacity: .56; filter: saturate(1.08) contrast(1.08); }
 .experience-wallpaper.is-automatic-live-theme::before {
   content: ""; position: absolute; inset: 0; z-index: 1;
@@ -795,7 +796,7 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
     radial-gradient(circle, rgba(255,210,83,.6) 0 1px, transparent 1.8px);
   background-size: 117px 117px, 173px 173px; animation: holiday-particles 24s linear infinite;
 }
-.experience-wallpaper:not(.is-automatic-live-theme) > span { display: none; }
+.experience-wallpaper:not(.is-live-theme) > span { display: none; }
 .experience-admin { left: 270px; }
 .admin-sidebar, .admin-main, .wallet-header, .wallet-layout, .themed-surface-content { position: relative; z-index: 2; }
 @keyframes live-wallpaper {
@@ -1000,11 +1001,59 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 .client-links .client-customize { margin: 0; text-decoration: none; }
 .client-links code { overflow: hidden; padding: 9px 11px; border-radius: 8px; color: var(--gold-pale); background: #030303; text-overflow: ellipsis; white-space: nowrap; }
 .client-appearance-manager { display: grid; gap: 14px; margin-top: 18px; padding: 20px; border: 1px solid var(--gold-faint); border-radius: 13px; background: rgba(7,6,3,.92); }
-.appearance-modal { width: min(calc(100% - 30px), 1040px); max-height: 92vh; }
+.appearance-modal { width: min(calc(100% - 30px), 1040px); max-height: 92vh; overscroll-behavior: contain; }
 .client-appearance-manager h3 { margin: 5px 0; color: var(--gold-pale); font: 800 20px var(--serif); }
 .client-appearance-manager p { margin: 0; color: var(--muted); line-height: 1.55; }
 .client-appearance-manager > label:not(.automatic-theme-toggle) { display: grid; gap: 7px; color: var(--gold-pale); font-weight: 750; font-size: 11px; }
 .client-appearance-manager select { min-height: 45px; padding: 0 12px; border: 1px solid var(--gold-faint); border-radius: 9px; color: white; background: #030303; }
+.customization-editor-section { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; padding: 20px; border: 1px solid rgba(0,190,255,.25); border-radius: 14px; background: rgba(2,10,22,.72); }
+.customization-section-heading, .customization-full-field { grid-column: 1 / -1; }
+.customization-section-heading h3 { margin: 5px 0; color: var(--gold-pale); font: 700 20px var(--serif); }
+.customization-section-heading p { margin: 0; color: var(--muted); }
+.customization-editor-section label { display: grid; gap: 7px; color: var(--gold-pale); font-weight: 750; font-size: 12px; }
+.customization-editor-section input:not([type="color"]), .customization-editor-section textarea, .customization-editor-section select { width: 100%; min-height: 48px; padding: 11px 13px; border: 1px solid rgba(0,190,255,.34); border-radius: 9px; color: white; background: rgba(2,10,22,.88); }
+.customization-editor-section textarea { min-height: 92px; resize: vertical; }
+.customization-color-section { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.customization-color-field > span { min-height: 48px; display: flex; align-items: center; gap: 10px; padding: 7px 10px; border: 1px solid rgba(0,190,255,.28); border-radius: 9px; background: rgba(2,10,22,.88); }
+.customization-color-field input { width: 42px; height: 34px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.customization-color-field code { color: var(--muted); }
+.customization-style-section { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.customization-visibility-section { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 12px 22px; padding: 18px 20px; border: 1px solid rgba(0,190,255,.25); border-radius: 14px; }
+.customization-visibility-section legend { padding: 0 7px; color: var(--gold-pale); font-weight: 850; }
+.customization-visibility-section label { display: flex; align-items: center; gap: 9px; min-height: 44px; color: var(--text); }
+.customization-visibility-section input { width: 19px; height: 19px; accent-color: var(--gold); }
+
+/* Platform-configured tenant experience tokens. */
+.client-public-page, .business-join-page, .wallet-page {
+  --gold: var(--experience-primary, #f6b900);
+  --gold-bright: var(--experience-accent, #ffe27a);
+  --gold-pale: color-mix(in srgb, var(--experience-primary, #f6b900) 40%, white);
+  --text: var(--experience-text, #fffaf0);
+  --muted: var(--experience-muted, #c7bea8);
+  --panel: var(--experience-surface, #07111f);
+  --serif: var(--experience-heading-font, "Orbitron", "Inter", Arial, sans-serif);
+  color: var(--experience-text, #fffaf0);
+  background-color: var(--experience-background, #020713);
+}
+.client-public-page::after, .business-join-page::after, .wallet-page::after {
+  content: ""; position: fixed; z-index: 0; inset: 0; pointer-events: none; background: rgba(0,0,0,.18);
+}
+.client-public-page .reward-card, .client-public-page .product-card, .business-join-page .referral-join-card,
+.wallet-page .reward-card, .wallet-page .next-reward-card, .wallet-page .scan-panel, .wallet-page .panel,
+.client-public-page .button, .business-join-page input, .business-join-page button, .wallet-page button {
+  border-radius: var(--experience-radius, 14px);
+}
+.client-public-page h1, .client-public-page h2, .business-join-page h1, .wallet-page h1, .wallet-page h2, .wallet-page h3 { font-family: var(--experience-heading-font, var(--serif)); }
+.client-public-page .button-primary, .business-join-page .admin-primary, .wallet-page .reward-card button { background: linear-gradient(135deg, color-mix(in srgb, var(--experience-primary) 28%, white), var(--experience-primary)); }
+.client-public-page .section-kicker, .client-public-page .eyebrow, .business-join-page .join-company-slogan, .wallet-page .section-kicker, .wallet-page .eyebrow { color: var(--experience-accent, var(--gold-bright)); }
+.client-public-page .reward-card, .client-public-page .product-card, .business-join-page .referral-join-card,
+.wallet-page .reward-card, .wallet-page .next-reward-card, .wallet-page .scan-panel, .wallet-page .panel { background: color-mix(in srgb, var(--experience-surface, #07111f) 94%, transparent); }
+
+@media (max-width: 760px) {
+  .customization-editor-section, .customization-color-section, .customization-style-section { grid-template-columns: 1fr; padding: 16px; }
+  .customization-section-heading, .customization-full-field { grid-column: auto; }
+  .customization-visibility-section { display: grid; }
+}
 .automatic-live-message { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(240px,.75fr) 1fr 1fr auto; align-items: end; gap: 14px; padding-top: 18px; border-top: 1px solid var(--gold-faint); }
 .automatic-live-message h3 { margin: 5px 0; color: var(--gold-pale); font: 700 19px var(--serif); }
 .automatic-live-message p { margin: 0; color: var(--muted); line-height: 1.55; }
@@ -1017,6 +1066,9 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 .client-public-hero { max-width: 780px; display: grid; gap: 19px; }
 .client-public-hero h1 { max-width: 700px; margin: 0; color: var(--client-secondary); font: 800 clamp(44px,7vw,76px)/.98 var(--serif); }
 .client-public-hero p { max-width: 660px; margin: 0; color: var(--muted); font-size: 19px; line-height: 1.65; }
+.client-company-slogan, .join-company-slogan, .member-company-slogan { color: var(--experience-accent, var(--client-secondary, var(--cyan))); font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+.member-company-slogan { display: block; margin-top: 12px; font-size: 12px; }
+.join-company-slogan { display: block; margin-bottom: 12px; font-size: 11px; }
 .client-public-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
 .client-public-actions > span { display: flex; align-items: center; gap: 8px; color: var(--client-secondary); font-weight: 800; }
 .client-public-rewards { display: grid; gap: 22px; }

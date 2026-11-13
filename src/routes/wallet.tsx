@@ -19,13 +19,14 @@ import { PageStatus } from "@/components/PageStatus";
 import { ProductCatalog } from "@/components/ProductCatalog";
 import { useI18n } from "@/i18n";
 import { api, type VisualSettings, type WalletData } from "@/lib/api-client";
+import { experienceStyle } from "@/lib/experience-style";
 export const Route = createFileRoute("/wallet")({
   head: () => ({ meta: [{ title: "My wallet | Elite Rewards" }] }),
   component: Wallet,
 });
 function Wallet() {
   const navigate = useNavigate();
-  const { t, formatNumber, formatDateTime, errorMessage } = useI18n();
+  const { t, locale, formatNumber, formatDateTime, errorMessage } = useI18n();
   const [data, setData] = useState<WalletData | null>(null),
     [busy, setBusy] = useState(true),
     [notice, setNotice] = useState(""),
@@ -120,8 +121,13 @@ function Wallet() {
     .filter((cost) => cost > data.balance);
   const readyReward = data.rewards.some((reward) => reward.cost <= data.balance),
     next = futureRewardPoints.length ? Math.min(...futureRewardPoints) : null;
+  const localized = (english: string, spanish: string) =>
+    locale === "es" ? spanish || english : english;
   return (
-    <div className={`wallet-page theme-${settings?.themeKey ?? "elite-signature"}`}>
+    <div
+      className={`wallet-page theme-${settings?.themeKey ?? "elite-signature"}`}
+      style={experienceStyle(settings)}
+    >
       <ExperienceBackdrop settings={settings} audience="member" />
       {notice && (
         <div className="toast" role="status">
@@ -146,10 +152,22 @@ function Wallet() {
             <span className="eyebrow">
               <Sparkles size={14} /> {data.context?.business_name}
             </span>
+            {settings && localized(settings.companySlogan, settings.companySloganEs) && (
+              <span className="member-company-slogan">
+                {localized(settings.companySlogan, settings.companySloganEs)}
+              </span>
+            )}
             <h1>
-              {t("Welcome back,")} <em>{data.member.name.split(" ")[0]}.</em>
+              {(settings && localized(settings.memberHeadline, settings.memberHeadlineEs)) || (
+                <>
+                  {t("Welcome back,")} <em>{data.member.name.split(" ")[0]}.</em>
+                </>
+              )}
             </h1>
-            <p>{t("Your balance is authoritative and updates from the live rewards ledger.")}</p>
+            <p>
+              {(settings && localized(settings.memberMessage, settings.memberMessageEs)) ||
+                t("Your balance is authoritative and updates from the live rewards ledger.")}
+            </p>
           </div>
           <div className="points-orb">
             <small>{t("Available balance")}</small>
@@ -157,103 +175,115 @@ function Wallet() {
             <span>{unitLabel}</span>
           </div>
         </section>
-        <section className="next-reward-card">
-          <div>
-            <span className="reward-glyph">
-              <Gift />
-            </span>
-            <div>
-              <small>{t(data.rewards.length ? "Next milestone" : "Reward catalog")}</small>
-              <h2>
-                {!data.rewards.length
-                  ? t("New rewards are coming soon.")
-                  : readyReward
-                    ? t("A reward is ready.")
-                    : data.loyaltyMode === "visits"
-                      ? t("{count} visits until your next reward", {
-                          count: (next ?? data.balance) - data.balance,
-                        })
-                      : t("{count} points until your next reward", {
-                          count: (next ?? data.balance) - data.balance,
-                        })}
-              </h2>
-            </div>
-          </div>
-          {data.rewards.length > 0 && (
-            <>
-              <div className="reward-progress">
-                <span
-                  style={{
-                    width: `${readyReward ? 100 : Math.min(100, (data.balance / (next ?? 1)) * 100)}%`,
-                  }}
-                />
-              </div>
-              <div className="reward-scale">
-                <span>0</span>
-                <span>
-                  {readyReward ? t("Reward ready") : `${formatNumber(next ?? 0)} ${unitLabel}`}
-                </span>
-              </div>
-            </>
-          )}
-        </section>
-        <div className="wallet-section-title">
-          <div>
-            <span className="section-kicker">{t("Choose your perk")}</span>
-            <h2>{t("Rewards for you")}</h2>
-          </div>
-          <button className="text-button" onClick={() => setHistoryOpen(true)}>
-            <History size={17} /> {t("Reward history")}
-          </button>
-        </div>
-        <section className="reward-grid">
-          {data.rewards.map((reward, index) => {
-            const disabled = data.balance < reward.cost;
-            return (
-              <article
-                className={`reward-card ${["champagne", "gold", "amber"][index % 3]}`}
-                key={reward.id}
-              >
-                <span className="reward-card-icon">
+        {settings?.showRewards !== false && (
+          <>
+            <section className="next-reward-card">
+              <div>
+                <span className="reward-glyph">
                   <Gift />
                 </span>
-                <span className="reward-cost">
-                  {formatNumber(reward.cost)} {shortUnitLabel}
-                </span>
-                <h3>{reward.name}</h3>
-                <p>{reward.description}</p>
-                <button
-                  disabled={disabled || redeemingId !== null}
-                  onClick={() => void redeem(reward.id, reward.name, reward.cost)}
-                >
-                  {t(
-                    redeemingId === reward.id ? "Redeeming…" : disabled ? "Keep earning" : "Redeem",
-                  )}
-                  <ChevronRight size={17} />
-                </button>
-              </article>
-            );
-          })}
-          {!data.rewards.length && (
-            <p className="empty-table">
-              {t("This business has not published an available reward yet. Check back soon.")}
-            </p>
-          )}
-        </section>
-        <div className="wallet-section-title">
-          <div>
-            <span className="section-kicker">{t("Member products")}</span>
-            <h2>
-              {t("Products from {businessName}", { businessName: data.context.business_name })}
-            </h2>
-          </div>
-        </div>
-        <ProductCatalog
-          products={data.products}
-          loyaltyMode={data.loyaltyMode}
-          className="member-product-grid"
-          emptyMessage={t("This business has not published products yet.")}
-        />
+                <div>
+                  <small>{t(data.rewards.length ? "Next milestone" : "Reward catalog")}</small>
+                  <h2>
+                    {!data.rewards.length
+                      ? t("New rewards are coming soon.")
+                      : readyReward
+                        ? t("A reward is ready.")
+                        : data.loyaltyMode === "visits"
+                          ? t("{count} visits until your next reward", {
+                              count: (next ?? data.balance) - data.balance,
+                            })
+                          : t("{count} points until your next reward", {
+                              count: (next ?? data.balance) - data.balance,
+                            })}
+                  </h2>
+                </div>
+              </div>
+              {data.rewards.length > 0 && (
+                <>
+                  <div className="reward-progress">
+                    <span
+                      style={{
+                        width: `${readyReward ? 100 : Math.min(100, (data.balance / (next ?? 1)) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="reward-scale">
+                    <span>0</span>
+                    <span>
+                      {readyReward ? t("Reward ready") : `${formatNumber(next ?? 0)} ${unitLabel}`}
+                    </span>
+                  </div>
+                </>
+              )}
+            </section>
+            <div className="wallet-section-title">
+              <div>
+                <span className="section-kicker">{t("Choose your perk")}</span>
+                <h2>{t("Rewards for you")}</h2>
+              </div>
+              <button className="text-button" onClick={() => setHistoryOpen(true)}>
+                <History size={17} /> {t("Reward history")}
+              </button>
+            </div>
+            <section className="reward-grid">
+              {data.rewards.map((reward, index) => {
+                const disabled = data.balance < reward.cost;
+                return (
+                  <article
+                    className={`reward-card ${["champagne", "gold", "amber"][index % 3]}`}
+                    key={reward.id}
+                  >
+                    <span className="reward-card-icon">
+                      <Gift />
+                    </span>
+                    <span className="reward-cost">
+                      {formatNumber(reward.cost)} {shortUnitLabel}
+                    </span>
+                    <h3>{reward.name}</h3>
+                    <p>{reward.description}</p>
+                    <button
+                      disabled={disabled || redeemingId !== null}
+                      onClick={() => void redeem(reward.id, reward.name, reward.cost)}
+                    >
+                      {t(
+                        redeemingId === reward.id
+                          ? "Redeeming…"
+                          : disabled
+                            ? "Keep earning"
+                            : "Redeem",
+                      )}
+                      <ChevronRight size={17} />
+                    </button>
+                  </article>
+                );
+              })}
+              {!data.rewards.length && (
+                <p className="empty-table">
+                  {t("This business has not published an available reward yet. Check back soon.")}
+                </p>
+              )}
+            </section>
+          </>
+        )}
+        {settings?.showProducts !== false && (
+          <>
+            <div className="wallet-section-title">
+              <div>
+                <span className="section-kicker">{t("Member products")}</span>
+                <h2>
+                  {t("Products from {businessName}", { businessName: data.context.business_name })}
+                </h2>
+              </div>
+            </div>
+            <ProductCatalog
+              products={data.products}
+              loyaltyMode={data.loyaltyMode}
+              className="member-product-grid"
+              emptyMessage={t("This business has not published products yet.")}
+            />
+          </>
+        )}
         <section className="scan-panel">
           <div>
             <span className="scan-icon">
@@ -266,40 +296,42 @@ function Wallet() {
           </div>
           <button onClick={() => setCodeOpen(true)}>{t("Show member code")}</button>
         </section>
-        <section className="referral-panel panel">
-          <div>
-            <span className="scan-icon">
-              <Share2 />
-            </span>
+        {settings?.showReferrals !== false && (
+          <section className="referral-panel panel">
             <div>
-              <span className="section-kicker">{t("Invite friends & family")}</span>
-              <h3>{t("Share your rewards link")}</h3>
-              <p>
-                {t("Friends can use your secure link to create a wallet for {businessName}.", {
-                  businessName: data.context?.business_name ?? "Elite Rewards",
-                })}
-              </p>
+              <span className="scan-icon">
+                <Share2 />
+              </span>
+              <div>
+                <span className="section-kicker">{t("Invite friends & family")}</span>
+                <h3>{t("Share your rewards link")}</h3>
+                <p>
+                  {t("Friends can use your secure link to create a wallet for {businessName}.", {
+                    businessName: data.context?.business_name ?? "Elite Rewards",
+                  })}
+                </p>
+              </div>
             </div>
-          </div>
-          {referral ? (
-            <div className="referral-share">
-              <code>{`${window.location.origin}${referral.sharePath}`}</code>
-              <button
-                onClick={() =>
-                  void navigator.clipboard
-                    .writeText(`${window.location.origin}${referral.sharePath}`)
-                    .then(() => setNotice(t("Referral link copied.")))
-                    .catch(() => setError(t("Copy failed. Select and copy the link manually.")))
-                }
-              >
-                <Copy size={17} /> {t("Copy link")}
-              </button>
-              <small>{t("{count} joined referral", { count: referral.referralCount })}</small>
-            </div>
-          ) : (
-            <button onClick={() => void loadReferral()}>{t("Create my referral link")}</button>
-          )}
-        </section>
+            {referral ? (
+              <div className="referral-share">
+                <code>{`${window.location.origin}${referral.sharePath}`}</code>
+                <button
+                  onClick={() =>
+                    void navigator.clipboard
+                      .writeText(`${window.location.origin}${referral.sharePath}`)
+                      .then(() => setNotice(t("Referral link copied.")))
+                      .catch(() => setError(t("Copy failed. Select and copy the link manually.")))
+                  }
+                >
+                  <Copy size={17} /> {t("Copy link")}
+                </button>
+                <small>{t("{count} joined referral", { count: referral.referralCount })}</small>
+              </div>
+            ) : (
+              <button onClick={() => void loadReferral()}>{t("Create my referral link")}</button>
+            )}
+          </section>
+        )}
         {data.redemptions.length > 0 && (
           <section className="panel">
             <div className="panel-title">

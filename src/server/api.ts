@@ -53,6 +53,8 @@ import {
   joinBusinessRewards,
   joinWithReferral,
   publicVisualSettings,
+  cornerStyles,
+  fontStyles,
   themeKeys,
   updateClientVisualSettings,
 } from "./experience-service.ts";
@@ -179,6 +181,58 @@ function color(value: unknown, name: string): string {
   if (!/^#[0-9A-F]{6}$/.test(normalized))
     throw Object.assign(new Error(`${name} is invalid`), { status: 400 });
   return normalized;
+}
+
+function enumValue<const T extends readonly string[]>(
+  value: unknown,
+  name: string,
+  values: T,
+): T[number] {
+  const normalized = text(value, name, 1, 40);
+  if (!values.includes(normalized as T[number]))
+    throw Object.assign(new Error(`${name} is invalid`), { status: 400 });
+  return normalized as T[number];
+}
+
+function booleanValue(value: unknown, name: string, fallback = true): boolean {
+  if (value === undefined) return fallback;
+  if (typeof value !== "boolean")
+    throw Object.assign(new Error(`${name} is invalid`), { status: 400 });
+  return value;
+}
+
+function relativeLuminance(hex: string): number {
+  const channels = [1, 3, 5].map((index) => Number.parseInt(hex.slice(index, index + 2), 16) / 255);
+  const [red, green, blue] = channels.map((channel) =>
+    channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+  );
+  return 0.2126 * red! + 0.7152 * green! + 0.0722 * blue!;
+}
+
+function contrastRatio(first: string, second: string): number {
+  const firstLuminance = relativeLuminance(first);
+  const secondLuminance = relativeLuminance(second);
+  const lighter = Math.max(firstLuminance, secondLuminance);
+  const darker = Math.min(firstLuminance, secondLuminance);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function accessiblePalette(payload: Record<string, unknown>) {
+  const palette = {
+    primaryColor: color(payload["primaryColor"] ?? "#F6B900", "Primary color"),
+    accentColor: color(payload["accentColor"] ?? "#14E6FF", "Accent color"),
+    backgroundColor: color(payload["backgroundColor"] ?? "#020713", "Background color"),
+    surfaceColor: color(payload["surfaceColor"] ?? "#07111F", "Surface color"),
+    textColor: color(payload["textColor"] ?? "#FFFAF0", "Text color"),
+    mutedColor: color(payload["mutedColor"] ?? "#C7BEA8", "Muted color"),
+  };
+  if (contrastRatio(palette.textColor, palette.backgroundColor) < 4.5)
+    throw Object.assign(new Error("Main text and background need more contrast"), { status: 400 });
+  if (contrastRatio(palette.mutedColor, palette.backgroundColor) < 3)
+    throw Object.assign(new Error("Secondary text and background need more contrast"), {
+      status: 400,
+    });
+  return palette;
 }
 
 function optionalHttpsUrl(value: unknown, name: string): string | null {
@@ -597,6 +651,7 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       const themeKey = text(payload["themeKey"], "Theme", 3, 40);
       if (!themeKeys.includes(themeKey as (typeof themeKeys)[number]))
         throw Object.assign(new Error("Theme is invalid"), { status: 400 });
+      const palette = accessiblePalette(payload);
       return json(
         await updateClientVisualSettings(user, businessId, {
           themeKey: themeKey as (typeof themeKeys)[number],
@@ -604,6 +659,36 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
           occasionMessage: text(payload["occasionMessage"] ?? "", "Occasion message", 0, 220),
           automaticHolidayThemes: payload["automaticHolidayThemes"] === true,
           timeZone: text(payload["timeZone"] ?? "UTC", "Time zone", 1, 100),
+          companySlogan: text(payload["companySlogan"] ?? "", "Company slogan", 0, 120),
+          companySloganEs: text(payload["companySloganEs"] ?? "", "Spanish company slogan", 0, 120),
+          publicHeadline: text(payload["publicHeadline"] ?? "", "Public headline", 0, 120),
+          publicHeadlineEs: text(
+            payload["publicHeadlineEs"] ?? "",
+            "Spanish public headline",
+            0,
+            120,
+          ),
+          publicMessage: text(payload["publicMessage"] ?? "", "Public message", 0, 300),
+          publicMessageEs: text(payload["publicMessageEs"] ?? "", "Spanish public message", 0, 300),
+          joinHeadline: text(payload["joinHeadline"] ?? "", "Join headline", 0, 120),
+          joinHeadlineEs: text(payload["joinHeadlineEs"] ?? "", "Spanish join headline", 0, 120),
+          joinMessage: text(payload["joinMessage"] ?? "", "Join message", 0, 300),
+          joinMessageEs: text(payload["joinMessageEs"] ?? "", "Spanish join message", 0, 300),
+          memberHeadline: text(payload["memberHeadline"] ?? "", "Member headline", 0, 120),
+          memberHeadlineEs: text(
+            payload["memberHeadlineEs"] ?? "",
+            "Spanish member headline",
+            0,
+            120,
+          ),
+          memberMessage: text(payload["memberMessage"] ?? "", "Member message", 0, 300),
+          memberMessageEs: text(payload["memberMessageEs"] ?? "", "Spanish member message", 0, 300),
+          ...palette,
+          fontStyle: enumValue(payload["fontStyle"] ?? "futuristic", "Font style", fontStyles),
+          cornerStyle: enumValue(payload["cornerStyle"] ?? "soft", "Corner style", cornerStyles),
+          showRewards: booleanValue(payload["showRewards"], "Show rewards"),
+          showProducts: booleanValue(payload["showProducts"], "Show products"),
+          showReferrals: booleanValue(payload["showReferrals"], "Show referrals"),
         }),
       );
     }

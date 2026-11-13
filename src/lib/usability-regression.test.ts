@@ -112,7 +112,7 @@ describe("user-friendly experience regression coverage", () => {
     assert.match(styles, /\.wallet-page \.back-link \{ font-size: 0; \}/);
     assert.match(styles, /\.password-visibility-toggle[\s\S]*width: 44px; height: 44px/);
     assert.doesNotMatch(home, /<button>\{t\("Use reward"\)\}<\/button>/);
-    assert.match(client, /\{data\.products\.length > 0 && \(/);
+    assert.match(client, /data\.visualSettings\.showProducts && data\.products\.length > 0/);
     assert.match(admin, /Enroll your first member/);
   });
 

@@ -8,6 +8,7 @@ import { PageStatus } from "@/components/PageStatus";
 import { PasswordField } from "@/components/PasswordField";
 import { useI18n } from "@/i18n";
 import { api, type BusinessEnrollment } from "@/lib/api-client";
+import { experienceStyle } from "@/lib/experience-style";
 
 type JoinSearch = { ref?: string; business?: string };
 
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/join")({
 function JoinRewards() {
   const navigate = useNavigate();
   const search = Route.useSearch();
-  const { t, errorMessage } = useI18n();
+  const { t, locale, errorMessage } = useI18n();
   const [referralContext, setReferralContext] = useState<{
     businessName: string;
     locationName: string;
@@ -99,6 +100,9 @@ function JoinRewards() {
   const style =
     businessContext || referralContext
       ? ({
+          ...experienceStyle(
+            businessContext?.visualSettings ?? referralContext?.visualSettings ?? null,
+          ),
           "--client-primary":
             businessContext?.primaryColor ?? referralContext?.primaryColor ?? "#F6B900",
           "--client-secondary":
@@ -106,6 +110,9 @@ function JoinRewards() {
         } as React.CSSProperties)
       : undefined;
   const loyaltyMode = businessContext?.loyaltyMode ?? referralContext?.loyaltyMode ?? "points";
+  const visualSettings = businessContext?.visualSettings ?? referralContext?.visualSettings ?? null;
+  const localized = (english: string, spanish: string) =>
+    locale === "es" ? spanish || english : english;
 
   if (!busy && error && !businessName) {
     return (
@@ -149,7 +156,17 @@ function JoinRewards() {
         </a>
       </header>
       <main className="auth-card referral-join-card themed-surface-content">
-        <h1>{t("Join {businessName}", { businessName: businessName ?? "Elite Rewards" })}</h1>
+        {visualSettings &&
+          localized(visualSettings.companySlogan, visualSettings.companySloganEs) && (
+            <span className="join-company-slogan">
+              {localized(visualSettings.companySlogan, visualSettings.companySloganEs)}
+            </span>
+          )}
+        <h1>
+          {(visualSettings &&
+            localized(visualSettings.joinHeadline, visualSettings.joinHeadlineEs)) ||
+            t("Join {businessName}", { businessName: businessName ?? "Elite Rewards" })}
+        </h1>
         {busy && (
           <div className="inline-loading" role="status">
             <span className="status-spinner" aria-hidden="true" />
@@ -172,13 +189,15 @@ function JoinRewards() {
               </small>
             </div>
             <p>
-              {loyaltyMode === "visits"
-                ? t(
-                    "Create your private member wallet to view this business’s products, record visits, and redeem available rewards.",
-                  )
-                : t(
-                    "Create your private member wallet to view this business’s products, earn points, and redeem available rewards.",
-                  )}
+              {(visualSettings &&
+                localized(visualSettings.joinMessage, visualSettings.joinMessageEs)) ||
+                (loyaltyMode === "visits"
+                  ? t(
+                      "Create your private member wallet to view this business’s products, record visits, and redeem available rewards.",
+                    )
+                  : t(
+                      "Create your private member wallet to view this business’s products, earn points, and redeem available rewards.",
+                    ))}
             </p>
             <form onSubmit={submit}>
               <label>

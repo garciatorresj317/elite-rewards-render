@@ -1,6 +1,7 @@
 import { useI18n } from "@/i18n";
 import type { PublicVisualSettings } from "@/lib/api-client";
 import { themeCatalog } from "@/lib/theme-catalog";
+
 export function ExperienceBackdrop({
   settings,
   audience,
@@ -13,10 +14,11 @@ export function ExperienceBackdrop({
   const theme = themeCatalog.find((item) => item.key === settings.themeKey) ?? themeCatalog[0]!;
   const backgroundImage =
     settings.automaticThemeActive && theme.liveImage ? theme.liveImage : theme.image;
+  const live = settings.automaticThemeActive || theme.live === true;
   return (
     <>
       <div
-        className={`experience-wallpaper experience-${audience} ${settings.automaticThemeActive ? "is-automatic-live-theme" : ""}`}
+        className={`experience-wallpaper experience-${audience} ${live ? "is-live-theme" : ""} ${settings.automaticThemeActive ? "is-automatic-live-theme" : ""}`}
         style={{ backgroundImage: `url(${backgroundImage})` }}
         aria-hidden="true"
       >

@@ -12,13 +12,46 @@ export const themeKeys = [
   "winter-holiday",
   "spring-celebration",
   "community-event",
+  "cosmic-neon",
+  "royal-purple",
+  "ocean-glow",
+  "sunset-energy",
 ] as const;
 export type ThemeKey = (typeof themeKeys)[number];
+export const fontStyles = ["futuristic", "modern", "classic"] as const;
+export type FontStyle = (typeof fontStyles)[number];
+export const cornerStyles = ["sharp", "soft", "rounded"] as const;
+export type CornerStyle = (typeof cornerStyles)[number];
 export type PublicVisualSettings = {
   themeKey: ThemeKey;
   occasionTitle: string;
   occasionMessage: string;
   automaticThemeActive: boolean;
+  companySlogan: string;
+  companySloganEs: string;
+  publicHeadline: string;
+  publicHeadlineEs: string;
+  publicMessage: string;
+  publicMessageEs: string;
+  joinHeadline: string;
+  joinHeadlineEs: string;
+  joinMessage: string;
+  joinMessageEs: string;
+  memberHeadline: string;
+  memberHeadlineEs: string;
+  memberMessage: string;
+  memberMessageEs: string;
+  primaryColor: string;
+  accentColor: string;
+  backgroundColor: string;
+  surfaceColor: string;
+  textColor: string;
+  mutedColor: string;
+  fontStyle: FontStyle;
+  cornerStyle: CornerStyle;
+  showRewards: boolean;
+  showProducts: boolean;
+  showReferrals: boolean;
 };
 export type VisualSettings = PublicVisualSettings & {
   configuredThemeKey: ThemeKey;
@@ -37,6 +70,31 @@ export function publicVisualSettings(settings: VisualSettings): PublicVisualSett
     occasionTitle: settings.occasionTitle,
     occasionMessage: settings.occasionMessage,
     automaticThemeActive: settings.automaticThemeActive,
+    companySlogan: settings.companySlogan,
+    companySloganEs: settings.companySloganEs,
+    publicHeadline: settings.publicHeadline,
+    publicHeadlineEs: settings.publicHeadlineEs,
+    publicMessage: settings.publicMessage,
+    publicMessageEs: settings.publicMessageEs,
+    joinHeadline: settings.joinHeadline,
+    joinHeadlineEs: settings.joinHeadlineEs,
+    joinMessage: settings.joinMessage,
+    joinMessageEs: settings.joinMessageEs,
+    memberHeadline: settings.memberHeadline,
+    memberHeadlineEs: settings.memberHeadlineEs,
+    memberMessage: settings.memberMessage,
+    memberMessageEs: settings.memberMessageEs,
+    primaryColor: settings.primaryColor,
+    accentColor: settings.accentColor,
+    backgroundColor: settings.backgroundColor,
+    surfaceColor: settings.surfaceColor,
+    textColor: settings.textColor,
+    mutedColor: settings.mutedColor,
+    fontStyle: settings.fontStyle,
+    cornerStyle: settings.cornerStyle,
+    showRewards: settings.showRewards,
+    showProducts: settings.showProducts,
+    showReferrals: settings.showReferrals,
   };
 }
 
@@ -47,6 +105,31 @@ type StoredVisualSettings = {
   automaticHolidayThemes: boolean;
   timeZone: string;
   updatedAt: string | null;
+  companySlogan: string;
+  companySloganEs: string;
+  publicHeadline: string;
+  publicHeadlineEs: string;
+  publicMessage: string;
+  publicMessageEs: string;
+  joinHeadline: string;
+  joinHeadlineEs: string;
+  joinMessage: string;
+  joinMessageEs: string;
+  memberHeadline: string;
+  memberHeadlineEs: string;
+  memberMessage: string;
+  memberMessageEs: string;
+  primaryColor: string;
+  accentColor: string;
+  backgroundColor: string;
+  surfaceColor: string;
+  textColor: string;
+  mutedColor: string;
+  fontStyle: FontStyle;
+  cornerStyle: CornerStyle;
+  showRewards: boolean;
+  showProducts: boolean;
+  showReferrals: boolean;
 };
 
 export function effectiveVisualSettings(
@@ -74,6 +157,140 @@ export function effectiveVisualSettings(
         }
       : null,
     updatedAt: stored.updatedAt,
+    companySlogan: stored.companySlogan,
+    companySloganEs: stored.companySloganEs,
+    publicHeadline: stored.publicHeadline,
+    publicHeadlineEs: stored.publicHeadlineEs,
+    publicMessage: stored.publicMessage,
+    publicMessageEs: stored.publicMessageEs,
+    joinHeadline: stored.joinHeadline,
+    joinHeadlineEs: stored.joinHeadlineEs,
+    joinMessage: stored.joinMessage,
+    joinMessageEs: stored.joinMessageEs,
+    memberHeadline: stored.memberHeadline,
+    memberHeadlineEs: stored.memberHeadlineEs,
+    memberMessage: stored.memberMessage,
+    memberMessageEs: stored.memberMessageEs,
+    primaryColor: stored.primaryColor,
+    accentColor: stored.accentColor,
+    backgroundColor: stored.backgroundColor,
+    surfaceColor: stored.surfaceColor,
+    textColor: stored.textColor,
+    mutedColor: stored.mutedColor,
+    fontStyle: stored.fontStyle,
+    cornerStyle: stored.cornerStyle,
+    showRewards: stored.showRewards,
+    showProducts: stored.showProducts,
+    showReferrals: stored.showReferrals,
+  };
+}
+
+const customizationDefaults = {
+  companySlogan: "",
+  companySloganEs: "",
+  publicHeadline: "",
+  publicHeadlineEs: "",
+  publicMessage: "",
+  publicMessageEs: "",
+  joinHeadline: "",
+  joinHeadlineEs: "",
+  joinMessage: "",
+  joinMessageEs: "",
+  memberHeadline: "",
+  memberHeadlineEs: "",
+  memberMessage: "",
+  memberMessageEs: "",
+  primaryColor: "#F6B900",
+  accentColor: "#14E6FF",
+  backgroundColor: "#020713",
+  surfaceColor: "#07111F",
+  textColor: "#FFFAF0",
+  mutedColor: "#C7BEA8",
+  fontStyle: "futuristic" as FontStyle,
+  cornerStyle: "soft" as CornerStyle,
+  showRewards: true,
+  showProducts: true,
+  showReferrals: true,
+};
+
+type StoredVisualRow = {
+  theme_key: ThemeKey;
+  occasion_title: string;
+  occasion_message: string;
+  automatic_holiday_themes: boolean;
+  time_zone: string;
+  updated_at: Date;
+  company_slogan: string;
+  company_slogan_es: string;
+  public_headline: string;
+  public_headline_es: string;
+  public_message: string;
+  public_message_es: string;
+  join_headline: string;
+  join_headline_es: string;
+  join_message: string;
+  join_message_es: string;
+  member_headline: string;
+  member_headline_es: string;
+  member_message: string;
+  member_message_es: string;
+  primary_color: string;
+  accent_color: string;
+  background_color: string;
+  surface_color: string;
+  text_color: string;
+  muted_color: string;
+  font_style: FontStyle;
+  corner_style: CornerStyle;
+  show_rewards: boolean;
+  show_products: boolean;
+  show_referrals: boolean;
+};
+
+function storedVisualSettings(row?: StoredVisualRow): StoredVisualSettings {
+  if (!row)
+    return {
+      themeKey: "elite-signature",
+      occasionTitle: "",
+      occasionMessage: "",
+      automaticHolidayThemes: false,
+      timeZone: normalizeTimeZone(undefined),
+      updatedAt: null,
+      ...customizationDefaults,
+    };
+  const defaults = customizationDefaults;
+  return {
+    themeKey: row.theme_key,
+    occasionTitle: row.occasion_title,
+    occasionMessage: row.occasion_message,
+    automaticHolidayThemes: row.automatic_holiday_themes,
+    timeZone: normalizeTimeZone(row.time_zone),
+    updatedAt: row.updated_at.toISOString(),
+    companySlogan: row.company_slogan ?? defaults.companySlogan,
+    companySloganEs: row.company_slogan_es ?? defaults.companySloganEs,
+    publicHeadline: row.public_headline ?? defaults.publicHeadline,
+    publicHeadlineEs: row.public_headline_es ?? defaults.publicHeadlineEs,
+    publicMessage: row.public_message ?? defaults.publicMessage,
+    publicMessageEs: row.public_message_es ?? defaults.publicMessageEs,
+    joinHeadline: row.join_headline ?? defaults.joinHeadline,
+    joinHeadlineEs: row.join_headline_es ?? defaults.joinHeadlineEs,
+    joinMessage: row.join_message ?? defaults.joinMessage,
+    joinMessageEs: row.join_message_es ?? defaults.joinMessageEs,
+    memberHeadline: row.member_headline ?? defaults.memberHeadline,
+    memberHeadlineEs: row.member_headline_es ?? defaults.memberHeadlineEs,
+    memberMessage: row.member_message ?? defaults.memberMessage,
+    memberMessageEs: row.member_message_es ?? defaults.memberMessageEs,
+    primaryColor: row.primary_color ?? defaults.primaryColor,
+    accentColor: row.accent_color ?? defaults.accentColor,
+    backgroundColor: row.background_color ?? defaults.backgroundColor,
+    surfaceColor: row.surface_color ?? defaults.surfaceColor,
+    textColor: row.text_color ?? defaults.textColor,
+    mutedColor: row.muted_color ?? defaults.mutedColor,
+    fontStyle: row.font_style ?? defaults.fontStyle,
+    cornerStyle: row.corner_style ?? defaults.cornerStyle,
+    showRewards: row.show_rewards ?? defaults.showRewards,
+    showProducts: row.show_products ?? defaults.showProducts,
+    showReferrals: row.show_referrals ?? defaults.showReferrals,
   };
 }
 
@@ -263,76 +480,34 @@ export async function getVisualSettings(
   user: SessionUser,
   now: Date = new Date(),
 ): Promise<VisualSettings> {
-  const result = await getPool().query<{
-    theme_key: ThemeKey;
-    occasion_title: string;
-    occasion_message: string;
-    automatic_holiday_themes: boolean;
-    time_zone: string;
-    updated_at: Date;
-  }>(
-    `SELECT theme_key, occasion_title, occasion_message, automatic_holiday_themes, time_zone, updated_at
+  const result = await getPool().query<StoredVisualRow>(
+    `SELECT theme_key, occasion_title, occasion_message, automatic_holiday_themes, time_zone, updated_at,
+            company_slogan, company_slogan_es, public_headline, public_headline_es,
+            public_message, public_message_es, join_headline, join_headline_es, join_message, join_message_es,
+            member_headline, member_headline_es, member_message, member_message_es,
+            primary_color, accent_color, background_color, surface_color, text_color, muted_color,
+            font_style, corner_style, show_rewards, show_products, show_referrals
        FROM business_visual_settings WHERE business_id = $1`,
     [user.businessId],
   );
-  const row = result.rows[0];
-  const stored: StoredVisualSettings = row
-    ? {
-        themeKey: row.theme_key,
-        occasionTitle: row.occasion_title,
-        occasionMessage: row.occasion_message,
-        automaticHolidayThemes: row.automatic_holiday_themes,
-        timeZone: normalizeTimeZone(row.time_zone),
-        updatedAt: row.updated_at.toISOString(),
-      }
-    : {
-        themeKey: "elite-signature",
-        occasionTitle: "",
-        occasionMessage: "",
-        automaticHolidayThemes: false,
-        timeZone: normalizeTimeZone(undefined),
-        updatedAt: null,
-      };
-  return effectiveVisualSettings(stored, now);
+  return effectiveVisualSettings(storedVisualSettings(result.rows[0]), now);
 }
 
 export async function getBusinessVisualSettings(
   businessId: string,
   now: Date = new Date(),
 ): Promise<VisualSettings> {
-  const result = await getPool().query<{
-    theme_key: ThemeKey;
-    occasion_title: string;
-    occasion_message: string;
-    automatic_holiday_themes: boolean;
-    time_zone: string;
-    updated_at: Date;
-  }>(
-    `SELECT theme_key, occasion_title, occasion_message, automatic_holiday_themes, time_zone, updated_at
+  const result = await getPool().query<StoredVisualRow>(
+    `SELECT theme_key, occasion_title, occasion_message, automatic_holiday_themes, time_zone, updated_at,
+            company_slogan, company_slogan_es, public_headline, public_headline_es,
+            public_message, public_message_es, join_headline, join_headline_es, join_message, join_message_es,
+            member_headline, member_headline_es, member_message, member_message_es,
+            primary_color, accent_color, background_color, surface_color, text_color, muted_color,
+            font_style, corner_style, show_rewards, show_products, show_referrals
        FROM business_visual_settings WHERE business_id = $1`,
     [businessId],
   );
-  const row = result.rows[0];
-  return effectiveVisualSettings(
-    row
-      ? {
-          themeKey: row.theme_key,
-          occasionTitle: row.occasion_title,
-          occasionMessage: row.occasion_message,
-          automaticHolidayThemes: row.automatic_holiday_themes,
-          timeZone: normalizeTimeZone(row.time_zone),
-          updatedAt: row.updated_at.toISOString(),
-        }
-      : {
-          themeKey: "elite-signature",
-          occasionTitle: "",
-          occasionMessage: "",
-          automaticHolidayThemes: false,
-          timeZone: normalizeTimeZone(undefined),
-          updatedAt: null,
-        },
-    now,
-  );
+  return effectiveVisualSettings(storedVisualSettings(result.rows[0]), now);
 }
 
 export async function getClientVisualSettings(
@@ -358,6 +533,31 @@ export async function updateClientVisualSettings(
     occasionMessage: string;
     automaticHolidayThemes: boolean;
     timeZone: string;
+    companySlogan?: string;
+    companySloganEs?: string;
+    publicHeadline?: string;
+    publicHeadlineEs?: string;
+    publicMessage?: string;
+    publicMessageEs?: string;
+    joinHeadline?: string;
+    joinHeadlineEs?: string;
+    joinMessage?: string;
+    joinMessageEs?: string;
+    memberHeadline?: string;
+    memberHeadlineEs?: string;
+    memberMessage?: string;
+    memberMessageEs?: string;
+    primaryColor?: string;
+    accentColor?: string;
+    backgroundColor?: string;
+    surfaceColor?: string;
+    textColor?: string;
+    mutedColor?: string;
+    fontStyle?: FontStyle;
+    cornerStyle?: CornerStyle;
+    showRewards?: boolean;
+    showProducts?: boolean;
+    showReferrals?: boolean;
   },
 ): Promise<VisualSettings> {
   requirePlatformAdmin(user);
@@ -366,6 +566,38 @@ export async function updateClientVisualSettings(
   const timeZone = normalizeTimeZone(input.timeZone);
   if (timeZone !== input.timeZone)
     throw Object.assign(new Error("Time zone is invalid"), { status: 400 });
+  const customization = {
+    ...customizationDefaults,
+    companySlogan: input.companySlogan ?? customizationDefaults.companySlogan,
+    companySloganEs: input.companySloganEs ?? customizationDefaults.companySloganEs,
+    publicHeadline: input.publicHeadline ?? customizationDefaults.publicHeadline,
+    publicHeadlineEs: input.publicHeadlineEs ?? customizationDefaults.publicHeadlineEs,
+    publicMessage: input.publicMessage ?? customizationDefaults.publicMessage,
+    publicMessageEs: input.publicMessageEs ?? customizationDefaults.publicMessageEs,
+    joinHeadline: input.joinHeadline ?? customizationDefaults.joinHeadline,
+    joinHeadlineEs: input.joinHeadlineEs ?? customizationDefaults.joinHeadlineEs,
+    joinMessage: input.joinMessage ?? customizationDefaults.joinMessage,
+    joinMessageEs: input.joinMessageEs ?? customizationDefaults.joinMessageEs,
+    memberHeadline: input.memberHeadline ?? customizationDefaults.memberHeadline,
+    memberHeadlineEs: input.memberHeadlineEs ?? customizationDefaults.memberHeadlineEs,
+    memberMessage: input.memberMessage ?? customizationDefaults.memberMessage,
+    memberMessageEs: input.memberMessageEs ?? customizationDefaults.memberMessageEs,
+    primaryColor: input.primaryColor ?? customizationDefaults.primaryColor,
+    accentColor: input.accentColor ?? customizationDefaults.accentColor,
+    backgroundColor: input.backgroundColor ?? customizationDefaults.backgroundColor,
+    surfaceColor: input.surfaceColor ?? customizationDefaults.surfaceColor,
+    textColor: input.textColor ?? customizationDefaults.textColor,
+    mutedColor: input.mutedColor ?? customizationDefaults.mutedColor,
+    fontStyle: input.fontStyle ?? customizationDefaults.fontStyle,
+    cornerStyle: input.cornerStyle ?? customizationDefaults.cornerStyle,
+    showRewards: input.showRewards ?? customizationDefaults.showRewards,
+    showProducts: input.showProducts ?? customizationDefaults.showProducts,
+    showReferrals: input.showReferrals ?? customizationDefaults.showReferrals,
+  };
+  if (!fontStyles.includes(customization.fontStyle))
+    throw Object.assign(new Error("Font style is invalid"), { status: 400 });
+  if (!cornerStyles.includes(customization.cornerStyle))
+    throw Object.assign(new Error("Corner style is invalid"), { status: 400 });
   const target = await getPool().query(
     `SELECT 1 FROM businesses
       WHERE id = $1 AND id <> (SELECT business_id FROM platform_state WHERE singleton = true)`,
@@ -376,14 +608,44 @@ export async function updateClientVisualSettings(
   try {
     await connection.query("BEGIN");
     await connection.query(
-      `INSERT INTO business_visual_settings(business_id,theme_key,occasion_title,occasion_message,automatic_holiday_themes,time_zone,updated_by_user_id,updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,now())
+      `INSERT INTO business_visual_settings(
+         business_id,theme_key,occasion_title,occasion_message,automatic_holiday_themes,time_zone,
+         company_slogan,company_slogan_es,public_headline,public_headline_es,public_message,public_message_es,
+         join_headline,join_headline_es,join_message,join_message_es,member_headline,member_headline_es,member_message,member_message_es,
+         primary_color,accent_color,background_color,surface_color,text_color,muted_color,font_style,corner_style,
+         show_rewards,show_products,show_referrals,updated_by_user_id,updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,now())
        ON CONFLICT (business_id) DO UPDATE SET
          theme_key = EXCLUDED.theme_key,
          occasion_title = EXCLUDED.occasion_title,
          occasion_message = EXCLUDED.occasion_message,
          automatic_holiday_themes = EXCLUDED.automatic_holiday_themes,
          time_zone = EXCLUDED.time_zone,
+         company_slogan = EXCLUDED.company_slogan,
+         company_slogan_es = EXCLUDED.company_slogan_es,
+         public_headline = EXCLUDED.public_headline,
+         public_headline_es = EXCLUDED.public_headline_es,
+         public_message = EXCLUDED.public_message,
+         public_message_es = EXCLUDED.public_message_es,
+         join_headline = EXCLUDED.join_headline,
+         join_headline_es = EXCLUDED.join_headline_es,
+         join_message = EXCLUDED.join_message,
+         join_message_es = EXCLUDED.join_message_es,
+         member_headline = EXCLUDED.member_headline,
+         member_headline_es = EXCLUDED.member_headline_es,
+         member_message = EXCLUDED.member_message,
+         member_message_es = EXCLUDED.member_message_es,
+         primary_color = EXCLUDED.primary_color,
+         accent_color = EXCLUDED.accent_color,
+         background_color = EXCLUDED.background_color,
+         surface_color = EXCLUDED.surface_color,
+         text_color = EXCLUDED.text_color,
+         muted_color = EXCLUDED.muted_color,
+         font_style = EXCLUDED.font_style,
+         corner_style = EXCLUDED.corner_style,
+         show_rewards = EXCLUDED.show_rewards,
+         show_products = EXCLUDED.show_products,
+         show_referrals = EXCLUDED.show_referrals,
          updated_by_user_id = EXCLUDED.updated_by_user_id,
          updated_at = now()`,
       [
@@ -393,6 +655,31 @@ export async function updateClientVisualSettings(
         input.occasionMessage,
         input.automaticHolidayThemes,
         timeZone,
+        customization.companySlogan,
+        customization.companySloganEs,
+        customization.publicHeadline,
+        customization.publicHeadlineEs,
+        customization.publicMessage,
+        customization.publicMessageEs,
+        customization.joinHeadline,
+        customization.joinHeadlineEs,
+        customization.joinMessage,
+        customization.joinMessageEs,
+        customization.memberHeadline,
+        customization.memberHeadlineEs,
+        customization.memberMessage,
+        customization.memberMessageEs,
+        customization.primaryColor,
+        customization.accentColor,
+        customization.backgroundColor,
+        customization.surfaceColor,
+        customization.textColor,
+        customization.mutedColor,
+        customization.fontStyle,
+        customization.cornerStyle,
+        customization.showRewards,
+        customization.showProducts,
+        customization.showReferrals,
         user.id,
       ],
     );
@@ -407,6 +694,11 @@ export async function updateClientVisualSettings(
           themeKey: input.themeKey,
           automaticHolidayThemes: input.automaticHolidayThemes,
           timeZone,
+          fontStyle: customization.fontStyle,
+          cornerStyle: customization.cornerStyle,
+          showRewards: customization.showRewards,
+          showProducts: customization.showProducts,
+          showReferrals: customization.showReferrals,
         }),
       ],
     );

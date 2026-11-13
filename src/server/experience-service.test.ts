@@ -70,6 +70,7 @@ describe("referrals and visual experiences", () => {
       "004_referrals_and_visual_themes.sql",
       "005_automatic_holiday_themes.sql",
       "010_client_suspension.sql",
+      "021_full_client_experience_customization.sql",
     ]) {
       await pool.query(await readFile(join(process.cwd(), "migrations", file), "utf8"));
     }
@@ -193,9 +194,51 @@ describe("referrals and visual experiences", () => {
       occasionMessage: "Honoring unity, service, and progress.",
       automaticHolidayThemes: false,
       timeZone: "America/New_York",
+      companySlogan: "Built for the bold",
+      companySloganEs: "Creado para los audaces",
+      publicHeadline: "Rewards made personal",
+      publicHeadlineEs: "Recompensas personales",
+      publicMessage: "Earn more with every visit.",
+      publicMessageEs: "Gana más con cada visita.",
+      joinHeadline: "Join the inner circle",
+      joinHeadlineEs: "Únete al círculo",
+      joinMessage: "Create your wallet in seconds.",
+      joinMessageEs: "Crea tu billetera en segundos.",
+      memberHeadline: "Your rewards, your way",
+      memberHeadlineEs: "Tus recompensas, a tu manera",
+      memberMessage: "See your balance and offers here.",
+      memberMessageEs: "Consulta aquí tu saldo y ofertas.",
+      primaryColor: "#11AAFF",
+      accentColor: "#FF44CC",
+      backgroundColor: "#020713",
+      surfaceColor: "#07111F",
+      textColor: "#FFFAF0",
+      mutedColor: "#C7BEA8",
+      fontStyle: "modern",
+      cornerStyle: "rounded",
+      showRewards: true,
+      showProducts: false,
+      showReferrals: true,
     });
     assert.equal(saved.themeKey, "mlk-day");
+    assert.equal(saved.companySlogan, "Built for the bold");
+    assert.equal(saved.companySloganEs, "Creado para los audaces");
+    assert.equal(saved.publicHeadline, "Rewards made personal");
+    assert.equal(saved.primaryColor, "#11AAFF");
+    assert.equal(saved.fontStyle, "modern");
+    assert.equal(saved.cornerStyle, "rounded");
+    assert.equal(saved.showProducts, false);
     assert.deepEqual(await getVisualSettings(member), saved);
+    const audit = await pool.query<{ metadata: string | Record<string, unknown> }>(
+      "SELECT metadata FROM audit_events WHERE action = 'platform.client.visual_settings.updated' ORDER BY created_at DESC LIMIT 1",
+    );
+    const metadata =
+      typeof audit.rows[0]?.metadata === "string"
+        ? (JSON.parse(audit.rows[0].metadata) as Record<string, unknown>)
+        : audit.rows[0]?.metadata;
+    assert.equal(metadata?.["themeKey"], "mlk-day");
+    assert.equal(metadata?.["fontStyle"], "modern");
+    assert.equal(metadata?.["showProducts"], false);
     await assert.rejects(
       () =>
         updateClientVisualSettings(owner, owner.businessId, {
@@ -290,5 +333,32 @@ describe("referrals and visual experiences", () => {
         }),
       /time zone is invalid/i,
     );
+  });
+
+  it("stores all four additional themes with tenant-scoped visibility settings", async () => {
+    const platformOwner: SessionUser = { ...owner, platformAdmin: true };
+    const otherThemeBefore = (await getVisualSettings(otherMember)).themeKey;
+    for (const themeKey of [
+      "cosmic-neon",
+      "royal-purple",
+      "ocean-glow",
+      "sunset-energy",
+    ] as const) {
+      const saved = await updateClientVisualSettings(platformOwner, owner.businessId, {
+        themeKey,
+        occasionTitle: "Live campaign",
+        occasionMessage: "A fresh customer experience.",
+        automaticHolidayThemes: false,
+        timeZone: "America/New_York",
+        showRewards: false,
+        showProducts: true,
+        showReferrals: false,
+      });
+      assert.equal(saved.themeKey, themeKey);
+      assert.equal(saved.showRewards, false);
+      assert.equal(saved.showProducts, true);
+      assert.equal(saved.showReferrals, false);
+      assert.equal((await getVisualSettings(otherMember)).themeKey, otherThemeBefore);
+    }
   });
 });

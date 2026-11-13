@@ -403,13 +403,45 @@ export type ThemeKey =
   | "remembrance-911"
   | "winter-holiday"
   | "spring-celebration"
-  | "community-event";
+  | "community-event"
+  | "cosmic-neon"
+  | "royal-purple"
+  | "ocean-glow"
+  | "sunset-energy";
+
+export type FontStyle = "futuristic" | "modern" | "classic";
+export type CornerStyle = "sharp" | "soft" | "rounded";
 
 export type PublicVisualSettings = {
   themeKey: ThemeKey;
   occasionTitle: string;
   occasionMessage: string;
   automaticThemeActive: boolean;
+  companySlogan: string;
+  companySloganEs: string;
+  publicHeadline: string;
+  publicHeadlineEs: string;
+  publicMessage: string;
+  publicMessageEs: string;
+  joinHeadline: string;
+  joinHeadlineEs: string;
+  joinMessage: string;
+  joinMessageEs: string;
+  memberHeadline: string;
+  memberHeadlineEs: string;
+  memberMessage: string;
+  memberMessageEs: string;
+  primaryColor: string;
+  accentColor: string;
+  backgroundColor: string;
+  surfaceColor: string;
+  textColor: string;
+  mutedColor: string;
+  fontStyle: FontStyle;
+  cornerStyle: CornerStyle;
+  showRewards: boolean;
+  showProducts: boolean;
+  showReferrals: boolean;
 };
 
 export type VisualSettings = PublicVisualSettings & {
@@ -425,7 +457,36 @@ export type VisualSettings = PublicVisualSettings & {
 
 export type VisualSettingsUpdate = Pick<
   VisualSettings,
-  "themeKey" | "occasionTitle" | "occasionMessage" | "automaticHolidayThemes" | "timeZone"
+  | "themeKey"
+  | "occasionTitle"
+  | "occasionMessage"
+  | "automaticHolidayThemes"
+  | "timeZone"
+  | "companySlogan"
+  | "companySloganEs"
+  | "publicHeadline"
+  | "publicHeadlineEs"
+  | "publicMessage"
+  | "publicMessageEs"
+  | "joinHeadline"
+  | "joinHeadlineEs"
+  | "joinMessage"
+  | "joinMessageEs"
+  | "memberHeadline"
+  | "memberHeadlineEs"
+  | "memberMessage"
+  | "memberMessageEs"
+  | "primaryColor"
+  | "accentColor"
+  | "backgroundColor"
+  | "surfaceColor"
+  | "textColor"
+  | "mutedColor"
+  | "fontStyle"
+  | "cornerStyle"
+  | "showRewards"
+  | "showProducts"
+  | "showReferrals"
 >;
 
 export type ClientSummary = {
