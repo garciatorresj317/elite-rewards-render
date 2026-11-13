@@ -67,6 +67,8 @@ export type VisualSettings = PublicVisualSettings & {
   automaticThemeName: string | null;
   nextAutomaticTheme: { name: string; localDate: string; dateLabel: string } | null;
   updatedAt: string | null;
+  paletteSource: "default" | "logo" | "manual";
+  logoPaletteVersion: number;
 };
 
 export function publicVisualSettings(settings: VisualSettings): PublicVisualSettings {
@@ -137,6 +139,8 @@ type StoredVisualSettings = {
   showRewards: boolean;
   showProducts: boolean;
   showReferrals: boolean;
+  paletteSource: "default" | "logo" | "manual";
+  logoPaletteVersion: number;
 };
 
 export function effectiveVisualSettings(
@@ -190,6 +194,8 @@ export function effectiveVisualSettings(
     showRewards: stored.showRewards,
     showProducts: stored.showProducts,
     showReferrals: stored.showReferrals,
+    paletteSource: stored.paletteSource,
+    logoPaletteVersion: stored.logoPaletteVersion,
   };
 }
 
@@ -255,6 +261,8 @@ type StoredVisualRow = {
   show_rewards: boolean;
   show_products: boolean;
   show_referrals: boolean;
+  palette_source: "default" | "logo" | "manual";
+  logo_palette_version: number;
 };
 
 function storedVisualSettings(row?: StoredVisualRow): StoredVisualSettings {
@@ -266,6 +274,8 @@ function storedVisualSettings(row?: StoredVisualRow): StoredVisualSettings {
       automaticHolidayThemes: false,
       timeZone: normalizeTimeZone(undefined),
       updatedAt: null,
+      paletteSource: "default",
+      logoPaletteVersion: 0,
       ...customizationDefaults,
     };
   const defaults = customizationDefaults;
@@ -302,6 +312,8 @@ function storedVisualSettings(row?: StoredVisualRow): StoredVisualSettings {
     showRewards: row.show_rewards ?? defaults.showRewards,
     showProducts: row.show_products ?? defaults.showProducts,
     showReferrals: row.show_referrals ?? defaults.showReferrals,
+    paletteSource: row.palette_source ?? "default",
+    logoPaletteVersion: Number(row.logo_palette_version ?? 0),
   };
 }
 
@@ -497,7 +509,8 @@ export async function getVisualSettings(
             public_message, public_message_es, join_headline, join_headline_es, join_message, join_message_es,
             member_headline, member_headline_es, member_message, member_message_es,
             business_name_color, primary_color, accent_color, background_color, surface_color, text_color, muted_color,
-            font_style, corner_style, show_rewards, show_products, show_referrals
+            font_style, corner_style, show_rewards, show_products, show_referrals,
+            palette_source, logo_palette_version
        FROM business_visual_settings WHERE business_id = $1`,
     [user.businessId],
   );
@@ -514,7 +527,8 @@ export async function getBusinessVisualSettings(
             public_message, public_message_es, join_headline, join_headline_es, join_message, join_message_es,
             member_headline, member_headline_es, member_message, member_message_es,
             business_name_color, primary_color, accent_color, background_color, surface_color, text_color, muted_color,
-            font_style, corner_style, show_rewards, show_products, show_referrals
+            font_style, corner_style, show_rewards, show_products, show_referrals,
+            palette_source, logo_palette_version
        FROM business_visual_settings WHERE business_id = $1`,
     [businessId],
   );
@@ -630,8 +644,8 @@ export async function updateClientVisualSettings(
          company_slogan,company_slogan_es,public_headline,public_headline_es,public_message,public_message_es,
          join_headline,join_headline_es,join_message,join_message_es,member_headline,member_headline_es,member_message,member_message_es,
          business_name_color,primary_color,accent_color,background_color,surface_color,text_color,muted_color,font_style,corner_style,
-         show_rewards,show_products,show_referrals,updated_by_user_id,updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,now())
+         show_rewards,show_products,show_referrals,palette_source,logo_palette_version,updated_by_user_id,updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,'manual',0,$33,now())
        ON CONFLICT (business_id) DO UPDATE SET
          theme_key = EXCLUDED.theme_key,
          occasion_title = EXCLUDED.occasion_title,
@@ -664,6 +678,8 @@ export async function updateClientVisualSettings(
          show_rewards = EXCLUDED.show_rewards,
          show_products = EXCLUDED.show_products,
          show_referrals = EXCLUDED.show_referrals,
+         palette_source = EXCLUDED.palette_source,
+         logo_palette_version = EXCLUDED.logo_palette_version,
          updated_by_user_id = EXCLUDED.updated_by_user_id,
          updated_at = now()`,
       [

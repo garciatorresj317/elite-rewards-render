@@ -15,6 +15,7 @@ import {
 } from "./experience-service.ts";
 import type { LoyaltyMode } from "./loyalty-settings-service.ts";
 import { countBusinessMembers } from "./member-count.ts";
+import { deriveLogoPalette, LOGO_PALETTE_VERSION, type LogoPalette } from "./logo-palette.ts";
 
 const invitationLifetimeHours = 72;
 
@@ -48,6 +49,7 @@ export type ClientBranding = {
   nfcPath: string;
   joinPath: string;
   loyaltyMode: LoyaltyMode;
+  logoPalette: LogoPalette | null;
 };
 
 export type PublicClientExperience = {
@@ -461,6 +463,7 @@ export async function getClientBranding(
     nfcPath: clientPath(row.id),
     joinPath: joinPath(row.id),
     loyaltyMode: row.loyalty_mode,
+    logoPalette: null,
   };
 }
 
@@ -549,44 +552,91 @@ export async function updateClientLogo(
       status: 400,
     });
   const processed = await normalizeUploadedImage(input, CLIENT_LOGO_MAX_BYTES, "Logo");
-  const result = await getPool().query(
-    `UPDATE businesses
-        SET logo_data = $2, logo_mime = $3, logo_url = NULL,
-            logo_width = $4, logo_height = $5, logo_processing_version = $6,
-            updated_at = now()
-      WHERE id = $1
-        AND id <> (SELECT business_id FROM platform_state WHERE singleton = true)`,
-    [
-      businessId,
-      processed.data,
-      processed.mime,
-      processed.width,
-      processed.height,
-      HIGH_RES_IMAGE_VERSION,
-    ],
-  );
-  if (!result.rowCount) throw Object.assign(new Error("Client not found"), { status: 404 });
-  await getPool().query(
-    `INSERT INTO audit_events(id,business_id,actor_user_id,action,target_type,target_id,metadata)
-     VALUES ($1,$2,$3,'platform.client.logo.updated','business',$2,$4)`,
-    [
-      id("aud"),
-      businessId,
-      user.id,
-      JSON.stringify({
-        mime: processed.mime,
-        bytes: processed.data.length,
-        width: processed.width,
-        height: processed.height,
-        sourceMime: input.mime,
-        sourceBytes: input.data.length,
-        sourceWidth: processed.sourceWidth,
-        sourceHeight: processed.sourceHeight,
-        processingVersion: HIGH_RES_IMAGE_VERSION,
-      }),
-    ],
-  );
-  return getClientBranding(user, businessId);
+  const palette = await deriveLogoPalette(processed.data);
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    const result = await client.query(
+      `UPDATE businesses
+          SET logo_data = $2, logo_mime = $3, logo_url = NULL,
+              logo_width = $4, logo_height = $5, logo_processing_version = $6,
+              primary_color = $7, secondary_color = $8,
+              updated_at = now()
+        WHERE id = $1
+          AND id <> (SELECT business_id FROM platform_state WHERE singleton = true)`,
+      [
+        businessId,
+        processed.data,
+        processed.mime,
+        processed.width,
+        processed.height,
+        HIGH_RES_IMAGE_VERSION,
+        palette.primaryColor,
+        palette.accentColor,
+      ],
+    );
+    if (!result.rowCount) throw Object.assign(new Error("Client not found"), { status: 404 });
+    await client.query(
+      `INSERT INTO business_visual_settings(
+         business_id,business_name_color,primary_color,accent_color,background_color,surface_color,text_color,muted_color,
+         palette_source,logo_palette_version,updated_by_user_id,updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'logo',$9,$10,now())
+       ON CONFLICT (business_id) DO UPDATE SET
+         business_name_color = EXCLUDED.business_name_color,
+         primary_color = EXCLUDED.primary_color,
+         accent_color = EXCLUDED.accent_color,
+         background_color = EXCLUDED.background_color,
+         surface_color = EXCLUDED.surface_color,
+         text_color = EXCLUDED.text_color,
+         muted_color = EXCLUDED.muted_color,
+         palette_source = 'logo',
+         logo_palette_version = EXCLUDED.logo_palette_version,
+         updated_by_user_id = EXCLUDED.updated_by_user_id,
+         updated_at = now()`,
+      [
+        businessId,
+        palette.businessNameColor,
+        palette.primaryColor,
+        palette.accentColor,
+        palette.backgroundColor,
+        palette.surfaceColor,
+        palette.textColor,
+        palette.mutedColor,
+        LOGO_PALETTE_VERSION,
+        user.id,
+      ],
+    );
+    await client.query(
+      `INSERT INTO audit_events(id,business_id,actor_user_id,action,target_type,target_id,metadata)
+       VALUES ($1,$2,$3,'platform.client.logo.updated','business',$2,$4)`,
+      [
+        id("aud"),
+        businessId,
+        user.id,
+        JSON.stringify({
+          mime: processed.mime,
+          bytes: processed.data.length,
+          width: processed.width,
+          height: processed.height,
+          sourceMime: input.mime,
+          sourceBytes: input.data.length,
+          sourceWidth: processed.sourceWidth,
+          sourceHeight: processed.sourceHeight,
+          processingVersion: HIGH_RES_IMAGE_VERSION,
+          palette,
+          paletteSource: "logo",
+          logoPaletteVersion: LOGO_PALETTE_VERSION,
+        }),
+      ],
+    );
+    await client.query("COMMIT");
+    return { ...(await getClientBranding(user, businessId)), logoPalette: palette };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export async function resetClientBranding(

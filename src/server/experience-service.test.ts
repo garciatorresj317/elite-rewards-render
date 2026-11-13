@@ -74,6 +74,7 @@ describe("referrals and visual experiences", () => {
       "021_full_client_experience_customization.sql",
       "022_business_name_color.sql",
       "025_more_live_themes.sql",
+      "026_logo_derived_palettes.sql",
     ]) {
       await pool.query(await readFile(join(process.cwd(), "migrations", file), "utf8"));
     }

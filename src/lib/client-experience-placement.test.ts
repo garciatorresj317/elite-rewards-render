@@ -267,6 +267,8 @@ describe("complete Elite-only client experience customization", () => {
     }
     assert.doesNotMatch(admin, / — (?:English|Spanish)/);
     assert.match(admin, /Full customer palette/);
+    assert.match(admin, /Logo colors are applied automatically when a logo is selected/);
+    assert.match(admin, /rewards pages now automatically match the logo colors/);
     assert.match(admin, /Back to full default/);
     assert.match(admin, /resetClientVisualSettings/);
     assert.match(admin, /Business name preview/);

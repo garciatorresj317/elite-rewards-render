@@ -151,6 +151,9 @@ describe("platform client management", () => {
       await readFile(join(process.cwd(), "migrations", "022_business_name_color.sql"), "utf8"),
     );
     await pool.query(
+      await readFile(join(process.cwd(), "migrations", "026_logo_derived_palettes.sql"), "utf8"),
+    );
+    await pool.query(
       "CREATE TABLE platform_administrator(singleton boolean PRIMARY KEY, user_id text NOT NULL UNIQUE REFERENCES users(id))",
     );
     await pool.query(
@@ -261,6 +264,24 @@ describe("platform client management", () => {
     const saved = await updateClientLogo(platformOwner, client.id, {
       mime: "image/webp",
       data: webp,
+    });
+    assert.ok(saved.logoPalette);
+    assert.equal(saved.primaryColor, saved.logoPalette.primaryColor);
+    assert.equal(saved.secondaryColor, saved.logoPalette.accentColor);
+    const logoPalette = await pool.query<{
+      palette_source: string;
+      logo_palette_version: number;
+      primary_color: string;
+      accent_color: string;
+    }>(
+      "SELECT palette_source,logo_palette_version,primary_color,accent_color FROM business_visual_settings WHERE business_id=$1",
+      [client.id],
+    );
+    assert.deepEqual(logoPalette.rows[0], {
+      palette_source: "logo",
+      logo_palette_version: 1,
+      primary_color: saved.logoPalette.primaryColor,
+      accent_color: saved.logoPalette.accentColor,
     });
     assert.match(saved.logoUrl ?? "", new RegExp(`^/api/public/clients/${client.id}/logo\\?v=`));
     const storedLogo = await getClientLogo(client.id);

@@ -474,6 +474,8 @@ export type VisualSettings = PublicVisualSettings & {
   automaticThemeName: string | null;
   nextAutomaticTheme: { name: string; localDate: string; dateLabel: string } | null;
   updatedAt: string | null;
+  paletteSource: "default" | "logo" | "manual";
+  logoPaletteVersion: number;
 };
 
 export type VisualSettingsUpdate = Pick<
@@ -553,11 +555,20 @@ export type ClientBranding = {
   nfcPath: string;
   joinPath: string;
   loyaltyMode: LoyaltyMode;
+  logoPalette: {
+    businessNameColor: string;
+    primaryColor: string;
+    accentColor: string;
+    backgroundColor: string;
+    surfaceColor: string;
+    textColor: string;
+    mutedColor: string;
+  } | null;
 };
 
 export type ClientBrandingDraft = Omit<
   ClientBranding,
-  "id" | "previewPath" | "nfcPath" | "joinPath" | "loyaltyMode"
+  "id" | "previewPath" | "nfcPath" | "joinPath" | "loyaltyMode" | "logoPalette"
 >;
 
 export type PublicClientExperience = {

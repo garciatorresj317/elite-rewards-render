@@ -36,6 +36,7 @@ describe("business Join Rewards enrollment", () => {
       "010_client_suspension.sql",
       "021_full_client_experience_customization.sql",
       "022_business_name_color.sql",
+      "026_logo_derived_palettes.sql",
     ]) {
       await pool.query(await readFile(join(process.cwd(), "migrations", file), "utf8"));
     }

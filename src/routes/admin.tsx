@@ -865,16 +865,35 @@ function Admin() {
     try {
       setLogoUploading(true);
       const result = await api.uploadClientLogo(clientEditor.id, file);
-      setClientBranding((current) => ({ ...current, logoUrl: result.branding.logoUrl }));
+      setClientBranding((current) => ({
+        ...current,
+        logoUrl: result.branding.logoUrl,
+        primaryColor: result.branding.primaryColor,
+        secondaryColor: result.branding.secondaryColor,
+      }));
       setClients((current) =>
         current.map((client) =>
-          client.id === clientEditor.id ? { ...client, logoUrl: result.branding.logoUrl } : client,
+          client.id === clientEditor.id
+            ? {
+                ...client,
+                logoUrl: result.branding.logoUrl,
+                primaryColor: result.branding.primaryColor,
+                secondaryColor: result.branding.secondaryColor,
+              }
+            : client,
         ),
       );
+      if (appearanceClient?.id === clientEditor.id) {
+        const saved = await api.clientVisualSettings(clientEditor.id);
+        const draft = visualDraftFromSettings(saved);
+        setClientVisualSettings(saved);
+        setClientVisualDraft(draft);
+        setClientAppearanceBaseline(JSON.stringify(draft));
+      }
       setNotice(
         tr(
-          `${clientEditor.name} logo was enhanced and uploaded in high resolution.`,
-          `El logotipo de ${clientEditor.name} se mejoró y se cargó en alta resolución.`,
+          `${clientEditor.name} logo was enhanced and its rewards pages now automatically match the logo colors.`,
+          `El logotipo de ${clientEditor.name} se mejoró y sus páginas de recompensas ahora combinan automáticamente con sus colores.`,
         ),
       );
     } catch (cause) {
@@ -3373,8 +3392,8 @@ function Admin() {
                       <h3>{tr("Full customer palette", "Paleta completa del cliente")}</h3>
                       <p>
                         {tr(
-                          "Colors apply to public, enrollment, and member rewards pages.",
-                          "Los colores se aplican a las páginas pública, de inscripción y de recompensas.",
+                          "Logo colors are applied automatically when a logo is selected. You can still fine-tune every color here.",
+                          "Los colores del logotipo se aplican automáticamente al seleccionarlo. Aún puedes ajustar cada color aquí.",
                         )}
                       </p>
                     </div>
