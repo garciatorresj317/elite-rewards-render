@@ -33,6 +33,7 @@ import { BrandMark } from "@/components/BrandMark";
 import { BusinessBrand } from "@/components/BusinessBrand";
 import { ExperienceBackdrop } from "@/components/ExperienceTheme";
 import { useI18n } from "@/i18n";
+import { experienceStyle } from "@/lib/experience-style";
 import { themeCatalog } from "@/lib/theme-catalog";
 import {
   CLIENT_LOGO_MAX_BYTES,
@@ -766,6 +767,41 @@ function Admin() {
       setClientAppearanceBusy(false);
     }
   };
+  const resetClientAppearance = async () => {
+    if (!appearanceClient) return;
+    if (
+      !window.confirm(
+        tr(
+          `Reset ${appearanceClient.name}'s rewards pages to the full Elite Rewards default? This removes its custom theme, messages, colors, typography, page visibility, and automatic theme settings. Business data, logo, rewards, products, and members will not be changed.`,
+          `¿Restablecer las páginas de recompensas de ${appearanceClient.name} al diseño predeterminado completo de Elite Rewards? Esto elimina su tema, mensajes, colores, tipografía, visibilidad y programación automática personalizados. No se cambiarán los datos, el logotipo, las recompensas, los productos ni los miembros.`,
+        ),
+      )
+    )
+      return;
+    setError("");
+    setClientAppearanceBusy(true);
+    try {
+      const saved = await api.resetClientVisualSettings(appearanceClient.id);
+      const draft = visualDraftFromSettings(saved);
+      setClientVisualSettings(saved);
+      setClientVisualDraft(draft);
+      setClientAppearanceBaseline(JSON.stringify(draft));
+      setNotice(
+        tr(
+          `${appearanceClient.name}'s rewards pages were restored to the full default.`,
+          `Las páginas de recompensas de ${appearanceClient.name} se restablecieron por completo.`,
+        ),
+      );
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : tr("Default restoration failed", "No se pudo restablecer el diseño"),
+      );
+    } finally {
+      setClientAppearanceBusy(false);
+    }
+  };
   const saveLoyaltySettings = async (loyaltyMode: "points" | "visits") => {
     setError("");
     setLoyaltyModeBusy(true);
@@ -1381,7 +1417,10 @@ function Admin() {
       />
     );
   return (
-    <div className={`admin-shell theme-${visualSettings?.themeKey ?? "elite-signature"}`}>
+    <div
+      className={`admin-shell theme-${visualSettings?.themeKey ?? "elite-signature"}`}
+      style={experienceStyle(visualSettings)}
+    >
       <ExperienceBackdrop settings={visualSettings} audience="admin" />
       {notice && (
         <div className="toast" role="status">
@@ -3570,16 +3609,30 @@ function Admin() {
                       </span>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    className="admin-primary full"
-                    disabled={clientAppearanceBusy}
-                    onClick={() => void saveClientAppearance()}
-                  >
-                    {clientAppearanceBusy
-                      ? tr("Publishing customization…", "Publicando personalización…")
-                      : tr("Publish client customization", "Publicar personalización del cliente")}
-                  </button>
+                  <div className="customization-publish-actions">
+                    <button
+                      type="button"
+                      className="danger-button customization-default-button"
+                      disabled={clientAppearanceBusy}
+                      onClick={() => void resetClientAppearance()}
+                    >
+                      <RotateCcw size={17} />{" "}
+                      {tr("Back to full default", "Volver al diseño predeterminado")}
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-primary"
+                      disabled={clientAppearanceBusy}
+                      onClick={() => void saveClientAppearance()}
+                    >
+                      {clientAppearanceBusy
+                        ? tr("Updating customization…", "Actualizando personalización…")
+                        : tr(
+                            "Publish client customization",
+                            "Publicar personalización del cliente",
+                          )}
+                    </button>
+                  </div>
                 </section>
               </>
             )}

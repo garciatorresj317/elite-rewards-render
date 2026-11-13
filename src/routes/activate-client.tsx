@@ -6,6 +6,7 @@ import { ExperienceBackdrop } from "@/components/ExperienceTheme";
 import { PasswordField } from "@/components/PasswordField";
 import { useI18n } from "@/i18n";
 import { api } from "@/lib/api-client";
+import { experienceStyle } from "@/lib/experience-style";
 export const Route = createFileRoute("/activate-client")({
   head: () => ({ meta: [{ title: "Activate client account | Elite Rewards" }] }),
   component: ActivateClient,
@@ -52,7 +53,10 @@ function ActivateClient() {
     }
   };
   return (
-    <div className={`auth-page theme-${invitation?.visualSettings.themeKey ?? "elite-signature"}`}>
+    <div
+      className={`auth-page theme-${invitation?.visualSettings.themeKey ?? "elite-signature"}`}
+      style={experienceStyle(invitation?.visualSettings ?? null)}
+    >
       <ExperienceBackdrop settings={invitation?.visualSettings ?? null} audience="member" />
       <header className="auth-header themed-surface-content">
         <BrandMark />

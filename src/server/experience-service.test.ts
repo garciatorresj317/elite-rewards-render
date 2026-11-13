@@ -12,6 +12,7 @@ import {
   getClientVisualSettings,
   getOrCreateReferralLink,
   getReferralEnrollment,
+  resetClientVisualSettings,
   getVisualSettings,
   joinWithReferral,
   updateClientVisualSettings,
@@ -256,6 +257,65 @@ describe("referrals and visual experiences", () => {
       /Platform administrator access required/i,
     );
     assert.equal((await getVisualSettings(otherMember)).themeKey, "elite-signature");
+  });
+
+  it("restores the complete client experience default without touching business data", async () => {
+    const platformOwner: SessionUser = { ...owner, platformAdmin: true };
+    const usersBefore = Number(
+      (
+        await pool.query<{ count: number }>(
+          "SELECT count(*)::int AS count FROM users WHERE business_id = 'biz_one'",
+        )
+      ).rows[0]?.count ?? 0,
+    );
+    const restored = await resetClientVisualSettings(platformOwner, owner.businessId);
+    assert.equal(restored.configuredThemeKey, "elite-signature");
+    assert.equal(restored.automaticHolidayThemes, false);
+    assert.equal(restored.companySlogan, "");
+    assert.equal(restored.businessNameColor, "#FFE27A");
+    assert.equal(restored.primaryColor, "#F6B900");
+    assert.equal(restored.accentColor, "#14E6FF");
+    assert.equal(restored.backgroundColor, "#020713");
+    assert.equal(restored.surfaceColor, "#07111F");
+    assert.equal(restored.textColor, "#FFFAF0");
+    assert.equal(restored.mutedColor, "#C7BEA8");
+    assert.equal(restored.fontStyle, "futuristic");
+    assert.equal(restored.cornerStyle, "soft");
+    assert.equal(restored.showRewards, true);
+    assert.equal(restored.showProducts, true);
+    assert.equal(restored.showReferrals, true);
+    assert.equal(
+      (await pool.query("SELECT name FROM businesses WHERE id = 'biz_one'")).rows[0]?.name,
+      "First Business",
+    );
+    assert.equal(
+      Number(
+        (
+          await pool.query<{ count: number }>(
+            "SELECT count(*)::int AS count FROM users WHERE business_id = 'biz_one'",
+          )
+        ).rows[0]?.count ?? 0,
+      ),
+      usersBefore,
+    );
+    assert.equal(
+      Number(
+        (
+          await pool.query<{ count: number }>(
+            "SELECT count(*)::int AS count FROM audit_events WHERE action = 'platform.client.visual_settings.reset' AND business_id = 'biz_one'",
+          )
+        ).rows[0]?.count ?? 0,
+      ),
+      1,
+    );
+    await assert.rejects(
+      () => resetClientVisualSettings(owner, owner.businessId),
+      /Platform administrator access required/i,
+    );
+    await assert.rejects(
+      () => resetClientVisualSettings(platformOwner, "biz_platform"),
+      /Client not found/i,
+    );
   });
 
   it("temporarily applies automatic holiday themes without overwriting the manual theme", async () => {

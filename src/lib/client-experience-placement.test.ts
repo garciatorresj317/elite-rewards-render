@@ -220,19 +220,34 @@ describe("client customization placement", () => {
 
 describe("complete Elite-only client experience customization", () => {
   it("covers slogans, page messages, palettes, live themes, styles, and visible customer sections", async () => {
-    const [admin, service, publicPage, joinPage, wallet, migration, nameColorMigration] =
-      await Promise.all([
-        readFile(join(process.cwd(), "src", "routes", "admin.tsx"), "utf8"),
-        readFile(join(process.cwd(), "src", "server", "experience-service.ts"), "utf8"),
-        readFile(join(process.cwd(), "src", "routes", "clients.$clientId.tsx"), "utf8"),
-        readFile(join(process.cwd(), "src", "routes", "join.tsx"), "utf8"),
-        readFile(join(process.cwd(), "src", "routes", "wallet.tsx"), "utf8"),
-        readFile(
-          join(process.cwd(), "migrations", "021_full_client_experience_customization.sql"),
-          "utf8",
-        ),
-        readFile(join(process.cwd(), "migrations", "022_business_name_color.sql"), "utf8"),
-      ]);
+    const [
+      admin,
+      service,
+      publicPage,
+      joinPage,
+      wallet,
+      activateMember,
+      activateClient,
+      experienceStyle,
+      styles,
+      migration,
+      nameColorMigration,
+    ] = await Promise.all([
+      readFile(join(process.cwd(), "src", "routes", "admin.tsx"), "utf8"),
+      readFile(join(process.cwd(), "src", "server", "experience-service.ts"), "utf8"),
+      readFile(join(process.cwd(), "src", "routes", "clients.$clientId.tsx"), "utf8"),
+      readFile(join(process.cwd(), "src", "routes", "join.tsx"), "utf8"),
+      readFile(join(process.cwd(), "src", "routes", "wallet.tsx"), "utf8"),
+      readFile(join(process.cwd(), "src", "routes", "activate-member.tsx"), "utf8"),
+      readFile(join(process.cwd(), "src", "routes", "activate-client.tsx"), "utf8"),
+      readFile(join(process.cwd(), "src", "lib", "experience-style.ts"), "utf8"),
+      readFile(join(process.cwd(), "src", "styles.css"), "utf8"),
+      readFile(
+        join(process.cwd(), "migrations", "021_full_client_experience_customization.sql"),
+        "utf8",
+      ),
+      readFile(join(process.cwd(), "migrations", "022_business_name_color.sql"), "utf8"),
+    ]);
     assert.match(admin, /Company slogan/);
     assert.match(admin, /Public page headline/);
     assert.match(admin, /Join Rewards headline/);
@@ -252,6 +267,8 @@ describe("complete Elite-only client experience customization", () => {
     }
     assert.doesNotMatch(admin, / — (?:English|Spanish)/);
     assert.match(admin, /Full customer palette/);
+    assert.match(admin, /Back to full default/);
+    assert.match(admin, /resetClientVisualSettings/);
     assert.match(admin, /Business name preview/);
     assert.match(admin, /businessNameColor/);
     const brandingSave = admin.slice(
@@ -277,14 +294,41 @@ describe("complete Elite-only client experience customization", () => {
     assert.match(admin, /theme\.quality/);
     assert.match(service, /requirePlatformAdmin\(user\)/);
     assert.match(service, /platform\.client\.visual_settings\.updated/);
+    assert.match(service, /platform\.client\.visual_settings\.reset/);
+    assert.match(service, /DELETE FROM business_visual_settings WHERE business_id = \$1/);
     assert.match(publicPage, /publicHeadline/);
     assert.match(publicPage, /nameColor=\{data\.visualSettings\.businessNameColor\}/);
     assert.match(publicPage, /showRewards/);
     assert.match(joinPage, /joinHeadline/);
     assert.match(joinPage, /nameColor=\{visualSettings\?\.businessNameColor\}/);
+    assert.match(joinPage, /"--client-primary"[\s\S]*\.\.\.experienceStyle/);
     assert.match(wallet, /memberHeadline/);
     assert.match(wallet, /nameColor=\{settings\?\.businessNameColor\}/);
     assert.match(wallet, /showReferrals/);
+    assert.match(admin, /style=\{experienceStyle\(visualSettings\)\}/);
+    assert.match(
+      activateMember,
+      /style=\{experienceStyle\(invitation\?\.visualSettings \?\? null\)\}/,
+    );
+    assert.match(
+      activateClient,
+      /style=\{experienceStyle\(invitation\?\.visualSettings \?\? null\)\}/,
+    );
+    for (const token of [
+      "--experience-primary",
+      "--experience-accent",
+      "--experience-background",
+      "--experience-surface",
+      "--experience-text",
+      "--experience-muted",
+    ])
+      assert.match(experienceStyle, new RegExp(token));
+    assert.match(styles, /var\(--experience-background/);
+    assert.match(styles, /var\(--experience-surface/);
+    assert.match(styles, /var\(--experience-primary/);
+    assert.match(styles, /var\(--experience-accent/);
+    assert.match(styles, /var\(--experience-text/);
+    assert.match(styles, /var\(--experience-muted/);
     assert.match(migration, /company_slogan/);
     assert.match(migration, /company_slogan_es/);
     assert.match(migration, /show_products/);

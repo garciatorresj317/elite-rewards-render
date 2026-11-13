@@ -136,6 +136,11 @@ export const api = {
       `/api/admin/clients/${encodeURIComponent(businessId)}/visual-settings`,
       { method: "PUT", body: JSON.stringify(payload) },
     ),
+  resetClientVisualSettings: (businessId: string) =>
+    request<VisualSettings>(
+      `/api/admin/clients/${encodeURIComponent(businessId)}/visual-settings`,
+      { method: "DELETE", body: "{}" },
+    ),
   uploadClientLogo: (businessId: string, file: File) =>
     uploadImage<{ branding: ClientBranding }>(
       `/api/admin/clients/${encodeURIComponent(businessId)}/logo`,

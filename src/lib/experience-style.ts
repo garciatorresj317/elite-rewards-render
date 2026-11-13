@@ -21,5 +21,20 @@ export function experienceStyle(settings: PublicVisualSettings | null): CSSPrope
     "--experience-muted": settings.mutedColor,
     "--experience-radius": radius,
     "--experience-heading-font": headingFont,
+    // Keep the original Elite component tokens synchronized too. Several shared
+    // components predate the customer palette and still consume these names.
+    "--black": settings.backgroundColor,
+    "--black-soft": settings.backgroundColor,
+    "--panel": settings.surfaceColor,
+    "--panel-high": settings.surfaceColor,
+    "--gold": settings.primaryColor,
+    "--gold-bright": settings.accentColor,
+    "--gold-pale": settings.textColor,
+    "--text": settings.textColor,
+    "--muted": settings.mutedColor,
+    "--cream": settings.textColor,
+    "--cyan": settings.accentColor,
+    "--blue": settings.primaryColor,
+    "--gold-gradient": `linear-gradient(135deg, color-mix(in srgb, ${settings.primaryColor} 28%, white), ${settings.primaryColor})`,
   } as CSSProperties;
 }

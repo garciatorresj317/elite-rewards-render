@@ -54,6 +54,7 @@ import {
   joinBusinessRewards,
   joinWithReferral,
   publicVisualSettings,
+  resetClientVisualSettings,
   cornerStyles,
   fontStyles,
   themeKeys,
@@ -700,6 +701,16 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
           showReferrals: booleanValue(payload["showReferrals"], "Show referrals"),
         }),
       );
+    }
+    if (clientVisualSettingsMatch && request.method === "DELETE") {
+      requirePlatformAdmin(user);
+      const businessId = text(
+        decodeURIComponent(clientVisualSettingsMatch[1] ?? ""),
+        "Client",
+        8,
+        120,
+      );
+      return json(await resetClientVisualSettings(user, businessId));
     }
     const clientLogoMatch = url.pathname.match(/^\/api\/admin\/clients\/([^/]+)\/logo$/);
     if (clientLogoMatch && request.method === "PUT") {

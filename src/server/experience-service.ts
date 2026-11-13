@@ -732,6 +732,48 @@ export async function updateClientVisualSettings(
   return getBusinessVisualSettings(businessId);
 }
 
+export async function resetClientVisualSettings(
+  user: SessionUser,
+  businessId: string,
+): Promise<VisualSettings> {
+  requirePlatformAdmin(user);
+  const connection = await getPool().connect();
+  try {
+    await connection.query("BEGIN");
+    const target = await connection.query(
+      `SELECT 1 FROM businesses
+        WHERE id = $1 AND id <> (SELECT business_id FROM platform_state WHERE singleton = true)
+        FOR UPDATE`,
+      [businessId],
+    );
+    if (!target.rowCount) throw Object.assign(new Error("Client not found"), { status: 404 });
+    await connection.query("DELETE FROM business_visual_settings WHERE business_id = $1", [
+      businessId,
+    ]);
+    await connection.query(
+      `INSERT INTO audit_events(id,business_id,actor_user_id,action,target_type,target_id,metadata)
+       VALUES ($1,$2,$3,'platform.client.visual_settings.reset','business',$2,$4)`,
+      [
+        id("aud"),
+        businessId,
+        user.id,
+        JSON.stringify({
+          themeKey: "elite-signature",
+          automaticHolidayThemes: false,
+          resetScope: "complete_customer_experience",
+        }),
+      ],
+    );
+    await connection.query("COMMIT");
+  } catch (error) {
+    await connection.query("ROLLBACK");
+    throw error;
+  } finally {
+    connection.release();
+  }
+  return getBusinessVisualSettings(businessId);
+}
+
 export async function getOrCreateReferralLink(user: SessionUser): Promise<{
   sharePath: string;
   referralCount: number;

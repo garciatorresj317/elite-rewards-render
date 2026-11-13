@@ -1085,6 +1085,9 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 .customization-visibility-section legend { padding: 0 7px; color: var(--gold-pale); font-weight: 850; }
 .customization-visibility-section label { display: flex; align-items: center; gap: 9px; min-height: 44px; color: var(--text); }
 .customization-visibility-section input { width: 19px; height: 19px; accent-color: var(--gold); }
+.customization-publish-actions { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 12px; padding-top: 6px; }
+.customization-publish-actions > button { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.customization-default-button { border-color: rgba(255,255,255,.25); color: var(--text); background: rgba(255,255,255,.045); }
 
 /* Platform-configured tenant experience tokens. */
 .client-public-page, .business-join-page, .wallet-page {
@@ -1112,6 +1115,48 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 .client-public-page .reward-card, .client-public-page .product-card, .business-join-page .referral-join-card,
 .wallet-page .reward-card, .wallet-page .next-reward-card, .wallet-page .scan-panel, .wallet-page .panel { background: color-mix(in srgb, var(--experience-surface, #07111f) 94%, transparent); }
 
+/* These rules deliberately follow the shared Elite chassis so a client's full
+   palette wins on every customer-facing rewards page instead of being masked by
+   later global gradients. */
+.client-public-page, .business-join-page, .wallet-page {
+  background: radial-gradient(circle at 50% -18%, color-mix(in srgb, var(--experience-primary) 22%, transparent), transparent 42%), var(--experience-background);
+}
+.client-public-page .client-public-header, .business-join-page .wallet-header, .wallet-page .wallet-header {
+  border-color: color-mix(in srgb, var(--experience-accent) 40%, transparent);
+  background: color-mix(in srgb, var(--experience-surface) 92%, transparent);
+}
+.client-public-page .reward-card, .client-public-page .product-card,
+.business-join-page .referral-join-card, .business-join-page .activation-summary,
+.wallet-page .reward-card, .wallet-page .next-reward-card, .wallet-page .scan-panel,
+.wallet-page .panel, .wallet-page .membership-anniversary-card {
+  border-color: color-mix(in srgb, var(--experience-primary) 38%, transparent);
+  background: color-mix(in srgb, var(--experience-surface) 96%, transparent);
+}
+.client-public-page p, .business-join-page p, .business-join-page label,
+.wallet-page p, .wallet-page small { color: var(--experience-muted); }
+.client-public-page h1, .client-public-page h2, .client-public-page h3,
+.business-join-page h1, .wallet-page h1, .wallet-page h2, .wallet-page h3 {
+  color: var(--experience-text);
+}
+.admin-shell, .auth-page {
+  color: var(--experience-text, var(--text));
+  background-color: var(--experience-background, var(--black));
+}
+.admin-shell .admin-sidebar, .admin-shell .dashboard-header,
+.admin-shell .panel, .admin-shell .stat-card, .admin-shell .quick-action,
+.auth-page .auth-header, .auth-page .auth-card, .auth-page .activation-summary {
+  border-color: color-mix(in srgb, var(--experience-primary, var(--gold)) 38%, transparent);
+  background-color: color-mix(in srgb, var(--experience-surface, var(--panel)) 96%, transparent);
+}
+.admin-shell h1, .admin-shell h2, .admin-shell h3, .admin-shell h4,
+.auth-page h1, .auth-page h2, .auth-page h3 { color: var(--experience-text, var(--text)); }
+.admin-shell p, .admin-shell small, .auth-page p, .auth-page small,
+.auth-page label { color: var(--experience-muted, var(--muted)); }
+.admin-shell .admin-primary, .auth-page .admin-primary {
+  border-color: var(--experience-accent, var(--gold-bright));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--experience-primary, var(--gold)) 28%, white), var(--experience-primary, var(--gold)));
+}
+
 @media (max-width: 760px) {
   .customization-editor-section, .customization-color-section, .customization-style-section, .customization-live-section { grid-template-columns: 1fr; padding: 16px; }
   .customization-section-heading, .customization-full-field { grid-column: auto; }
@@ -1124,6 +1169,8 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
   .customization-client-switcher { width: 100%; }
   .customization-jump-nav { margin-inline: 0; }
   .customization-screen .client-appearance-manager { padding: 14px; }
+  .customization-publish-actions { flex-direction: column-reverse; }
+  .customization-publish-actions > button { width: 100%; }
 }
 .automatic-live-message { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(240px,.75fr) 1fr 1fr auto; align-items: end; gap: 14px; padding-top: 18px; border-top: 1px solid var(--gold-faint); }
 .automatic-live-message h3 { margin: 5px 0; color: var(--gold-pale); font: 700 19px var(--serif); }
@@ -1803,10 +1850,38 @@ td { border-color: rgba(0, 184, 255, .12); }
 }
 .business-join-page {
   background:
-    radial-gradient(circle at 50% -10%, color-mix(in srgb, var(--client-primary, var(--gold)) 28%, transparent), transparent 38%),
-    radial-gradient(circle at 8% 72%, color-mix(in srgb, var(--client-secondary, var(--gold-bright)) 13%, transparent), transparent 28%),
+    radial-gradient(circle at 50% -10%, color-mix(in srgb, var(--experience-primary, var(--gold)) 28%, transparent), transparent 38%),
+    radial-gradient(circle at 8% 72%, color-mix(in srgb, var(--experience-accent, var(--gold-bright)) 13%, transparent), transparent 28%),
     radial-gradient(circle at 92% 60%, rgba(0, 166, 255, .12), transparent 30rem),
-    var(--black);
+    var(--experience-background, var(--black));
+}
+.client-public-page {
+  background:
+    radial-gradient(circle at 50% -20%, color-mix(in srgb, var(--experience-primary, var(--gold)) 25%, transparent), transparent 42%),
+    radial-gradient(circle at 90% 70%, color-mix(in srgb, var(--experience-accent, var(--cyan)) 10%, transparent), transparent 32rem),
+    var(--experience-background, var(--black));
+}
+.client-public-page .client-public-header, .business-join-page .wallet-header, .wallet-page .wallet-header {
+  border-color: color-mix(in srgb, var(--experience-accent, var(--cyan)) 42%, transparent);
+  background: color-mix(in srgb, var(--experience-surface, var(--panel)) 94%, transparent);
+}
+.client-public-page .reward-card, .client-public-page .product-card,
+.business-join-page .referral-join-card, .business-join-page .activation-summary,
+.wallet-page .reward-card, .wallet-page .next-reward-card, .wallet-page .scan-panel,
+.wallet-page .panel, .wallet-page .membership-anniversary-card {
+  border-color: color-mix(in srgb, var(--experience-primary, var(--gold)) 40%, transparent);
+  background: color-mix(in srgb, var(--experience-surface, var(--panel)) 96%, transparent);
+}
+.client-public-page .button-primary, .business-join-page .admin-primary,
+.wallet-page .reward-card button {
+  border-color: var(--experience-accent, var(--gold-bright));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--experience-primary, var(--gold)) 28%, white), var(--experience-primary, var(--gold)));
+}
+.client-public-page p, .business-join-page p, .business-join-page label,
+.wallet-page p, .wallet-page small { color: var(--experience-muted, var(--muted)); }
+.client-public-page h1, .client-public-page h2, .client-public-page h3,
+.business-join-page h1, .wallet-page h1, .wallet-page h2, .wallet-page h3 {
+  color: var(--experience-text, var(--text));
 }
 .join-future-grid { background-size: 72px 44px; opacity: .34; }
 .join-orbit { border-width: 2px; }

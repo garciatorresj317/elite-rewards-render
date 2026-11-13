@@ -100,13 +100,13 @@ function JoinRewards() {
   const style =
     businessContext || referralContext
       ? ({
-          ...experienceStyle(
-            businessContext?.visualSettings ?? referralContext?.visualSettings ?? null,
-          ),
           "--client-primary":
             businessContext?.primaryColor ?? referralContext?.primaryColor ?? "#F6B900",
           "--client-secondary":
             businessContext?.secondaryColor ?? referralContext?.secondaryColor ?? "#FFE27A",
+          ...experienceStyle(
+            businessContext?.visualSettings ?? referralContext?.visualSettings ?? null,
+          ),
         } as React.CSSProperties)
       : undefined;
   const loyaltyMode = businessContext?.loyaltyMode ?? referralContext?.loyaltyMode ?? "points";
