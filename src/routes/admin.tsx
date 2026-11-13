@@ -2977,189 +2977,128 @@ function Admin() {
                   <h3>{tr("Slogan and page messages", "Eslogan y mensajes de página")}</h3>
                   <p>
                     {tr(
-                      "Blank fields keep the built-in bilingual defaults.",
-                      "Los campos vacíos conservan los valores bilingües predeterminados.",
+                      "Use the language switcher to edit each translation. Blank fields keep the built-in default.",
+                      "Usa el selector de idioma para editar cada traducción. Los campos vacíos conservan el valor predeterminado.",
                     )}
                   </p>
                 </div>
                 <label className="customization-full-field">
-                  {tr("Company slogan — English", "Eslogan de la empresa — inglés")}
+                  {tr("Company slogan", "Eslogan de la empresa")}
                   <input
                     maxLength={120}
-                    value={clientVisualDraft.companySlogan}
+                    value={
+                      locale === "es"
+                        ? clientVisualDraft.companySloganEs
+                        : clientVisualDraft.companySlogan
+                    }
                     onChange={(event) =>
                       setClientVisualDraft({
                         ...clientVisualDraft,
-                        companySlogan: event.target.value,
+                        [locale === "es" ? "companySloganEs" : "companySlogan"]: event.target.value,
                       })
                     }
                   />
                 </label>
                 <label>
-                  {tr("Company slogan — Spanish", "Eslogan de la empresa — español")}
+                  {tr("Public page headline", "Título de la página pública")}
                   <input
                     maxLength={120}
-                    value={clientVisualDraft.companySloganEs}
+                    value={
+                      locale === "es"
+                        ? clientVisualDraft.publicHeadlineEs
+                        : clientVisualDraft.publicHeadline
+                    }
                     onChange={(event) =>
                       setClientVisualDraft({
                         ...clientVisualDraft,
-                        companySloganEs: event.target.value,
+                        [locale === "es" ? "publicHeadlineEs" : "publicHeadline"]:
+                          event.target.value,
                       })
                     }
                   />
                 </label>
                 <label>
-                  {tr("Public page headline — English", "Título público — inglés")}
-                  <input
-                    maxLength={120}
-                    value={clientVisualDraft.publicHeadline}
-                    onChange={(event) =>
-                      setClientVisualDraft({
-                        ...clientVisualDraft,
-                        publicHeadline: event.target.value,
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  {tr("Public page headline — Spanish", "Título público — español")}
-                  <input
-                    maxLength={120}
-                    value={clientVisualDraft.publicHeadlineEs}
-                    onChange={(event) =>
-                      setClientVisualDraft({
-                        ...clientVisualDraft,
-                        publicHeadlineEs: event.target.value,
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  {tr("Public page message — English", "Mensaje público — inglés")}
+                  {tr("Public page message", "Mensaje de la página pública")}
                   <textarea
                     maxLength={300}
-                    value={clientVisualDraft.publicMessage}
+                    value={
+                      locale === "es"
+                        ? clientVisualDraft.publicMessageEs
+                        : clientVisualDraft.publicMessage
+                    }
                     onChange={(event) =>
                       setClientVisualDraft({
                         ...clientVisualDraft,
-                        publicMessage: event.target.value,
+                        [locale === "es" ? "publicMessageEs" : "publicMessage"]: event.target.value,
                       })
                     }
                   />
                 </label>
                 <label>
-                  {tr("Public page message — Spanish", "Mensaje público — español")}
-                  <textarea
-                    maxLength={300}
-                    value={clientVisualDraft.publicMessageEs}
-                    onChange={(event) =>
-                      setClientVisualDraft({
-                        ...clientVisualDraft,
-                        publicMessageEs: event.target.value,
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  {tr("Join Rewards headline — English", "Título de Únete — inglés")}
+                  {tr("Join Rewards headline", "Título de Únete a Recompensas")}
                   <input
                     maxLength={120}
-                    value={clientVisualDraft.joinHeadline}
+                    value={
+                      locale === "es"
+                        ? clientVisualDraft.joinHeadlineEs
+                        : clientVisualDraft.joinHeadline
+                    }
                     onChange={(event) =>
                       setClientVisualDraft({
                         ...clientVisualDraft,
-                        joinHeadline: event.target.value,
+                        [locale === "es" ? "joinHeadlineEs" : "joinHeadline"]: event.target.value,
                       })
                     }
                   />
                 </label>
                 <label>
-                  {tr("Join Rewards headline — Spanish", "Título de Únete — español")}
+                  {tr("Join Rewards message", "Mensaje de Únete a Recompensas")}
+                  <textarea
+                    maxLength={300}
+                    value={
+                      locale === "es"
+                        ? clientVisualDraft.joinMessageEs
+                        : clientVisualDraft.joinMessage
+                    }
+                    onChange={(event) =>
+                      setClientVisualDraft({
+                        ...clientVisualDraft,
+                        [locale === "es" ? "joinMessageEs" : "joinMessage"]: event.target.value,
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  {tr("Member wallet headline", "Título de la billetera del miembro")}
                   <input
                     maxLength={120}
-                    value={clientVisualDraft.joinHeadlineEs}
+                    value={
+                      locale === "es"
+                        ? clientVisualDraft.memberHeadlineEs
+                        : clientVisualDraft.memberHeadline
+                    }
                     onChange={(event) =>
                       setClientVisualDraft({
                         ...clientVisualDraft,
-                        joinHeadlineEs: event.target.value,
+                        [locale === "es" ? "memberHeadlineEs" : "memberHeadline"]:
+                          event.target.value,
                       })
                     }
                   />
                 </label>
                 <label>
-                  {tr("Join Rewards message — English", "Mensaje de Únete — inglés")}
+                  {tr("Member wallet message", "Mensaje de la billetera del miembro")}
                   <textarea
                     maxLength={300}
-                    value={clientVisualDraft.joinMessage}
-                    onChange={(event) =>
-                      setClientVisualDraft({
-                        ...clientVisualDraft,
-                        joinMessage: event.target.value,
-                      })
+                    value={
+                      locale === "es"
+                        ? clientVisualDraft.memberMessageEs
+                        : clientVisualDraft.memberMessage
                     }
-                  />
-                </label>
-                <label>
-                  {tr("Join Rewards message — Spanish", "Mensaje de Únete — español")}
-                  <textarea
-                    maxLength={300}
-                    value={clientVisualDraft.joinMessageEs}
                     onChange={(event) =>
                       setClientVisualDraft({
                         ...clientVisualDraft,
-                        joinMessageEs: event.target.value,
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  {tr("Member wallet headline — English", "Título de billetera — inglés")}
-                  <input
-                    maxLength={120}
-                    value={clientVisualDraft.memberHeadline}
-                    onChange={(event) =>
-                      setClientVisualDraft({
-                        ...clientVisualDraft,
-                        memberHeadline: event.target.value,
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  {tr("Member wallet headline — Spanish", "Título de billetera — español")}
-                  <input
-                    maxLength={120}
-                    value={clientVisualDraft.memberHeadlineEs}
-                    onChange={(event) =>
-                      setClientVisualDraft({
-                        ...clientVisualDraft,
-                        memberHeadlineEs: event.target.value,
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  {tr("Member wallet message — English", "Mensaje de billetera — inglés")}
-                  <textarea
-                    maxLength={300}
-                    value={clientVisualDraft.memberMessage}
-                    onChange={(event) =>
-                      setClientVisualDraft({
-                        ...clientVisualDraft,
-                        memberMessage: event.target.value,
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  {tr("Member wallet message — Spanish", "Mensaje de billetera — español")}
-                  <textarea
-                    maxLength={300}
-                    value={clientVisualDraft.memberMessageEs}
-                    onChange={(event) =>
-                      setClientVisualDraft({
-                        ...clientVisualDraft,
-                        memberMessageEs: event.target.value,
+                        [locale === "es" ? "memberMessageEs" : "memberMessage"]: event.target.value,
                       })
                     }
                   />

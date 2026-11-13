@@ -204,10 +204,23 @@ describe("complete Elite-only client experience customization", () => {
       ),
     ]);
     assert.match(admin, /Company slogan/);
-    assert.match(admin, /Company slogan — Spanish/);
     assert.match(admin, /Public page headline/);
     assert.match(admin, /Join Rewards headline/);
     assert.match(admin, /Member wallet headline/);
+    assert.match(admin, /Use the language switcher to edit each translation/);
+    for (const [englishKey, spanishKey] of [
+      ["companySlogan", "companySloganEs"],
+      ["publicHeadline", "publicHeadlineEs"],
+      ["publicMessage", "publicMessageEs"],
+      ["joinHeadline", "joinHeadlineEs"],
+      ["joinMessage", "joinMessageEs"],
+      ["memberHeadline", "memberHeadlineEs"],
+      ["memberMessage", "memberMessageEs"],
+    ]) {
+      assert.match(admin, new RegExp(`locale === "es"\\s*\\? clientVisualDraft\\.${spanishKey}`));
+      assert.match(admin, new RegExp(`locale === "es" \\? "${spanishKey}" : "${englishKey}"`));
+    }
+    assert.doesNotMatch(admin, / — (?:English|Spanish)/);
     assert.match(admin, /Full customer palette/);
     assert.match(admin, /Heading style/);
     assert.match(admin, /Customer page sections/);
