@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Gift, LogIn, PackageOpen, ScanLine, Sparkles, UserPlus } from "lucide-react";
+import { ArrowRight, Gift, LogIn, ScanLine, Sparkles, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BusinessBrand } from "@/components/BusinessBrand";
 import { ExperienceBackdrop } from "@/components/ExperienceTheme";
 import { PageStatus } from "@/components/PageStatus";
+import { ProductCatalog } from "@/components/ProductCatalog";
 import { useI18n } from "@/i18n";
 import { api, type PublicClientExperience } from "@/lib/api-client";
 export const Route = createFileRoute("/clients/$clientId")({
@@ -109,49 +110,7 @@ function ClientExperience() {
               <span className="section-kicker">{t("Business products")}</span>
               <h2>{t("Explore what this business offers")}</h2>
             </div>
-            <div className="product-grid">
-              {data.products.map((product) => (
-                <article className="product-card" key={product.id}>
-                  {product.imageUrl ? (
-                    <img src={product.imageUrl} alt={product.name} loading="lazy" />
-                  ) : (
-                    <span className="product-placeholder">
-                      <PackageOpen />
-                    </span>
-                  )}
-                  <div>
-                    {product.category && <small>{product.category}</small>}
-                    <h3>{product.name}</h3>
-                    <p>{product.description}</p>
-                    {product.priceCents > 0 && (
-                      <strong>
-                        {new Intl.NumberFormat(undefined, {
-                          style: "currency",
-                          currency: "USD",
-                        }).format(product.priceCents / 100)}
-                      </strong>
-                    )}
-                    {(data.business.loyalty_mode === "visits"
-                      ? (product.visitsCost ?? 0)
-                      : product.pointsCost) > 0 && (
-                      <span className="product-points">
-                        {formatNumber(
-                          data.business.loyalty_mode === "visits"
-                            ? (product.visitsCost ?? 0)
-                            : product.pointsCost,
-                        )}{" "}
-                        {data.business.loyalty_mode === "visits" ? t("visits") : t("points")}
-                      </span>
-                    )}
-                    {product.purchaseUrl && (
-                      <a href={product.purchaseUrl} target="_blank" rel="noreferrer">
-                        {t("View product")} <ArrowRight size={16} />
-                      </a>
-                    )}
-                  </div>
-                </article>
-              ))}
-            </div>
+            <ProductCatalog products={data.products} loyaltyMode={data.business.loyalty_mode} />
           </section>
         )}
       </main>

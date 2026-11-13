@@ -6,7 +6,6 @@ import {
   Gift,
   History,
   LogOut,
-  PackageOpen,
   QrCode,
   Share2,
   Sparkles,
@@ -17,6 +16,7 @@ import { BrandMark } from "@/components/BrandMark";
 import { BusinessBrand } from "@/components/BusinessBrand";
 import { ExperienceBackdrop } from "@/components/ExperienceTheme";
 import { PageStatus } from "@/components/PageStatus";
+import { ProductCatalog } from "@/components/ProductCatalog";
 import { useI18n } from "@/i18n";
 import { api, type VisualSettings, type WalletData } from "@/lib/api-client";
 export const Route = createFileRoute("/wallet")({
@@ -248,51 +248,12 @@ function Wallet() {
             </h2>
           </div>
         </div>
-        <section className="product-grid member-product-grid">
-          {data.products.map((product) => (
-            <article className="product-card" key={product.id}>
-              {product.imageUrl ? (
-                <img src={product.imageUrl} alt={product.name} loading="lazy" />
-              ) : (
-                <span className="product-placeholder">
-                  <PackageOpen />
-                </span>
-              )}
-              <div>
-                {product.category && <small>{product.category}</small>}
-                <h3>{product.name}</h3>
-                <p>{product.description}</p>
-                {product.priceCents > 0 && (
-                  <strong>
-                    {new Intl.NumberFormat(undefined, {
-                      style: "currency",
-                      currency: "USD",
-                    }).format(product.priceCents / 100)}
-                  </strong>
-                )}
-                {(data.loyaltyMode === "visits" ? (product.visitsCost ?? 0) : product.pointsCost) >
-                  0 && (
-                  <span className="product-points">
-                    {formatNumber(
-                      data.loyaltyMode === "visits"
-                        ? (product.visitsCost ?? 0)
-                        : product.pointsCost,
-                    )}{" "}
-                    {unitLabel}
-                  </span>
-                )}
-                {product.purchaseUrl && (
-                  <a href={product.purchaseUrl} target="_blank" rel="noreferrer">
-                    {t("View product")} <ChevronRight size={16} />
-                  </a>
-                )}
-              </div>
-            </article>
-          ))}
-          {!data.products.length && (
-            <p className="empty-table">{t("This business has not published products yet.")}</p>
-          )}
-        </section>
+        <ProductCatalog
+          products={data.products}
+          loyaltyMode={data.loyaltyMode}
+          className="member-product-grid"
+          emptyMessage={t("This business has not published products yet.")}
+        />
         <section className="scan-panel">
           <div>
             <span className="scan-icon">

@@ -92,6 +92,36 @@ describe("user-friendly experience regression coverage", () => {
     assert.match(admin, /Enroll your first member/);
   });
 
+  it("shows complete customer product images in an accessible clickable detail view", async () => {
+    const [catalog, client, wallet, styles, i18n] = await Promise.all([
+      source("components", "ProductCatalog.tsx"),
+      source("routes", "clients.$clientId.tsx"),
+      source("routes", "wallet.tsx"),
+      source("styles.css"),
+      source("i18n", "index.tsx"),
+    ]);
+    assert.match(client, /<ProductCatalog products=\{data\.products\}/);
+    assert.match(wallet, /<ProductCatalog[\s\S]*products=\{data\.products\}/);
+    assert.match(catalog, /className="product-card-open"/);
+    assert.match(catalog, /role="dialog"/);
+    assert.match(catalog, /aria-modal="true"/);
+    assert.match(catalog, /const dialogTitleId = useId\(\)/);
+    assert.match(catalog, /aria-labelledby=\{dialogTitleId\}/);
+    assert.match(catalog, /createPortal\(/);
+    assert.match(catalog, /event\.key === "Escape"/);
+    assert.match(catalog, /event\.key === "Tab"/);
+    assert.match(catalog, /document\.body\.style\.overflow = "hidden"/);
+    assert.match(catalog, /returnFocus\.current\?\.focus\(\)/);
+    assert.match(styles, /\.product-card-media > img[\s\S]*object-fit: contain/);
+    assert.match(styles, /\.product-detail-media > img[\s\S]*object-fit: contain/);
+    assert.match(
+      styles,
+      /@media \(max-width: 620px\)[\s\S]*\.product-detail-modal \{ max-height: calc\(100dvh - 16px\); grid-template-columns: 1fr/,
+    );
+    assert.match(i18n, /"View full product": "Ver producto completo"/);
+    assert.match(i18n, /"Close product details": "Cerrar detalles del producto"/);
+  });
+
   it("keeps every sign-in control off the How It Works marketing page", async () => {
     const home = await source("routes", "index.tsx");
     assert.doesNotMatch(home, /to="\/login"/);

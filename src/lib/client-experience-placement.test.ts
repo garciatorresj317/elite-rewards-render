@@ -34,10 +34,11 @@ describe("client customization placement", () => {
   });
 
   it("keeps product image upload and configurable points or visits controls in both admin product workflows", async () => {
-    const [admin, clientPage, wallet, uploadLimits] = await Promise.all([
+    const [admin, clientPage, wallet, productCatalog, uploadLimits] = await Promise.all([
       readFile(join(process.cwd(), "src", "routes", "admin.tsx"), "utf8"),
       readFile(join(process.cwd(), "src", "routes", "clients.$clientId.tsx"), "utf8"),
       readFile(join(process.cwd(), "src", "routes", "wallet.tsx"), "utf8"),
+      readFile(join(process.cwd(), "src", "components", "ProductCatalog.tsx"), "utf8"),
       readFile(join(process.cwd(), "src", "lib", "upload-limits.ts"), "utf8"),
     ]);
     assert.equal((admin.match(/<ProductEditorFields/g) ?? []).length, 2);
@@ -59,10 +60,10 @@ describe("client customization placement", () => {
     assert.match(admin, /loyaltyMode === "visits" \? draft\.visitsCost : draft\.pointsCost/);
     assert.match(admin, /Choose points or visits/);
     assert.match(admin, /Use visits/);
-    assert.match(clientPage, /product\.pointsCost/);
-    assert.match(wallet, /product\.pointsCost/);
-    assert.match(clientPage, /alt=\{product\.name\}/);
-    assert.match(wallet, /alt=\{product\.name\}/);
+    assert.match(clientPage, /<ProductCatalog products=\{data\.products\}/);
+    assert.match(wallet, /<ProductCatalog[\s\S]*products=\{data\.products\}/);
+    assert.match(productCatalog, /product\.pointsCost/);
+    assert.match(productCatalog, /alt=\{product\.name\}/);
   });
 
   it("opens client customization without letting one failed section collapse the editor", async () => {
