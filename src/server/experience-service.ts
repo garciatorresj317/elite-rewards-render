@@ -41,6 +41,7 @@ export type PublicVisualSettings = {
   memberHeadlineEs: string;
   memberMessage: string;
   memberMessageEs: string;
+  businessNameColor: string;
   primaryColor: string;
   accentColor: string;
   backgroundColor: string;
@@ -84,6 +85,7 @@ export function publicVisualSettings(settings: VisualSettings): PublicVisualSett
     memberHeadlineEs: settings.memberHeadlineEs,
     memberMessage: settings.memberMessage,
     memberMessageEs: settings.memberMessageEs,
+    businessNameColor: settings.businessNameColor,
     primaryColor: settings.primaryColor,
     accentColor: settings.accentColor,
     backgroundColor: settings.backgroundColor,
@@ -119,6 +121,7 @@ type StoredVisualSettings = {
   memberHeadlineEs: string;
   memberMessage: string;
   memberMessageEs: string;
+  businessNameColor: string;
   primaryColor: string;
   accentColor: string;
   backgroundColor: string;
@@ -171,6 +174,7 @@ export function effectiveVisualSettings(
     memberHeadlineEs: stored.memberHeadlineEs,
     memberMessage: stored.memberMessage,
     memberMessageEs: stored.memberMessageEs,
+    businessNameColor: stored.businessNameColor,
     primaryColor: stored.primaryColor,
     accentColor: stored.accentColor,
     backgroundColor: stored.backgroundColor,
@@ -200,6 +204,7 @@ const customizationDefaults = {
   memberHeadlineEs: "",
   memberMessage: "",
   memberMessageEs: "",
+  businessNameColor: "#FFE27A",
   primaryColor: "#F6B900",
   accentColor: "#14E6FF",
   backgroundColor: "#020713",
@@ -234,6 +239,7 @@ type StoredVisualRow = {
   member_headline_es: string;
   member_message: string;
   member_message_es: string;
+  business_name_color: string;
   primary_color: string;
   accent_color: string;
   background_color: string;
@@ -280,6 +286,7 @@ function storedVisualSettings(row?: StoredVisualRow): StoredVisualSettings {
     memberHeadlineEs: row.member_headline_es ?? defaults.memberHeadlineEs,
     memberMessage: row.member_message ?? defaults.memberMessage,
     memberMessageEs: row.member_message_es ?? defaults.memberMessageEs,
+    businessNameColor: row.business_name_color ?? defaults.businessNameColor,
     primaryColor: row.primary_color ?? defaults.primaryColor,
     accentColor: row.accent_color ?? defaults.accentColor,
     backgroundColor: row.background_color ?? defaults.backgroundColor,
@@ -485,7 +492,7 @@ export async function getVisualSettings(
             company_slogan, company_slogan_es, public_headline, public_headline_es,
             public_message, public_message_es, join_headline, join_headline_es, join_message, join_message_es,
             member_headline, member_headline_es, member_message, member_message_es,
-            primary_color, accent_color, background_color, surface_color, text_color, muted_color,
+            business_name_color, primary_color, accent_color, background_color, surface_color, text_color, muted_color,
             font_style, corner_style, show_rewards, show_products, show_referrals
        FROM business_visual_settings WHERE business_id = $1`,
     [user.businessId],
@@ -502,7 +509,7 @@ export async function getBusinessVisualSettings(
             company_slogan, company_slogan_es, public_headline, public_headline_es,
             public_message, public_message_es, join_headline, join_headline_es, join_message, join_message_es,
             member_headline, member_headline_es, member_message, member_message_es,
-            primary_color, accent_color, background_color, surface_color, text_color, muted_color,
+            business_name_color, primary_color, accent_color, background_color, surface_color, text_color, muted_color,
             font_style, corner_style, show_rewards, show_products, show_referrals
        FROM business_visual_settings WHERE business_id = $1`,
     [businessId],
@@ -547,6 +554,7 @@ export async function updateClientVisualSettings(
     memberHeadlineEs?: string;
     memberMessage?: string;
     memberMessageEs?: string;
+    businessNameColor?: string;
     primaryColor?: string;
     accentColor?: string;
     backgroundColor?: string;
@@ -582,6 +590,7 @@ export async function updateClientVisualSettings(
     memberHeadlineEs: input.memberHeadlineEs ?? customizationDefaults.memberHeadlineEs,
     memberMessage: input.memberMessage ?? customizationDefaults.memberMessage,
     memberMessageEs: input.memberMessageEs ?? customizationDefaults.memberMessageEs,
+    businessNameColor: input.businessNameColor ?? customizationDefaults.businessNameColor,
     primaryColor: input.primaryColor ?? customizationDefaults.primaryColor,
     accentColor: input.accentColor ?? customizationDefaults.accentColor,
     backgroundColor: input.backgroundColor ?? customizationDefaults.backgroundColor,
@@ -604,6 +613,10 @@ export async function updateClientVisualSettings(
     [businessId],
   );
   if (!target.rowCount) throw Object.assign(new Error("Client not found"), { status: 404 });
+  if (input.businessNameColor === undefined)
+    customization.businessNameColor = (
+      await getBusinessVisualSettings(businessId)
+    ).businessNameColor;
   const connection = await getPool().connect();
   try {
     await connection.query("BEGIN");
@@ -612,9 +625,9 @@ export async function updateClientVisualSettings(
          business_id,theme_key,occasion_title,occasion_message,automatic_holiday_themes,time_zone,
          company_slogan,company_slogan_es,public_headline,public_headline_es,public_message,public_message_es,
          join_headline,join_headline_es,join_message,join_message_es,member_headline,member_headline_es,member_message,member_message_es,
-         primary_color,accent_color,background_color,surface_color,text_color,muted_color,font_style,corner_style,
+         business_name_color,primary_color,accent_color,background_color,surface_color,text_color,muted_color,font_style,corner_style,
          show_rewards,show_products,show_referrals,updated_by_user_id,updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,now())
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,now())
        ON CONFLICT (business_id) DO UPDATE SET
          theme_key = EXCLUDED.theme_key,
          occasion_title = EXCLUDED.occasion_title,
@@ -635,6 +648,7 @@ export async function updateClientVisualSettings(
          member_headline_es = EXCLUDED.member_headline_es,
          member_message = EXCLUDED.member_message,
          member_message_es = EXCLUDED.member_message_es,
+         business_name_color = EXCLUDED.business_name_color,
          primary_color = EXCLUDED.primary_color,
          accent_color = EXCLUDED.accent_color,
          background_color = EXCLUDED.background_color,
@@ -669,6 +683,7 @@ export async function updateClientVisualSettings(
         customization.memberHeadlineEs,
         customization.memberMessage,
         customization.memberMessageEs,
+        customization.businessNameColor,
         customization.primaryColor,
         customization.accentColor,
         customization.backgroundColor,
@@ -696,6 +711,7 @@ export async function updateClientVisualSettings(
           timeZone,
           fontStyle: customization.fontStyle,
           cornerStyle: customization.cornerStyle,
+          businessNameColor: customization.businessNameColor,
           showRewards: customization.showRewards,
           showProducts: customization.showProducts,
           showReferrals: customization.showReferrals,

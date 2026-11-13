@@ -431,6 +431,7 @@ export type PublicVisualSettings = {
   memberHeadlineEs: string;
   memberMessage: string;
   memberMessageEs: string;
+  businessNameColor: string;
   primaryColor: string;
   accentColor: string;
   backgroundColor: string;
@@ -476,6 +477,7 @@ export type VisualSettingsUpdate = Pick<
   | "memberHeadlineEs"
   | "memberMessage"
   | "memberMessageEs"
+  | "businessNameColor"
   | "primaryColor"
   | "accentColor"
   | "backgroundColor"

@@ -58,6 +58,7 @@ describe("member enrollment", () => {
       "005_automatic_holiday_themes.sql",
       "010_client_suspension.sql",
       "021_full_client_experience_customization.sql",
+      "022_business_name_color.sql",
     ]) {
       await pool.query(await readFile(join(process.cwd(), "migrations", file), "utf8"));
     }

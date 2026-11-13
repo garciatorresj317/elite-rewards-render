@@ -271,6 +271,7 @@ function Admin() {
     memberHeadlineEs: "",
     memberMessage: "",
     memberMessageEs: "",
+    businessNameColor: "#FFE27A",
     primaryColor: "#F6B900",
     accentColor: "#14E6FF",
     backgroundColor: "#020713",
@@ -681,6 +682,7 @@ function Admin() {
         memberHeadlineEs: clientAppearance.memberHeadlineEs,
         memberMessage: clientAppearance.memberMessage,
         memberMessageEs: clientAppearance.memberMessageEs,
+        businessNameColor: clientAppearance.businessNameColor,
         primaryColor: clientAppearance.primaryColor,
         accentColor: clientAppearance.accentColor,
         backgroundColor: clientAppearance.backgroundColor,
@@ -708,17 +710,6 @@ function Admin() {
     setError("");
     try {
       const result = await api.updateClientBranding(clientEditor.id, clientBranding);
-      const appearance = await api.updateClientVisualSettings(clientEditor.id, {
-        ...clientVisualDraft,
-        primaryColor: clientBranding.primaryColor.toUpperCase(),
-        accentColor: clientBranding.secondaryColor.toUpperCase(),
-      });
-      setClientVisualSettings(appearance);
-      setClientVisualDraft({
-        ...clientVisualDraft,
-        primaryColor: appearance.primaryColor,
-        accentColor: appearance.accentColor,
-      });
       setClients((current) =>
         current.map((client) =>
           client.id === clientEditor.id
@@ -772,6 +763,7 @@ function Admin() {
         memberHeadlineEs: saved.memberHeadlineEs,
         memberMessage: saved.memberMessage,
         memberMessageEs: saved.memberMessageEs,
+        businessNameColor: saved.businessNameColor,
         primaryColor: saved.primaryColor,
         accentColor: saved.accentColor,
         backgroundColor: saved.backgroundColor,
@@ -1410,7 +1402,11 @@ function Admin() {
           {user.platformAdmin ? (
             <BrandMark compact />
           ) : (
-            <BusinessBrand business={data.business} compact />
+            <BusinessBrand
+              business={data.business}
+              compact
+              nameColor={visualSettings?.businessNameColor}
+            />
           )}
           <button
             onClick={() => setMobile(false)}
@@ -3117,6 +3113,7 @@ function Admin() {
                 </div>
                 {(
                   [
+                    ["businessNameColor", tr("Business name", "Nombre del negocio")],
                     ["primaryColor", tr("Primary", "Principal")],
                     ["accentColor", tr("Accent", "Acento")],
                     ["backgroundColor", tr("Background", "Fondo")],
@@ -3142,6 +3139,16 @@ function Admin() {
                     </span>
                   </label>
                 ))}
+                <div
+                  className="business-name-color-preview"
+                  aria-live="polite"
+                  style={{ backgroundColor: clientVisualDraft.backgroundColor }}
+                >
+                  <small>{tr("Business name preview", "Vista previa del negocio")}</small>
+                  <strong style={{ color: clientVisualDraft.businessNameColor }}>
+                    {appearanceClient.name}
+                  </strong>
+                </div>
               </div>
               <div className="customization-editor-section customization-style-section">
                 <div className="customization-section-heading">

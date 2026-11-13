@@ -192,17 +192,19 @@ describe("client customization placement", () => {
 
 describe("complete Elite-only client experience customization", () => {
   it("covers slogans, page messages, palettes, live themes, styles, and visible customer sections", async () => {
-    const [admin, service, publicPage, joinPage, wallet, migration] = await Promise.all([
-      readFile(join(process.cwd(), "src", "routes", "admin.tsx"), "utf8"),
-      readFile(join(process.cwd(), "src", "server", "experience-service.ts"), "utf8"),
-      readFile(join(process.cwd(), "src", "routes", "clients.$clientId.tsx"), "utf8"),
-      readFile(join(process.cwd(), "src", "routes", "join.tsx"), "utf8"),
-      readFile(join(process.cwd(), "src", "routes", "wallet.tsx"), "utf8"),
-      readFile(
-        join(process.cwd(), "migrations", "021_full_client_experience_customization.sql"),
-        "utf8",
-      ),
-    ]);
+    const [admin, service, publicPage, joinPage, wallet, migration, nameColorMigration] =
+      await Promise.all([
+        readFile(join(process.cwd(), "src", "routes", "admin.tsx"), "utf8"),
+        readFile(join(process.cwd(), "src", "server", "experience-service.ts"), "utf8"),
+        readFile(join(process.cwd(), "src", "routes", "clients.$clientId.tsx"), "utf8"),
+        readFile(join(process.cwd(), "src", "routes", "join.tsx"), "utf8"),
+        readFile(join(process.cwd(), "src", "routes", "wallet.tsx"), "utf8"),
+        readFile(
+          join(process.cwd(), "migrations", "021_full_client_experience_customization.sql"),
+          "utf8",
+        ),
+        readFile(join(process.cwd(), "migrations", "022_business_name_color.sql"), "utf8"),
+      ]);
     assert.match(admin, /Company slogan/);
     assert.match(admin, /Public page headline/);
     assert.match(admin, /Join Rewards headline/);
@@ -222,6 +224,13 @@ describe("complete Elite-only client experience customization", () => {
     }
     assert.doesNotMatch(admin, / — (?:English|Spanish)/);
     assert.match(admin, /Full customer palette/);
+    assert.match(admin, /Business name preview/);
+    assert.match(admin, /businessNameColor/);
+    const brandingSave = admin.slice(
+      admin.indexOf("const saveClientBranding"),
+      admin.indexOf("const saveClientAppearance"),
+    );
+    assert.doesNotMatch(brandingSave, /updateClientVisualSettings/);
     assert.match(admin, /Heading style/);
     assert.match(admin, /Customer page sections/);
     for (const key of ["cosmic-neon", "royal-purple", "ocean-glow", "sunset-energy"])
@@ -229,13 +238,17 @@ describe("complete Elite-only client experience customization", () => {
     assert.match(service, /requirePlatformAdmin\(user\)/);
     assert.match(service, /platform\.client\.visual_settings\.updated/);
     assert.match(publicPage, /publicHeadline/);
+    assert.match(publicPage, /nameColor=\{data\.visualSettings\.businessNameColor\}/);
     assert.match(publicPage, /showRewards/);
     assert.match(joinPage, /joinHeadline/);
+    assert.match(joinPage, /nameColor=\{visualSettings\?\.businessNameColor\}/);
     assert.match(wallet, /memberHeadline/);
+    assert.match(wallet, /nameColor=\{settings\?\.businessNameColor\}/);
     assert.match(wallet, /showReferrals/);
     assert.match(migration, /company_slogan/);
     assert.match(migration, /company_slogan_es/);
     assert.match(migration, /show_products/);
+    assert.match(nameColorMigration, /business_name_color/);
     assert.match(admin, /clientAppearanceBusy/);
     assert.match(admin, /appearanceDialogRef/);
   });

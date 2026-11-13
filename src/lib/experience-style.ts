@@ -14,6 +14,7 @@ export function experienceStyle(settings: PublicVisualSettings | null): CSSPrope
     "--experience-accent": settings.accentColor,
     "--client-primary": settings.primaryColor,
     "--client-secondary": settings.accentColor,
+    "--business-name-color": settings.businessNameColor,
     "--experience-background": settings.backgroundColor,
     "--experience-surface": settings.surfaceColor,
     "--experience-text": settings.textColor,

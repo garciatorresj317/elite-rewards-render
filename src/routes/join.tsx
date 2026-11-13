@@ -150,7 +150,11 @@ function JoinRewards() {
       <div className="join-orbit join-orbit-one" aria-hidden="true" />
       <div className="join-orbit join-orbit-two" aria-hidden="true" />
       <header className="wallet-header container-mid themed-surface-content">
-        {branding ? <BusinessBrand business={branding} /> : <BrandMark />}
+        {branding ? (
+          <BusinessBrand business={branding} nameColor={visualSettings?.businessNameColor} />
+        ) : (
+          <BrandMark />
+        )}
         <a className="back-link" href="/login?access=member">
           {t("Already a member?")}
         </a>

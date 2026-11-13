@@ -71,6 +71,7 @@ describe("referrals and visual experiences", () => {
       "005_automatic_holiday_themes.sql",
       "010_client_suspension.sql",
       "021_full_client_experience_customization.sql",
+      "022_business_name_color.sql",
     ]) {
       await pool.query(await readFile(join(process.cwd(), "migrations", file), "utf8"));
     }
@@ -208,6 +209,7 @@ describe("referrals and visual experiences", () => {
       memberHeadlineEs: "Tus recompensas, a tu manera",
       memberMessage: "See your balance and offers here.",
       memberMessageEs: "Consulta aquí tu saldo y ofertas.",
+      businessNameColor: "#66CCFF",
       primaryColor: "#11AAFF",
       accentColor: "#FF44CC",
       backgroundColor: "#020713",
@@ -224,6 +226,7 @@ describe("referrals and visual experiences", () => {
     assert.equal(saved.companySlogan, "Built for the bold");
     assert.equal(saved.companySloganEs, "Creado para los audaces");
     assert.equal(saved.publicHeadline, "Rewards made personal");
+    assert.equal(saved.businessNameColor, "#66CCFF");
     assert.equal(saved.primaryColor, "#11AAFF");
     assert.equal(saved.fontStyle, "modern");
     assert.equal(saved.cornerStyle, "rounded");
@@ -237,6 +240,7 @@ describe("referrals and visual experiences", () => {
         ? (JSON.parse(audit.rows[0].metadata) as Record<string, unknown>)
         : audit.rows[0]?.metadata;
     assert.equal(metadata?.["themeKey"], "mlk-day");
+    assert.equal(metadata?.["businessNameColor"], "#66CCFF");
     assert.equal(metadata?.["fontStyle"], "modern");
     assert.equal(metadata?.["showProducts"], false);
     await assert.rejects(

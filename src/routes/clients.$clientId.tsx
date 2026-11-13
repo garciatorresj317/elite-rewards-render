@@ -52,7 +52,7 @@ function ClientExperience() {
     <div className={`client-public-page theme-${data.visualSettings.themeKey}`} style={style}>
       <ExperienceBackdrop settings={data.visualSettings} audience="member" />
       <header className="client-public-header container-mid themed-surface-content">
-        <BusinessBrand business={data.business} />
+        <BusinessBrand business={data.business} nameColor={data.visualSettings.businessNameColor} />
         <a href="/login?access=member" className="button button-dark">
           <LogIn size={17} /> {t("Member sign in")}
         </a>

@@ -5,14 +5,17 @@ import type { BusinessContext } from "@/lib/api-client";
 export function BusinessBrand({
   business,
   compact = false,
+  nameColor,
 }: {
   business: BusinessContext;
   compact?: boolean;
+  nameColor?: string | undefined;
 }) {
   const { t } = useI18n();
   const style = {
     "--client-primary": business.primary_color,
     "--client-secondary": business.secondary_color,
+    ...(nameColor ? { "--business-name-color": nameColor } : {}),
   } as CSSProperties;
   return (
     <div className={`business-brand ${compact ? "compact" : ""}`} style={style}>

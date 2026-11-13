@@ -217,8 +217,12 @@ function contrastRatio(first: string, second: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-function accessiblePalette(payload: Record<string, unknown>) {
+export function accessiblePalette(payload: Record<string, unknown>) {
   const palette = {
+    businessNameColor: color(
+      payload["businessNameColor"] ?? payload["accentColor"] ?? "#FFE27A",
+      "Business name color",
+    ),
     primaryColor: color(payload["primaryColor"] ?? "#F6B900", "Primary color"),
     accentColor: color(payload["accentColor"] ?? "#14E6FF", "Accent color"),
     backgroundColor: color(payload["backgroundColor"] ?? "#020713", "Background color"),
@@ -230,6 +234,10 @@ function accessiblePalette(payload: Record<string, unknown>) {
     throw Object.assign(new Error("Main text and background need more contrast"), { status: 400 });
   if (contrastRatio(palette.mutedColor, palette.backgroundColor) < 3)
     throw Object.assign(new Error("Secondary text and background need more contrast"), {
+      status: 400,
+    });
+  if (contrastRatio(palette.businessNameColor, palette.backgroundColor) < 4.5)
+    throw Object.assign(new Error("Business name and background need more contrast"), {
       status: 400,
     });
   return palette;

@@ -951,7 +951,7 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 .business-brand > span, .business-brand > img { width: 46px; height: 46px; flex: 0 0 46px; border: 1px solid var(--client-primary); border-radius: 12px; object-fit: contain; background: rgba(0,0,0,.76); box-shadow: 0 0 22px color-mix(in srgb, var(--client-primary) 28%, transparent); }
 .business-brand > span { display: grid; place-items: center; color: var(--client-secondary); }
 .business-brand > div { min-width: 0; display: grid; gap: 3px; }
-.business-brand strong { overflow: hidden; text-overflow: ellipsis; color: var(--client-secondary); font: 800 19px var(--serif); white-space: nowrap; }
+.business-brand strong { overflow: hidden; text-overflow: ellipsis; color: var(--business-name-color, var(--client-secondary)); font: 800 19px var(--serif); white-space: nowrap; }
 .business-brand small { color: var(--muted); font-size: 9px; letter-spacing: .09em; text-transform: uppercase; }
 .business-brand.compact > span, .business-brand.compact > img { width: 38px; height: 38px; flex-basis: 38px; }
 .business-brand.compact strong { font-size: 15px; }
@@ -964,6 +964,9 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 .client-brand-preview small { color: var(--muted); }
 .client-color-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .client-color-fields input[type="color"] { padding: 5px; cursor: pointer; }
+.business-name-color-preview { grid-column: 1 / -1; display: grid; gap: 6px; padding: 14px; border: 1px solid var(--navy-line); border-radius: 12px; background: var(--experience-background, var(--black)); }
+.business-name-color-preview small { color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.business-name-color-preview strong { font: 800 21px var(--serif); }
 .points-rate-control { display: grid; gap: 12px; margin-top: 16px; padding: 15px; border: 1px solid var(--gold-faint); border-radius: 11px; background: rgba(246,185,0,.035); }
 .points-rate-control label { display: grid; gap: 8px; color: var(--gold-pale); font-weight: 800; font-size: 12px; }
 .points-rate-control input { width: 100%; min-height: 48px; padding: 0 13px; border: 1px solid rgba(0,190,255,.34); border-radius: 10px; color: #eefaff; background: rgba(2,10,22,.88); }
@@ -1711,6 +1714,7 @@ td { border-color: rgba(0, 184, 255, .12); }
   color: color-mix(in srgb, var(--client-primary, var(--gold)) 44%, white);
   text-shadow: 0 0 16px color-mix(in srgb, var(--client-primary, var(--gold)) 24%, transparent);
 }
+.business-brand strong { color: var(--business-name-color, color-mix(in srgb, var(--client-primary, var(--gold)) 44%, white)); }
 .client-public-page {
   background:
     radial-gradient(circle at 50% -20%, color-mix(in srgb, var(--client-primary) 25%, transparent), transparent 42%),

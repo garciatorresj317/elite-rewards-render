@@ -136,7 +136,7 @@ function Wallet() {
         </div>
       )}
       <header className="wallet-header container-mid">
-        <BusinessBrand business={data.context} />
+        <BusinessBrand business={data.context} nameColor={settings?.businessNameColor} />
         <button className="back-link plain-button" onClick={logout}>
           <LogOut size={17} /> {t("Sign out")}
         </button>
