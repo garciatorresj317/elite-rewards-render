@@ -418,7 +418,11 @@ export type ThemeKey =
   | "cosmic-neon"
   | "royal-purple"
   | "ocean-glow"
-  | "sunset-energy";
+  | "sunset-energy"
+  | "emerald-pulse"
+  | "ruby-velocity"
+  | "arctic-prism"
+  | "golden-horizon";
 
 export type FontStyle = "futuristic" | "modern" | "classic";
 export type CornerStyle = "sharp" | "soft" | "rounded";

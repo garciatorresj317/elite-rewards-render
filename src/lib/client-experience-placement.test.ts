@@ -261,8 +261,20 @@ describe("complete Elite-only client experience customization", () => {
     assert.doesNotMatch(brandingSave, /updateClientVisualSettings/);
     assert.match(admin, /Heading style/);
     assert.match(admin, /Customer page sections/);
-    for (const key of ["cosmic-neon", "royal-purple", "ocean-glow", "sunset-energy"])
+    for (const key of [
+      "cosmic-neon",
+      "royal-purple",
+      "ocean-glow",
+      "sunset-energy",
+      "emerald-pulse",
+      "ruby-velocity",
+      "arctic-prism",
+      "golden-horizon",
+    ])
       assert.match(admin, new RegExp(key));
+    assert.match(admin, /theme\.description/);
+    assert.match(admin, /Live motion/);
+    assert.match(admin, /theme\.quality/);
     assert.match(service, /requirePlatformAdmin\(user\)/);
     assert.match(service, /platform\.client\.visual_settings\.updated/);
     assert.match(publicPage, /publicHeadline/);

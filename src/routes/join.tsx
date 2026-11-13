@@ -142,9 +142,17 @@ function JoinRewards() {
         audience="member"
       />
       {logoUrl && (
-        <div className="join-business-watermark" aria-hidden="true">
-          <img src={logoUrl} alt="" />
-        </div>
+        <>
+          <div className="join-business-watermark" aria-hidden="true">
+            <img src={logoUrl} alt="" />
+          </div>
+          <div className="join-floating-logo join-floating-logo-left" aria-hidden="true">
+            <img src={logoUrl} alt="" />
+          </div>
+          <div className="join-floating-logo join-floating-logo-right" aria-hidden="true">
+            <img src={logoUrl} alt="" />
+          </div>
+        </>
       )}
       <div className="join-future-grid" aria-hidden="true" />
       <div className="join-orbit join-orbit-one" aria-hidden="true" />

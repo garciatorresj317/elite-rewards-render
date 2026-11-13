@@ -28,6 +28,8 @@ The Elite Rewards platform administrator uses **Elite Dashboard → Customizatio
 
 The selected preset and optional occasion message are stored per business and apply to that business's admin and member surfaces. Login, setup, activation, and platform marketing surfaces remain on the base Elite Rewards design.
 
+The platform-only Customization workspace includes compact, descriptive wallpaper cards and four additional 4K live styles: Emerald Pulse, Ruby Velocity, Arctic Prism, and Golden Horizon. Live styles use subtle layered motion on supported devices and stop automatically when the visitor requests reduced motion. Join Rewards pages also reinforce the selected business identity with a central logo watermark and two low-opacity floating logo accents that never accept pointer input or cover the enrollment form.
+
 The Elite Rewards platform administrator can enable **Automatic holiday themes** and select the business time zone from the same platform-only Customization tab. Business owners and staff can see the effective appearance but cannot change it. Automatic resolution runs server-side and temporarily overrides the displayed wallpaper and occasion message without changing the saved manual theme:
 
 - MLK Day — third Monday in January
@@ -37,7 +39,7 @@ The Elite Rewards platform administrator can enable **Automatic holiday themes**
 
 When the toggle is off or the scheduled date ends, the saved manual theme and message display again. Community Event remains manual because it has no universal date. New and existing businesses default to UTC until the Elite Rewards platform administrator selects the correct business time zone.
 
-All supplied backgrounds are same-origin 1920×1080 optimized WebP images. Subtle motion uses CSS transforms and is disabled by the existing reduced-motion rule. The commemorative themes contain no sales language, points promotion, or discount messaging.
+All supplied backgrounds are same-origin optimized images. Standard previews are at least 1600×900, the four newest live styles are 3840×2160 WebP, and automatic holiday live artwork is 3840×2160 JPEG. Subtle motion uses CSS transforms and is disabled by the existing reduced-motion rule. The commemorative themes contain no sales language, points promotion, or discount messaging.
 
 ## Verification
 

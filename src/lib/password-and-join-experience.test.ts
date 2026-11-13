@@ -66,7 +66,7 @@ describe("password visibility and join experience", () => {
     assert.doesNotMatch(combined, /between 12 and 200|minLength=\{12\}|"Password", 12, 200/);
   });
 
-  it("renders a futuristic tenant-branded Join Rewards scene with a faint business logo", async () => {
+  it("renders a futuristic tenant-branded Join Rewards scene with visible floating logos", async () => {
     const [route, styles, service, client] = await Promise.all([
       read("src", "routes", "join.tsx"),
       read("src", "styles.css"),
@@ -74,6 +74,7 @@ describe("password visibility and join experience", () => {
       read("src", "lib", "api-client.ts"),
     ]);
     assert.match(route, /join-business-watermark/);
+    assert.equal((route.match(/className="join-floating-logo/g) ?? []).length, 2);
     assert.match(route, /join-future-grid/);
     assert.equal((route.match(/className="join-orbit/g) ?? []).length, 2);
     assert.match(route, /referralContext\?\.logoUrl/);
@@ -91,14 +92,21 @@ describe("password visibility and join experience", () => {
     );
     assert.match(
       styles,
-      /@keyframes join-logo-breathe\s*\{\s*from\s*\{\s*transform: scale\(\.98\);[\s\S]*?to\s*\{\s*transform: scale\(1\.03\);/,
+      /@keyframes join-logo-drift\s*\{\s*from\s*\{\s*transform: translate3d\(-4\.5%,0,0\) scale\(\.98\);[\s\S]*?to\s*\{\s*transform: translate3d\(4\.5%,0,0\) scale\(1\.03\);/,
     );
     assert.doesNotMatch(styles, /object-fit: cover;\s*transform: scale\(2\.4\)|scale\(2\.[0-9]+\)/);
     assert.match(
       styles,
       /@media \(max-width: 620px\)[\s\S]*?\.join-business-watermark img \{ width: 94vw; height: 78vh; \}/,
     );
-    assert.match(styles, /@keyframes join-logo-breathe/);
+    assert.match(styles, /@keyframes join-logo-drift/);
+    assert.match(styles, /@keyframes join-logo-float-left/);
+    assert.match(styles, /@keyframes join-logo-float-right/);
+    assert.match(styles, /\.join-floating-logo[\s\S]*?pointer-events: none;/);
+    assert.match(
+      styles,
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.join-floating-logo[\s\S]*?animation: none !important;/,
+    );
     assert.match(styles, /@keyframes join-grid-flow/);
     assert.match(styles, /prefers-reduced-motion: reduce/);
     assert.match(service, /logoUrl: row\.has_logo/);

@@ -8,6 +8,7 @@ export const themeCatalog: Array<{
   image: string;
   liveImage?: string;
   live?: boolean;
+  quality?: string;
 }> = [
   {
     key: "elite-signature",
@@ -86,5 +87,41 @@ export const themeCatalog: Array<{
     description: "Warm amber, magenta, and red light for bold customer experiences.",
     image: "/themes/sunset-energy.webp",
     live: true,
+  },
+  {
+    key: "emerald-pulse",
+    name: "Emerald Pulse",
+    category: "4K live style",
+    description: "Emerald and teal light ribbons with restrained gold energy for confident brands.",
+    image: "/themes/emerald-pulse.webp",
+    live: true,
+    quality: "4K",
+  },
+  {
+    key: "ruby-velocity",
+    name: "Ruby Velocity",
+    category: "4K live style",
+    description: "Crimson motion, rose-gold highlights, and a polished high-energy atmosphere.",
+    image: "/themes/ruby-velocity.webp",
+    live: true,
+    quality: "4K",
+  },
+  {
+    key: "arctic-prism",
+    name: "Arctic Prism",
+    category: "4K live style",
+    description: "Ice-blue crystalline light and clean navy depth for a sharp modern finish.",
+    image: "/themes/arctic-prism.webp",
+    live: true,
+    quality: "4K",
+  },
+  {
+    key: "golden-horizon",
+    name: "Golden Horizon",
+    category: "4K live style",
+    description: "Liquid gold, warm amber light, and premium dark space built for luxury brands.",
+    image: "/themes/golden-horizon.webp",
+    live: true,
+    quality: "4K",
   },
 ];

@@ -69,6 +69,7 @@ export async function migrateDatabase(): Promise<void> {
         [22, "022_business_name_color.sql"],
         [23, "023_free_rewards.sql"],
         [24, "024_member_anniversaries.sql"],
+        [25, "025_more_live_themes.sql"],
       ] as const;
       for (const [version, filename] of migrations) {
         if (versions.has(version)) continue;

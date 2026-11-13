@@ -72,6 +72,7 @@ describe("referrals and visual experiences", () => {
       "010_client_suspension.sql",
       "021_full_client_experience_customization.sql",
       "022_business_name_color.sql",
+      "025_more_live_themes.sql",
     ]) {
       await pool.query(await readFile(join(process.cwd(), "migrations", file), "utf8"));
     }
@@ -339,7 +340,7 @@ describe("referrals and visual experiences", () => {
     );
   });
 
-  it("stores all four additional themes with tenant-scoped visibility settings", async () => {
+  it("stores every additional live theme with tenant-scoped visibility settings", async () => {
     const platformOwner: SessionUser = { ...owner, platformAdmin: true };
     const otherThemeBefore = (await getVisualSettings(otherMember)).themeKey;
     for (const themeKey of [
@@ -347,6 +348,10 @@ describe("referrals and visual experiences", () => {
       "royal-purple",
       "ocean-glow",
       "sunset-energy",
+      "emerald-pulse",
+      "ruby-velocity",
+      "arctic-prism",
+      "golden-horizon",
     ] as const) {
       const saved = await updateClientVisualSettings(platformOwner, owner.businessId, {
         themeKey,

@@ -16,6 +16,10 @@ export const themeKeys = [
   "royal-purple",
   "ocean-glow",
   "sunset-energy",
+  "emerald-pulse",
+  "ruby-velocity",
+  "arctic-prism",
+  "golden-horizon",
 ] as const;
 export type ThemeKey = (typeof themeKeys)[number];
 export const fontStyles = ["futuristic", "modern", "classic"] as const;

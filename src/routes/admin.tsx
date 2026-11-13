@@ -197,6 +197,26 @@ function themeSpanish(key: ThemeKey) {
       category: "Estilo en vivo",
       description: "Luz ámbar, magenta y roja para experiencias audaces.",
     },
+    "emerald-pulse": {
+      name: "Pulso esmeralda",
+      category: "Estilo en vivo 4K",
+      description: "Cintas de luz esmeralda y turquesa con energía dorada para marcas seguras.",
+    },
+    "ruby-velocity": {
+      name: "Velocidad rubí",
+      category: "Estilo en vivo 4K",
+      description: "Movimiento carmesí y reflejos de oro rosa con una atmósfera enérgica.",
+    },
+    "arctic-prism": {
+      name: "Prisma ártico",
+      category: "Estilo en vivo 4K",
+      description: "Luz cristalina azul hielo y profundidad azul marino para un acabado moderno.",
+    },
+    "golden-horizon": {
+      name: "Horizonte dorado",
+      category: "Estilo en vivo 4K",
+      description: "Oro líquido y luz ámbar sobre un fondo oscuro creado para marcas de lujo.",
+    },
   };
   return translations[key];
 }
@@ -3157,6 +3177,11 @@ function Admin() {
                         <span>
                           <small>{tr(theme.category, themeSpanish(theme.key).category)}</small>
                           <strong>{tr(theme.name, themeSpanish(theme.key).name)}</strong>
+                          <em>{tr(theme.description, themeSpanish(theme.key).description)}</em>
+                          <span className="theme-card-meta">
+                            {theme.live && <b>{tr("Live motion", "Movimiento en vivo")}</b>}
+                            {theme.quality && <b>{theme.quality}</b>}
+                          </span>
                         </span>
                       </label>
                     ))}
