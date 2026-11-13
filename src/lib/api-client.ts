@@ -92,10 +92,14 @@ export const api = {
     request<LoyaltySettings>(
       `/api/admin/clients/${encodeURIComponent(businessId)}/loyalty-settings`,
     ),
-  updateClientLoyaltySettings: (businessId: string, loyaltyMode: LoyaltyMode) =>
+  updateClientLoyaltySettings: (
+    businessId: string,
+    loyaltyMode: LoyaltyMode,
+    pointsPerDollar: number,
+  ) =>
     request<LoyaltySettings>(
       `/api/admin/clients/${encodeURIComponent(businessId)}/loyalty-settings`,
-      { method: "PUT", body: JSON.stringify({ loyaltyMode }) },
+      { method: "PUT", body: JSON.stringify({ loyaltyMode, pointsPerDollar }) },
     ),
   clientBranding: (businessId: string) =>
     request<{ branding: ClientBranding }>(
@@ -181,10 +185,10 @@ export const api = {
       { method: "POST", body: JSON.stringify({ productIds }) },
     ),
   loyaltySettings: () => request<LoyaltySettings>("/api/admin/loyalty-settings"),
-  updateLoyaltySettings: (loyaltyMode: LoyaltyMode) =>
+  updateLoyaltySettings: (loyaltyMode: LoyaltyMode, pointsPerDollar: number) =>
     request<LoyaltySettings>("/api/admin/loyalty-settings", {
       method: "PUT",
-      body: JSON.stringify({ loyaltyMode }),
+      body: JSON.stringify({ loyaltyMode, pointsPerDollar }),
     }),
   award: (payload: {
     memberId: string;
@@ -193,7 +197,7 @@ export const api = {
     amountCents: number;
     note?: string;
   }) =>
-    request<{ id: string; duplicate: boolean }>("/api/admin/award", {
+    request<{ id: string; duplicate: boolean; unitsAwarded?: number }>("/api/admin/award", {
       method: "POST",
       headers: { "idempotency-key": crypto.randomUUID() },
       body: JSON.stringify(payload),
@@ -315,10 +319,11 @@ export type BusinessContext = {
   primary_color: string;
   secondary_color: string;
   loyalty_mode: LoyaltyMode;
+  points_per_dollar?: number;
 };
 
 export type LoyaltyMode = "points" | "visits";
-export type LoyaltySettings = { loyaltyMode: LoyaltyMode };
+export type LoyaltySettings = { loyaltyMode: LoyaltyMode; pointsPerDollar: number };
 
 export type DashboardData = {
   business: BusinessContext;
@@ -415,6 +420,7 @@ export type ClientSummary = {
   nfcPath: string;
   joinPath: string;
   loyaltyMode: LoyaltyMode;
+  pointsPerDollar: number;
 };
 
 export type PasswordResetRequest = {

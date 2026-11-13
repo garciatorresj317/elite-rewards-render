@@ -87,6 +87,9 @@ describe("production rewards ledger", () => {
     await pool.query("ALTER TABLE businesses ADD COLUMN logo_url text");
     await pool.query("ALTER TABLE businesses ADD COLUMN logo_data bytea");
     await pool.query(
+      await readFile(join(process.cwd(), "migrations", "020_points_per_dollar.sql"), "utf8"),
+    );
+    await pool.query(
       "ALTER TABLE businesses ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now()",
     );
     await pool.query(
@@ -95,7 +98,10 @@ describe("production rewards ledger", () => {
     await pool.query(
       "ALTER TABLE businesses ADD COLUMN secondary_color text NOT NULL DEFAULT '#FFE27A'",
     );
-    await pool.query("INSERT INTO businesses(id,name) VALUES ($1,'Test Business')", [businessId]);
+    await pool.query(
+      "INSERT INTO businesses(id,name,points_per_dollar) VALUES ($1,'Test Business',5)",
+      [businessId],
+    );
     await pool.query("INSERT INTO locations(id,business_id,name) VALUES ($1,$2,'Test Location')", [
       locationId,
       businessId,
@@ -122,16 +128,14 @@ describe("production rewards ledger", () => {
     await closeDatabase();
   });
 
-  it("awards points once for the same idempotency key", async () => {
+  it("awards server-calculated points once for the same idempotency key", async () => {
     const first = await awardPoints(owner, {
       memberId,
-      points: 600,
       amountCents: 12000,
       idempotencyKey: "award-order-1001",
     });
     const duplicate = await awardPoints(owner, {
       memberId,
-      points: 600,
       amountCents: 12000,
       idempotencyKey: "award-order-1001",
     });
@@ -142,8 +146,7 @@ describe("production rewards ledger", () => {
       () =>
         awardPoints(owner, {
           memberId,
-          points: 601,
-          amountCents: 12000,
+          amountCents: 12100,
           idempotencyKey: "award-order-1001",
         }),
       /different request/,

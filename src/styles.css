@@ -955,6 +955,11 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 .client-brand-preview small { color: var(--muted); }
 .client-color-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .client-color-fields input[type="color"] { padding: 5px; cursor: pointer; }
+.points-rate-control { display: grid; gap: 12px; margin-top: 16px; padding: 15px; border: 1px solid var(--gold-faint); border-radius: 11px; background: rgba(246,185,0,.035); }
+.points-rate-control label { display: grid; gap: 8px; color: var(--gold-pale); font-weight: 800; font-size: 12px; }
+.points-rate-control input { width: 100%; min-height: 48px; padding: 0 13px; border: 1px solid rgba(0,190,255,.34); border-radius: 10px; color: #eefaff; background: rgba(2,10,22,.88); }
+.points-rate-control p { margin: 0; color: var(--muted); line-height: 1.55; font-size: 12px; }
+.points-rate-control .admin-primary { width: 100%; justify-content: center; }
 @media (max-width: 560px) { .business-brand strong { font-size: 15px; } .business-brand small { font-size: 7px; } .client-color-fields { grid-template-columns: 1fr; } }
 
 .client-reward-manager { display: grid; gap: 14px; margin-top: 10px; padding-top: 20px; border-top: 1px solid var(--gold-faint); }

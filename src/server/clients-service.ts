@@ -33,6 +33,7 @@ export type ClientSummary = {
   nfcPath: string;
   joinPath: string;
   loyaltyMode: LoyaltyMode;
+  pointsPerDollar: number;
 };
 
 export type ClientBranding = {
@@ -198,8 +199,9 @@ export async function listClients(user: SessionUser): Promise<ClientSummary[]> {
     active: boolean;
     updated_at: Date;
     loyalty_mode: LoyaltyMode;
+    points_per_dollar: number;
   }>(
-    `SELECT id, name, created_at, logo_url, primary_color, secondary_color, loyalty_mode, active, updated_at,
+    `SELECT id, name, created_at, logo_url, primary_color, secondary_color, loyalty_mode, points_per_dollar, active, updated_at,
             (logo_data IS NOT NULL) AS has_logo
        FROM businesses
       WHERE id <> (SELECT business_id FROM platform_state WHERE singleton = true)
@@ -245,6 +247,7 @@ export async function listClients(user: SessionUser): Promise<ClientSummary[]> {
       nfcPath: clientPath(business.id),
       joinPath: joinPath(business.id),
       loyaltyMode: business.loyalty_mode,
+      pointsPerDollar: Number(business.points_per_dollar),
     });
   }
   return clients;
@@ -343,6 +346,7 @@ export async function createClient(
         nfcPath: clientPath(businessId),
         joinPath: joinPath(businessId),
         loyaltyMode: "points",
+        pointsPerDollar: 1,
       },
       activationPath: `/activate-client?token=${encodeURIComponent(invitationToken)}`,
     };

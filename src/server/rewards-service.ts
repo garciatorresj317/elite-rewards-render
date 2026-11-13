@@ -22,9 +22,10 @@ export async function getDashboard(user: SessionUser) {
     has_logo: boolean;
     updated_at: Date;
     loyalty_mode: LoyaltyMode;
+    points_per_dollar: number;
   }>(
     `SELECT b.id AS business_id,b.name AS business_name,l.name AS location_name,b.logo_url,
-            b.primary_color,b.secondary_color,b.updated_at,b.loyalty_mode,
+            b.primary_color,b.secondary_color,b.updated_at,b.loyalty_mode,b.points_per_dollar,
             (b.logo_data IS NOT NULL) AS has_logo
        FROM businesses b LEFT JOIN locations l ON l.business_id=b.id
       WHERE b.id=$1 ORDER BY l.created_at LIMIT 1`,
@@ -90,6 +91,7 @@ export async function getDashboard(user: SessionUser) {
           primary_color: businessRow.primary_color,
           secondary_color: businessRow.secondary_color,
           loyalty_mode: mode,
+          points_per_dollar: Number(businessRow.points_per_dollar),
         }
       : {
           business_name: "Elite Rewards",
@@ -98,6 +100,7 @@ export async function getDashboard(user: SessionUser) {
           primary_color: "#F6B900",
           secondary_color: "#FFE27A",
           loyalty_mode: "points" as const,
+          points_per_dollar: 1,
         },
     metrics: {
       members: Number(total?.members ?? 0),
@@ -312,14 +315,6 @@ export async function awardPoints(
     note?: string;
   },
 ) {
-  const awardedUnits = input.units ?? input.points;
-  if (
-    !Number.isSafeInteger(awardedUnits) ||
-    !awardedUnits ||
-    awardedUnits <= 0 ||
-    awardedUnits > 1_000_000
-  )
-    throw Object.assign(new Error("Loyalty amount must be a positive integer"), { status: 400 });
   if (
     !Number.isSafeInteger(input.amountCents) ||
     input.amountCents < 0 ||
@@ -331,12 +326,36 @@ export async function awardPoints(
   const client = await getPool().connect();
   try {
     await client.query("BEGIN");
-    const business = await client.query<{ loyalty_mode: LoyaltyMode }>(
-      "SELECT loyalty_mode FROM businesses WHERE id=$1 AND active=true FOR UPDATE",
+    const business = await client.query<{
+      loyalty_mode: LoyaltyMode;
+      points_per_dollar: number;
+    }>(
+      "SELECT loyalty_mode, points_per_dollar FROM businesses WHERE id=$1 AND active=true FOR UPDATE",
       [user.businessId],
     );
-    const mode = business.rows[0]?.loyalty_mode;
-    if (!mode) throw Object.assign(new Error("Rewards program unavailable"), { status: 404 });
+    const businessRow = business.rows[0];
+    const mode = businessRow?.loyalty_mode;
+    if (!mode || !businessRow)
+      throw Object.assign(new Error("Rewards program unavailable"), { status: 404 });
+    const submittedUnits = input.units ?? input.points;
+    const awardedUnits =
+      mode === "points"
+        ? Math.floor((input.amountCents * Number(businessRow.points_per_dollar)) / 100)
+        : submittedUnits;
+    if (
+      !Number.isSafeInteger(awardedUnits) ||
+      !awardedUnits ||
+      awardedUnits <= 0 ||
+      awardedUnits > 1_000_000
+    )
+      throw Object.assign(
+        new Error(
+          mode === "points"
+            ? "Purchase amount is too small or too large for this points rate"
+            : "Loyalty amount must be a positive integer",
+        ),
+        { status: 400 },
+      );
     const column = unitColumn(mode);
     const member = await client.query(
       "SELECT id FROM users WHERE id=$1 AND business_id=$2 AND role='member' AND active=true FOR UPDATE",
@@ -348,6 +367,7 @@ export async function awardPoints(
       units: awardedUnits,
       amountCents: input.amountCents,
       note: input.note ?? "Loyalty award",
+      ...(mode === "points" ? { pointsPerDollar: Number(businessRow.points_per_dollar) } : {}),
     };
     const existing = await reserveIdempotency(client, user, "award", input.idempotencyKey, payload);
     if (existing) {
@@ -392,7 +412,7 @@ export async function awardPoints(
     );
     await finishIdempotency(client, user, input.idempotencyKey, entryId);
     await client.query("COMMIT");
-    return { id: entryId, duplicate: false };
+    return { id: entryId, duplicate: false, unitsAwarded: awardedUnits };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;

@@ -236,6 +236,8 @@ function Admin() {
   });
   const [clientStatusBusyId, setClientStatusBusyId] = useState<string | null>(null);
   const [loyaltyModeBusy, setLoyaltyModeBusy] = useState(false);
+  const [pointsPerDollar, setPointsPerDollar] = useState(1);
+  const [clientPointsPerDollar, setClientPointsPerDollar] = useState(1);
   const [activationPath, setActivationPath] = useState("");
   const [memberModal, setMemberModal] = useState(false);
   const [memberActivationPath, setMemberActivationPath] = useState("");
@@ -276,7 +278,7 @@ function Admin() {
   const [award, setAward] = useState({
     memberId: "",
     amount: "",
-    points: "",
+    visits: "",
     note: locale === "es" ? "Compra elegible" : "Eligible purchase",
   });
   const [clientForm, setClientForm] = useState({
@@ -326,6 +328,7 @@ function Admin() {
         api.managedProducts(),
       ]);
       setData(dashboard);
+      setPointsPerDollar(dashboard.business.points_per_dollar ?? 1);
       setClients(clientResult.clients);
       setPasswordResetRequests(passwordResetResult.requests);
       setMembers(memberResult.members);
@@ -375,7 +378,7 @@ function Admin() {
       await api.award({
         memberId: award.memberId,
         amountCents: Math.round(Number(award.amount) * 100),
-        units: Number(award.points),
+        ...(data?.business.loyalty_mode === "visits" ? { units: Number(award.visits) } : {}),
         note: award.note,
       });
       setModal(false);
@@ -473,6 +476,7 @@ function Admin() {
     // Open from the already-authorized client summary first. Optional catalog or
     // appearance failures must not make the entire branding editor unusable.
     setClientEditor(client);
+    setClientPointsPerDollar(client.pointsPerDollar);
     setClientBranding({
       name: client.name,
       locationName: client.locationName,
@@ -528,8 +532,15 @@ function Admin() {
       });
     }
     if (loyaltyResult.status === "fulfilled") {
+      setClientPointsPerDollar(loyaltyResult.value.pointsPerDollar);
       setClientEditor((current) =>
-        current ? { ...current, loyaltyMode: loyaltyResult.value.loyaltyMode } : current,
+        current
+          ? {
+              ...current,
+              loyaltyMode: loyaltyResult.value.loyaltyMode,
+              pointsPerDollar: loyaltyResult.value.pointsPerDollar,
+            }
+          : current,
       );
     }
 
@@ -604,33 +615,61 @@ function Admin() {
       );
     }
   };
-  const saveLoyaltyMode = async (loyaltyMode: "points" | "visits") => {
+  const saveLoyaltySettings = async (loyaltyMode: "points" | "visits") => {
     setError("");
     setLoyaltyModeBusy(true);
     try {
       if (clientEditor) {
-        const saved = await api.updateClientLoyaltySettings(clientEditor.id, loyaltyMode);
-        setClientEditor({ ...clientEditor, loyaltyMode: saved.loyaltyMode });
+        const saved = await api.updateClientLoyaltySettings(
+          clientEditor.id,
+          loyaltyMode,
+          clientPointsPerDollar,
+        );
+        setClientPointsPerDollar(saved.pointsPerDollar);
+        setClientEditor({
+          ...clientEditor,
+          loyaltyMode: saved.loyaltyMode,
+          pointsPerDollar: saved.pointsPerDollar,
+        });
         setClients((current) =>
           current.map((client) =>
-            client.id === clientEditor.id ? { ...client, loyaltyMode: saved.loyaltyMode } : client,
+            client.id === clientEditor.id
+              ? {
+                  ...client,
+                  loyaltyMode: saved.loyaltyMode,
+                  pointsPerDollar: saved.pointsPerDollar,
+                }
+              : client,
           ),
         );
       } else {
-        const saved = await api.updateLoyaltySettings(loyaltyMode);
+        const saved = await api.updateLoyaltySettings(loyaltyMode, pointsPerDollar);
+        setPointsPerDollar(saved.pointsPerDollar);
         setData((current) =>
           current
-            ? { ...current, business: { ...current.business, loyalty_mode: saved.loyaltyMode } }
+            ? {
+                ...current,
+                business: {
+                  ...current.business,
+                  loyalty_mode: saved.loyaltyMode,
+                  points_per_dollar: saved.pointsPerDollar,
+                },
+              }
             : current,
         );
       }
       setNotice(
         loyaltyMode === "visits"
           ? tr("The rewards program now runs on visits.", "El programa ahora funciona con visitas.")
-          : tr("The rewards program now runs on points.", "El programa ahora funciona con puntos."),
+          : tr(
+              `Points settings saved: $1 earns ${clientEditor ? clientPointsPerDollar : pointsPerDollar} points.`,
+              `Configuración guardada: $1 otorga ${clientEditor ? clientPointsPerDollar : pointsPerDollar} puntos.`,
+            ),
       );
     } catch {
-      setError(tr("Loyalty model update failed", "No se pudo actualizar el modelo de lealtad"));
+      setError(
+        tr("Loyalty settings update failed", "No se pudo actualizar la configuración de lealtad"),
+      );
     } finally {
       setLoyaltyModeBusy(false);
     }
@@ -2060,7 +2099,7 @@ function Admin() {
                       data.business.loyalty_mode === "points" ? "admin-primary" : "client-customize"
                     }
                     disabled={user.role !== "owner" || loyaltyModeBusy}
-                    onClick={() => void saveLoyaltyMode("points")}
+                    onClick={() => void saveLoyaltySettings("points")}
                   >
                     {tr("Use points", "Usar puntos")}
                   </button>
@@ -2070,11 +2109,45 @@ function Admin() {
                       data.business.loyalty_mode === "visits" ? "admin-primary" : "client-customize"
                     }
                     disabled={user.role !== "owner" || loyaltyModeBusy}
-                    onClick={() => void saveLoyaltyMode("visits")}
+                    onClick={() => void saveLoyaltySettings("visits")}
                   >
                     {tr("Use visits", "Usar visitas")}
                   </button>
                 </div>
+                {data.business.loyalty_mode === "points" && (
+                  <div className="points-rate-control">
+                    <label>
+                      {tr("Points earned per $1", "Puntos otorgados por cada $1")}
+                      <input
+                        type="number"
+                        min="1"
+                        max="1000"
+                        step="1"
+                        value={pointsPerDollar}
+                        disabled={user.role !== "owner" || loyaltyModeBusy}
+                        onChange={(event) =>
+                          setPointsPerDollar(
+                            Math.min(1_000, Math.max(1, Math.round(Number(event.target.value)))),
+                          )
+                        }
+                      />
+                    </label>
+                    <p>
+                      {tr(
+                        `$1.00 earns ${formatNumber(pointsPerDollar)} points. A $20.00 purchase earns ${formatNumber(pointsPerDollar * 20)} points.`,
+                        `$1.00 otorga ${formatNumber(pointsPerDollar)} puntos. Una compra de $20.00 otorga ${formatNumber(pointsPerDollar * 20)} puntos.`,
+                      )}
+                    </p>
+                    <button
+                      type="button"
+                      className="admin-primary"
+                      disabled={user.role !== "owner" || loyaltyModeBusy}
+                      onClick={() => void saveLoyaltySettings("points")}
+                    >
+                      {tr("Save points rate", "Guardar tasa de puntos")}
+                    </button>
+                  </div>
+                )}
               </section>
               <div className="panel appearance-intro">
                 <span className="modal-icon">
@@ -2364,7 +2437,7 @@ function Admin() {
                     clientEditor.loyaltyMode === "points" ? "admin-primary" : "client-customize"
                   }
                   disabled={loyaltyModeBusy}
-                  onClick={() => void saveLoyaltyMode("points")}
+                  onClick={() => void saveLoyaltySettings("points")}
                 >
                   {tr("Use points", "Usar puntos")}
                 </button>
@@ -2374,11 +2447,45 @@ function Admin() {
                     clientEditor.loyaltyMode === "visits" ? "admin-primary" : "client-customize"
                   }
                   disabled={loyaltyModeBusy}
-                  onClick={() => void saveLoyaltyMode("visits")}
+                  onClick={() => void saveLoyaltySettings("visits")}
                 >
                   {tr("Use visits", "Usar visitas")}
                 </button>
               </div>
+              {clientEditor.loyaltyMode === "points" && (
+                <div className="points-rate-control">
+                  <label>
+                    {tr("Points earned per $1", "Puntos otorgados por cada $1")}
+                    <input
+                      type="number"
+                      min="1"
+                      max="1000"
+                      step="1"
+                      value={clientPointsPerDollar}
+                      disabled={loyaltyModeBusy}
+                      onChange={(event) =>
+                        setClientPointsPerDollar(
+                          Math.min(1_000, Math.max(1, Math.round(Number(event.target.value)))),
+                        )
+                      }
+                    />
+                  </label>
+                  <p>
+                    {tr(
+                      `$1.00 earns ${formatNumber(clientPointsPerDollar)} points. A $20.00 purchase earns ${formatNumber(clientPointsPerDollar * 20)} points.`,
+                      `$1.00 otorga ${formatNumber(clientPointsPerDollar)} puntos. Una compra de $20.00 otorga ${formatNumber(clientPointsPerDollar * 20)} puntos.`,
+                    )}
+                  </p>
+                  <button
+                    type="button"
+                    className="admin-primary"
+                    disabled={loyaltyModeBusy}
+                    onClick={() => void saveLoyaltySettings("points")}
+                  >
+                    {tr("Save points rate", "Guardar tasa de puntos")}
+                  </button>
+                </div>
+              )}
             </fieldset>
             <label>
               {tr("Business name", "Nombre del negocio")}
@@ -3335,19 +3442,37 @@ function Admin() {
                 onChange={(e) => setAward({ ...award, amount: e.target.value })}
               />
             </label>
-            <label>
-              {data.business.loyalty_mode === "visits"
-                ? tr("Visits", "Visitas")
-                : tr("Points", "Puntos")}
-              <input
-                type="number"
-                min="1"
-                step="1"
-                required
-                value={award.points}
-                onChange={(e) => setAward({ ...award, points: e.target.value })}
-              />
-            </label>
+            {data.business.loyalty_mode === "visits" ? (
+              <label>
+                {tr("Visits", "Visitas")}
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  required
+                  value={award.visits}
+                  onChange={(event) => setAward({ ...award, visits: event.target.value })}
+                />
+              </label>
+            ) : (
+              <div className="award-equation" role="status">
+                <span>
+                  {tr(
+                    `${formatNumber(pointsPerDollar)} points per $1`,
+                    `${formatNumber(pointsPerDollar)} puntos por cada $1`,
+                  )}
+                </span>
+                <strong>
+                  {formatNumber(
+                    Math.floor(
+                      (Math.max(0, Math.round(Number(award.amount || 0) * 100)) * pointsPerDollar) /
+                        100,
+                    ),
+                  )}{" "}
+                  {tr("points", "puntos")}
+                </strong>
+              </div>
+            )}
             <label>
               {tr("Reason", "Motivo")}
               <input

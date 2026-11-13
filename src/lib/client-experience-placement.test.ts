@@ -33,6 +33,28 @@ describe("client customization placement", () => {
     assert.match(admin, /suspended: \["Suspended", "Suspendido"\]/);
   });
 
+  it("keeps the points-per-dollar setting and automatic award calculation in both admin workflows", async () => {
+    const [admin, apiClient, service, migration] = await Promise.all([
+      readFile(join(process.cwd(), "src", "routes", "admin.tsx"), "utf8"),
+      readFile(join(process.cwd(), "src", "lib", "api-client.ts"), "utf8"),
+      readFile(join(process.cwd(), "src", "server", "rewards-service.ts"), "utf8"),
+      readFile(join(process.cwd(), "migrations", "020_points_per_dollar.sql"), "utf8"),
+    ]);
+    assert.equal((admin.match(/Points earned per \$1/g) ?? []).length, 2);
+    assert.equal((admin.match(/Puntos otorgados por cada \$1/g) ?? []).length, 2);
+    assert.match(admin, /Save points rate/);
+    assert.match(admin, /Guardar tasa de puntos/);
+    assert.match(admin, /pointsPerDollar/);
+    assert.doesNotMatch(admin, /value=\{award\.points\}/);
+    assert.match(apiClient, /JSON\.stringify\(\{ loyaltyMode, pointsPerDollar \}\)/);
+    assert.match(
+      service,
+      /Math\.floor\(\(input\.amountCents \* Number\(businessRow\.points_per_dollar\)\) \/ 100\)/,
+    );
+    assert.match(migration, /points_per_dollar integer NOT NULL DEFAULT 1/);
+    assert.match(migration, /BETWEEN 1 AND 1000/);
+  });
+
   it("keeps product image upload and configurable points or visits controls in both admin product workflows", async () => {
     const [admin, clientPage, wallet, productCatalog, uploadLimits] = await Promise.all([
       readFile(join(process.cwd(), "src", "routes", "admin.tsx"), "utf8"),

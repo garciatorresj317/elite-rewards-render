@@ -84,6 +84,7 @@ import {
   getClientLoyaltySettings,
   getLoyaltySettings,
   parseLoyaltyMode,
+  parsePointsPerDollar,
   updateClientLoyaltySettings,
   updateLoyaltySettings,
 } from "./loyalty-settings-service.ts";
@@ -547,6 +548,7 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
           user,
           businessId,
           parseLoyaltyMode(payload["loyaltyMode"]),
+          parsePointsPerDollar(payload["pointsPerDollar"]),
         ),
       );
     }
@@ -805,7 +807,13 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
     if (url.pathname === "/api/admin/loyalty-settings" && request.method === "PUT") {
       requireRole(user, ["owner"]);
       const payload = await body(request);
-      return json(await updateLoyaltySettings(user, parseLoyaltyMode(payload["loyaltyMode"])));
+      return json(
+        await updateLoyaltySettings(
+          user,
+          parseLoyaltyMode(payload["loyaltyMode"]),
+          parsePointsPerDollar(payload["pointsPerDollar"]),
+        ),
+      );
     }
     if (url.pathname === "/api/admin/rewards" && request.method === "POST") {
       requireRole(user, ["owner"]);
@@ -904,7 +912,11 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       const payload = await body(request);
       const awardInput = {
         memberId: text(payload["memberId"], "Member", 8, 120),
-        units: integer(payload["units"] ?? payload["points"], "Loyalty amount", 1, 1_000_000),
+        ...(payload["units"] === undefined && payload["points"] === undefined
+          ? {}
+          : {
+              units: integer(payload["units"] ?? payload["points"], "Loyalty amount", 1, 1_000_000),
+            }),
         amountCents: integer(payload["amountCents"], "Amount", 0, 100_000_000),
         idempotencyKey: text(request.headers.get("idempotency-key"), "Idempotency key", 8, 120),
         ...(typeof payload["note"] === "string" ? { note: payload["note"].slice(0, 300) } : {}),

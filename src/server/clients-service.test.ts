@@ -136,6 +136,9 @@ describe("platform client management", () => {
       ).replaceAll(" NOT VALID", ""),
     );
     await pool.query(
+      await readFile(join(process.cwd(), "migrations", "020_points_per_dollar.sql"), "utf8"),
+    );
+    await pool.query(
       "CREATE TABLE platform_administrator(singleton boolean PRIMARY KEY, user_id text NOT NULL UNIQUE REFERENCES users(id))",
     );
     await pool.query(

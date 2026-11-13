@@ -8,6 +8,7 @@ import { setDatabasePoolForTests, closeDatabase } from "./database.ts";
 import { awardPoints, getWallet, redeemReward } from "./rewards-service.ts";
 import {
   getClientLoyaltySettings,
+  parsePointsPerDollar,
   updateClientLoyaltySettings,
   updateLoyaltySettings,
 } from "./loyalty-settings-service.ts";
@@ -90,6 +91,9 @@ describe("per-business points or visits", () => {
     );
     await pool.query("ALTER TABLE businesses ADD COLUMN active boolean NOT NULL DEFAULT true");
     await pool.query(
+      await readFile(join(process.cwd(), "migrations", "020_points_per_dollar.sql"), "utf8"),
+    );
+    await pool.query(
       "INSERT INTO businesses(id,name) VALUES ('biz_platform','Elite Rewards'),('biz_client','Client')",
     );
     await pool.query(
@@ -117,13 +121,16 @@ describe("per-business points or visits", () => {
   });
   after(async () => closeDatabase());
 
-  it("keeps existing businesses on points by default", async () => {
-    assert.equal((await getClientLoyaltySettings(platform, "biz_client")).loyaltyMode, "points");
+  it("keeps existing businesses on points at one point per dollar by default", async () => {
+    assert.deepEqual(await getClientLoyaltySettings(platform, "biz_client"), {
+      loyaltyMode: "points",
+      pointsPerDollar: 1,
+    });
     assert.equal((await getWallet(member)).balance, 500);
   });
 
   it("lets the business owner switch to visits and uses the visit ledger", async () => {
-    assert.equal((await updateLoyaltySettings(owner, "visits")).loyaltyMode, "visits");
+    assert.equal((await updateLoyaltySettings(owner, "visits", 5)).loyaltyMode, "visits");
     await awardPoints(owner, {
       memberId: member.id,
       units: 3,
@@ -140,12 +147,31 @@ describe("per-business points or visits", () => {
 
   it("lets only the platform administrator change a client", async () => {
     await assert.rejects(
-      () => updateClientLoyaltySettings(owner, "biz_client", "points"),
+      () => updateClientLoyaltySettings(owner, "biz_client", "points", 5),
       /Platform administrator/,
     );
     assert.equal(
-      (await updateClientLoyaltySettings(platform, "biz_client", "points")).loyaltyMode,
+      (await updateClientLoyaltySettings(platform, "biz_client", "points", 5)).loyaltyMode,
       "points",
     );
+    assert.equal((await getClientLoyaltySettings(platform, "biz_client")).pointsPerDollar, 5);
+  });
+
+  it("calculates points from purchase cents and the business rate", async () => {
+    const before = (await getWallet(member)).balance;
+    const result = await awardPoints(owner, {
+      memberId: member.id,
+      amountCents: 1_099,
+      idempotencyKey: "points-rate-award-001",
+    });
+    assert.equal(result.unitsAwarded, 54);
+    assert.equal((await getWallet(member)).balance, before + 54);
+  });
+
+  it("validates the configurable points rate", () => {
+    assert.equal(parsePointsPerDollar(1), 1);
+    assert.equal(parsePointsPerDollar(1_000), 1_000);
+    for (const invalid of [0, 1.5, 1_001, "5", null])
+      assert.throws(() => parsePointsPerDollar(invalid), /whole number from 1 to 1,000/);
   });
 });
