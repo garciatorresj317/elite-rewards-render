@@ -2,7 +2,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   Award,
   Building2,
-  CalendarClock,
   Check,
   CircleDollarSign,
   Copy,
@@ -100,14 +99,6 @@ const sections = [
     en: "Products",
     es: "Productos",
     icon: PackageOpen,
-    platformOnly: false,
-    clientOnly: true,
-  },
-  {
-    id: "Appearance",
-    en: "Appearance",
-    es: "Apariencia",
-    icon: Palette,
     platformOnly: false,
     clientOnly: true,
   },
@@ -275,13 +266,7 @@ function Admin() {
   const [busy, setBusy] = useState(true);
   const [initialLoadFailed, setInitialLoadFailed] = useState(false);
   const [visualSettings, setVisualSettings] = useState<VisualSettings | null>(null);
-  const [visualDraft, setVisualDraft] = useState({
-    themeKey: "elite-signature" as ThemeKey,
-    occasionTitle: "",
-    occasionMessage: "",
-    automaticHolidayThemes: false,
-    timeZone: "UTC",
-  });
+
   const [award, setAward] = useState({
     memberId: "",
     amount: "",
@@ -342,13 +327,7 @@ function Admin() {
       setVisualSettings(visualResult);
       setManagedRewards(rewardResult.rewards);
       setManagedProducts(productResult.products);
-      setVisualDraft({
-        themeKey: visualResult.configuredThemeKey,
-        occasionTitle: visualResult.configuredOccasionTitle,
-        occasionMessage: visualResult.configuredOccasionMessage,
-        automaticHolidayThemes: visualResult.automaticHolidayThemes,
-        timeZone: visualResult.timeZone,
-      });
+
       const firstMember = dashboard.members[0];
       if (!award.memberId && firstMember)
         setAward((current) => ({ ...current, memberId: firstMember.id }));
@@ -671,22 +650,7 @@ function Admin() {
               : client,
           ),
         );
-      } else {
-        const saved = await api.updateLoyaltySettings(loyaltyMode, pointsPerDollar);
-        setPointsPerDollar(saved.pointsPerDollar);
-        setData((current) =>
-          current
-            ? {
-                ...current,
-                business: {
-                  ...current.business,
-                  loyalty_mode: saved.loyaltyMode,
-                  points_per_dollar: saved.pointsPerDollar,
-                },
-              }
-            : current,
-        );
-      }
+      } else return;
       setNotice(
         loyaltyMode === "visits"
           ? tr("The rewards program now runs on visits.", "El programa ahora funciona con visitas.")
@@ -1135,6 +1099,24 @@ function Admin() {
     setClientRewardDraft(emptyRewardForm());
     setNotice(tr("Client reward archived.", "Se archivó la recompensa del cliente."));
   };
+  const restoreSelectedClientReward = async (rewardId: string) => {
+    if (!clientEditor) return;
+    setError("");
+    try {
+      await api.restoreClientReward(clientEditor.id, rewardId);
+      setClientRewards((await api.clientRewards(clientEditor.id)).rewards);
+      setNotice(
+        tr(
+          "Client reward restored as hidden. Review it before making it visible.",
+          "La recompensa del cliente se restauró como oculta. Revísala antes de hacerla visible.",
+        ),
+      );
+    } catch {
+      setError(
+        tr("Client reward restore failed", "No se pudo restaurar la recompensa del cliente"),
+      );
+    }
+  };
   const openNewReward = () => {
     setEditingRewardId(null);
     setRewardForm(emptyRewardForm());
@@ -1194,20 +1176,19 @@ function Admin() {
     await api.logout();
     await navigate({ to: "/login" });
   };
-  const saveVisuals = async (event: FormEvent) => {
-    event.preventDefault();
+  const restoreCurrentReward = async (rewardId: string) => {
     setError("");
     try {
-      const result = await api.updateVisualSettings(visualDraft);
-      setVisualSettings(result);
+      await api.restoreReward(rewardId);
       setNotice(
         tr(
-          "Business pages and dashboards were updated.",
-          "Se actualizaron las páginas y los paneles del negocio.",
+          "Reward restored as hidden. Review it before making it visible.",
+          "La recompensa se restauró como oculta. Revísala antes de hacerla visible.",
         ),
       );
-    } catch (cause) {
-      setError(tr("Appearance update failed", "No se pudo actualizar la apariencia"));
+      await load();
+    } catch {
+      setError(tr("Reward restore failed", "No se pudo restaurar la recompensa"));
     }
   };
   const visible = useMemo(() => {
@@ -1554,20 +1535,15 @@ function Admin() {
                     </small>
                   </span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setActive(user.platformAdmin ? "Clients" : "Appearance")}
-                >
+                <button type="button" onClick={() => setActive("Clients")}>
                   <Palette />
                   <span>
                     <strong>{tr("Customize appearance", "Personalizar apariencia")}</strong>
                     <small>
-                      {user.platformAdmin
-                        ? tr(
-                            "Choose a client to customize its branding",
-                            "Elige un cliente para personalizar su marca",
-                          )
-                        : tr("Change themes and live messages", "Cambia temas y mensajes en vivo")}
+                      {tr(
+                        "Elite controls client branding and themes here",
+                        "Elite controla aquí la marca y los temas de los clientes",
+                      )}
                     </small>
                   </span>
                 </button>
@@ -1955,15 +1931,18 @@ function Admin() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => openReward(reward)}
-                      disabled={Boolean(reward.archivedAt)}
+                      onClick={() =>
+                        reward.archivedAt
+                          ? void restoreCurrentReward(reward.id)
+                          : openReward(reward)
+                      }
                     >
                       <span>
                         {reward.archivedAt
-                          ? tr("Archived", "Archivada")
+                          ? tr("Unarchive reward", "Desarchivar recompensa")
                           : tr("Edit reward", "Editar recompensa")}
                       </span>
-                      <Pencil size={17} />
+                      {reward.archivedAt ? <RotateCcw size={17} /> : <Pencil size={17} />}
                     </button>
                   </article>
                 ))}
@@ -2124,313 +2103,6 @@ function Admin() {
                   <p className="empty-table">{tr("No products yet.", "Aún no hay productos.")}</p>
                 )}
               </div>
-            </section>
-          )}
-          {active === "Appearance" && (
-            <section className="appearance-layout">
-              <section className="panel automatic-theme-editor">
-                <div className="automatic-theme-heading">
-                  <span className="modal-icon">
-                    <Award />
-                  </span>
-                  <div>
-                    <span className="section-kicker">
-                      {tr("Loyalty model", "Modelo de lealtad")}
-                    </span>
-                    <h3>{tr("Choose points or visits", "Elige puntos o visitas")}</h3>
-                    <p>
-                      {tr(
-                        "This controls balances, earning, reward costs, customer pages, and member wallets for this business.",
-                        "Esto controla los saldos, la acumulación, los costos de recompensas, las páginas para clientes y las billeteras de miembros de este negocio.",
-                      )}
-                    </p>
-                  </div>
-                </div>
-                <div className="client-color-fields">
-                  <button
-                    type="button"
-                    className={
-                      data.business.loyalty_mode === "points" ? "admin-primary" : "client-customize"
-                    }
-                    disabled={user.role !== "owner" || loyaltyModeBusy}
-                    onClick={() => void saveLoyaltySettings("points")}
-                  >
-                    {tr("Use points", "Usar puntos")}
-                  </button>
-                  <button
-                    type="button"
-                    className={
-                      data.business.loyalty_mode === "visits" ? "admin-primary" : "client-customize"
-                    }
-                    disabled={user.role !== "owner" || loyaltyModeBusy}
-                    onClick={() => void saveLoyaltySettings("visits")}
-                  >
-                    {tr("Use visits", "Usar visitas")}
-                  </button>
-                </div>
-                {data.business.loyalty_mode === "points" && (
-                  <div className="points-rate-control">
-                    <label>
-                      {tr("Points earned per $1", "Puntos otorgados por cada $1")}
-                      <input
-                        type="number"
-                        min="1"
-                        max="1000"
-                        step="1"
-                        value={pointsPerDollar}
-                        disabled={user.role !== "owner" || loyaltyModeBusy}
-                        onChange={(event) =>
-                          setPointsPerDollar(
-                            Math.min(1_000, Math.max(1, Math.round(Number(event.target.value)))),
-                          )
-                        }
-                      />
-                    </label>
-                    <p>
-                      {tr(
-                        `$1.00 earns ${formatNumber(pointsPerDollar)} points. A $20.00 purchase earns ${formatNumber(pointsPerDollar * 20)} points.`,
-                        `$1.00 otorga ${formatNumber(pointsPerDollar)} puntos. Una compra de $20.00 otorga ${formatNumber(pointsPerDollar * 20)} puntos.`,
-                      )}
-                    </p>
-                    <button
-                      type="button"
-                      className="admin-primary"
-                      disabled={user.role !== "owner" || loyaltyModeBusy}
-                      onClick={() => void saveLoyaltySettings("points")}
-                    >
-                      {tr("Save points rate", "Guardar tasa de puntos")}
-                    </button>
-                  </div>
-                )}
-              </section>
-              <div className="panel appearance-intro">
-                <span className="modal-icon">
-                  <Palette />
-                </span>
-                <div>
-                  <span className="section-kicker">
-                    {tr("Business customization", "Personalización del negocio")}
-                  </span>
-                  <h2>
-                    {tr("Live backgrounds & event themes", "Fondos en vivo y temas de eventos")}
-                  </h2>
-                  <p>
-                    {tr(
-                      "Select a high-resolution animated visual for this business’s admin dashboard and member wallets. Motion automatically reduces when a visitor requests it.",
-                      "Selecciona una imagen animada de alta resolución para el panel administrativo y las billeteras de miembros de este negocio. El movimiento se reduce automáticamente cuando un visitante lo solicita.",
-                    )}
-                  </p>
-                </div>
-              </div>
-              <form className="appearance-form" onSubmit={saveVisuals}>
-                <section className="panel automatic-theme-editor">
-                  <div className="automatic-theme-heading">
-                    <span className="modal-icon">
-                      <CalendarClock />
-                    </span>
-                    <div>
-                      <span className="section-kicker">
-                        {tr("Automatic schedule", "Programación automática")}
-                      </span>
-                      <h3>{tr("Switch themes on holidays", "Cambiar temas en días festivos")}</h3>
-                      <p>
-                        {tr(
-                          "When enabled, Elite Rewards temporarily publishes the matching holiday theme on its scheduled date, then restores your selected theme automatically.",
-                          "Cuando está activado, Elite Rewards publica temporalmente el tema festivo correspondiente en la fecha programada y luego restaura automáticamente el tema seleccionado.",
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                  <label className="theme-toggle">
-                    <input
-                      type="checkbox"
-                      checked={visualDraft.automaticHolidayThemes}
-                      onChange={(event) =>
-                        setVisualDraft({
-                          ...visualDraft,
-                          automaticHolidayThemes: event.target.checked,
-                        })
-                      }
-                      disabled={user.role !== "owner"}
-                    />
-                    <span aria-hidden="true" />
-                    <strong>
-                      {visualDraft.automaticHolidayThemes
-                        ? tr("Automatic holiday themes on", "Temas festivos automáticos activados")
-                        : tr(
-                            "Automatic holiday themes off",
-                            "Temas festivos automáticos desactivados",
-                          )}
-                    </strong>
-                  </label>
-                  <label className="timezone-field">
-                    {tr("Business time zone", "Zona horaria del negocio")}
-                    <select
-                      value={visualDraft.timeZone}
-                      onChange={(event) =>
-                        setVisualDraft({ ...visualDraft, timeZone: event.target.value })
-                      }
-                      disabled={user.role !== "owner"}
-                    >
-                      <option value="UTC">UTC</option>
-                      <option value="America/New_York">
-                        {tr("Eastern Time", "Hora del Este")}
-                      </option>
-                      <option value="America/Chicago">{tr("Central Time", "Hora Central")}</option>
-                      <option value="America/Denver">
-                        {tr("Mountain Time", "Hora de la Montaña")}
-                      </option>
-                      <option value="America/Los_Angeles">
-                        {tr("Pacific Time", "Hora del Pacífico")}
-                      </option>
-                      <option value="America/Anchorage">
-                        {tr("Alaska Time", "Hora de Alaska")}
-                      </option>
-                      <option value="Pacific/Honolulu">{tr("Hawaii Time", "Hora de Hawái")}</option>
-                    </select>
-                  </label>
-                  <div className="automatic-theme-status" role="status">
-                    {!visualSettings?.automaticHolidayThemes ? (
-                      <>
-                        <strong>
-                          {tr(
-                            "Automatic switching is currently off.",
-                            "El cambio automático está desactivado.",
-                          )}
-                        </strong>
-                        <span>
-                          {tr(
-                            "Enable the toggle and publish the appearance to start the schedule.",
-                            "Activa el interruptor y publica la apariencia para iniciar la programación.",
-                          )}
-                        </span>
-                      </>
-                    ) : visualSettings.automaticThemeActive ? (
-                      <>
-                        <strong>
-                          {tr(
-                            `${visualSettings.automaticThemeName} is active today.`,
-                            `${themeSpanish(visualSettings.themeKey).name} está activo hoy.`,
-                          )}
-                        </strong>
-                        <span>
-                          {tr(
-                            "Your manual theme remains saved and will return afterward.",
-                            "Tu tema manual permanece guardado y volverá después.",
-                          )}
-                        </span>
-                      </>
-                    ) : visualSettings.nextAutomaticTheme ? (
-                      <>
-                        <strong>
-                          {tr("Next", "Próximo")}: {visualSettings.nextAutomaticTheme.name}{" "}
-                          {tr("on", "el")} {visualSettings.nextAutomaticTheme.localDate}
-                        </strong>
-                        <span>{visualSettings.nextAutomaticTheme.dateLabel}</span>
-                      </>
-                    ) : null}
-                  </div>
-                  <ul
-                    className="automatic-theme-schedule"
-                    aria-label={tr(
-                      "Automatic holiday schedule",
-                      "Programación automática de días festivos",
-                    )}
-                  >
-                    <li>
-                      <strong>{tr("MLK Day", "Día de Martin Luther King Jr.")}</strong>
-                      <span>{tr("Third Monday in January", "Tercer lunes de enero")}</span>
-                    </li>
-                    <li>
-                      <strong>{tr("Spring Celebration", "Celebración de primavera")}</strong>
-                      <span>{tr("Easter Sunday", "Domingo de Pascua")}</span>
-                    </li>
-                    <li>
-                      <strong>
-                        {tr("September 11 Remembrance", "Conmemoración del 11 de septiembre")}
-                      </strong>
-                      <span>{tr("September 11", "11 de septiembre")}</span>
-                    </li>
-                    <li>
-                      <strong>{tr("Winter Holiday", "Festividad de invierno")}</strong>
-                      <span>{tr("December 24–26", "24–26 de diciembre")}</span>
-                    </li>
-                  </ul>
-                  <div className="automatic-live-message">
-                    <div>
-                      <span className="section-kicker">
-                        {tr("Optional live message", "Mensaje en vivo opcional")}
-                      </span>
-                      <h3>{tr("Holiday or event announcement", "Anuncio festivo o de evento")}</h3>
-                      <p>
-                        {tr(
-                          "Add a respectful observance, store event, or seasonal message. Leave both fields empty for wallpaper only.",
-                          "Agrega una conmemoración respetuosa, un evento de la tienda o un mensaje de temporada. Deja ambos campos vacíos para mostrar solo el fondo.",
-                        )}
-                      </p>
-                    </div>
-                    <label>
-                      {tr("Headline", "Título")}
-                      <input
-                        maxLength={80}
-                        value={visualDraft.occasionTitle}
-                        onChange={(event) =>
-                          setVisualDraft({ ...visualDraft, occasionTitle: event.target.value })
-                        }
-                        placeholder={tr(
-                          "Example: Honoring Dr. Martin Luther King Jr.",
-                          "Ejemplo: En honor al Dr. Martin Luther King Jr.",
-                        )}
-                      />
-                    </label>
-                    <label>
-                      {tr("Message", "Mensaje")}
-                      <textarea
-                        maxLength={220}
-                        value={visualDraft.occasionMessage}
-                        onChange={(event) =>
-                          setVisualDraft({ ...visualDraft, occasionMessage: event.target.value })
-                        }
-                        placeholder={tr(
-                          "Add a short message for members and staff.",
-                          "Agrega un mensaje breve para los miembros y el personal.",
-                        )}
-                      />
-                    </label>
-                    <button className="admin-primary" disabled={user.role !== "owner"}>
-                      {user.role === "owner"
-                        ? tr("Publish appearance", "Publicar apariencia")
-                        : tr("Owner access required", "Se requiere acceso de propietario")}
-                    </button>
-                  </div>
-                </section>
-                <div
-                  className="theme-grid"
-                  role="radiogroup"
-                  aria-label={tr("Business page theme", "Tema de la página del negocio")}
-                >
-                  {themeCatalog.map((theme) => (
-                    <label
-                      className={`theme-card ${visualDraft.themeKey === theme.key ? "selected" : ""}`}
-                      key={theme.key}
-                    >
-                      <input
-                        type="radio"
-                        name="theme"
-                        value={theme.key}
-                        checked={visualDraft.themeKey === theme.key}
-                        onChange={() => setVisualDraft({ ...visualDraft, themeKey: theme.key })}
-                      />
-                      <img src={theme.image} alt="" loading="lazy" width="320" height="180" />
-                      <span>
-                        <small>{tr(theme.category, themeSpanish(theme.key).category)}</small>
-                        <strong>{tr(theme.name, themeSpanish(theme.key).name)}</strong>
-                        <em>{tr(theme.description, themeSpanish(theme.key).description)}</em>
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </form>
             </section>
           )}
         </main>
@@ -2634,16 +2306,69 @@ function Admin() {
             <section className="client-appearance-manager">
               <div>
                 <span className="section-kicker">
-                  {tr("Client holiday experience", "Experiencia festiva del cliente")}
+                  {tr("Client appearance", "Apariencia del cliente")}
                 </span>
-                <h3>{tr("Automatic live themes", "Temas en vivo automáticos")}</h3>
+                <h3>{tr("Themes and live messages", "Temas y mensajes en vivo")}</h3>
                 <p>
                   {tr(
-                    "Turn holiday themes on or off for this business. When enabled, the selected holiday appears across its dashboard, wallet, customer page, and Join Rewards experience.",
-                    "Activa o desactiva los temas festivos para este negocio. Cuando están activos, el día festivo aparece en su panel, billetera, página del cliente y experiencia Únete a Recompensas.",
+                    "Elite controls this business’s manual theme, live message, holiday schedule, and time zone here.",
+                    "Elite controla aquí el tema manual, el mensaje en vivo, el calendario festivo y la zona horaria de este negocio.",
                   )}
                 </p>
               </div>
+              <div
+                className="theme-grid client-theme-grid"
+                role="radiogroup"
+                aria-label={tr("Client theme", "Tema del cliente")}
+              >
+                {themeCatalog.map((theme) => (
+                  <label
+                    className={`theme-card ${clientVisualDraft.themeKey === theme.key ? "selected" : ""}`}
+                    key={theme.key}
+                  >
+                    <input
+                      type="radio"
+                      name="client-theme"
+                      value={theme.key}
+                      checked={clientVisualDraft.themeKey === theme.key}
+                      onChange={() =>
+                        setClientVisualDraft({ ...clientVisualDraft, themeKey: theme.key })
+                      }
+                    />
+                    <img src={theme.image} alt="" loading="lazy" width="320" height="180" />
+                    <span>
+                      <small>{tr(theme.category, themeSpanish(theme.key).category)}</small>
+                      <strong>{tr(theme.name, themeSpanish(theme.key).name)}</strong>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <label>
+                {tr("Live message headline", "Título del mensaje en vivo")}
+                <input
+                  maxLength={80}
+                  value={clientVisualDraft.occasionTitle}
+                  onChange={(event) =>
+                    setClientVisualDraft({
+                      ...clientVisualDraft,
+                      occasionTitle: event.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label>
+                {tr("Live message", "Mensaje en vivo")}
+                <textarea
+                  maxLength={220}
+                  value={clientVisualDraft.occasionMessage}
+                  onChange={(event) =>
+                    setClientVisualDraft({
+                      ...clientVisualDraft,
+                      occasionMessage: event.target.value,
+                    })
+                  }
+                />
+              </label>
               <label className="automatic-theme-toggle">
                 <input
                   type="checkbox"
@@ -2711,7 +2436,7 @@ function Admin() {
                 className="admin-primary full"
                 onClick={() => void saveClientAppearance()}
               >
-                {tr("Publish holiday settings", "Publicar ajustes festivos")}
+                {tr("Publish client appearance", "Publicar apariencia del cliente")}
               </button>
             </section>
             <section className="client-links">
@@ -2921,8 +2646,11 @@ function Admin() {
                   <button
                     type="button"
                     key={reward.id}
-                    onClick={() => editClientReward(reward)}
-                    disabled={Boolean(reward.archivedAt)}
+                    onClick={() =>
+                      reward.archivedAt
+                        ? void restoreSelectedClientReward(reward.id)
+                        : editClientReward(reward)
+                    }
                   >
                     <span>
                       <strong>{reward.name}</strong>
@@ -2943,6 +2671,11 @@ function Admin() {
                         tr,
                       )}
                     </span>
+                    {reward.archivedAt && (
+                      <span className="client-reward-restore-label">
+                        <RotateCcw size={15} /> {tr("Unarchive", "Desarchivar")}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>

@@ -68,7 +68,7 @@ async function updateForBusiness(
       );
       await client.query(
         `INSERT INTO audit_events(id,business_id,actor_user_id,action,target_type,target_id,metadata)
-         VALUES ($1,$2,$3,'business.loyalty_mode.updated','business',$2,$4)`,
+         VALUES ($1,$2,$3,'platform.client.loyalty_settings.updated','business',$2,$4)`,
         [
           id("aud"),
           businessId,
@@ -96,15 +96,6 @@ async function updateForBusiness(
 export async function getLoyaltySettings(user: SessionUser): Promise<LoyaltySettings> {
   requireOwner(user);
   return getForBusiness(user.businessId);
-}
-
-export async function updateLoyaltySettings(
-  user: SessionUser,
-  loyaltyMode: LoyaltyMode,
-  pointsPerDollar: number,
-): Promise<LoyaltySettings> {
-  requireOwner(user);
-  return updateForBusiness(user, user.businessId, loyaltyMode, pointsPerDollar, false);
 }
 
 export async function getClientLoyaltySettings(

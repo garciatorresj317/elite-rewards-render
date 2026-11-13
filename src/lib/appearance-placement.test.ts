@@ -6,7 +6,7 @@ import { describe, it } from "node:test";
 const routesDirectory = join(process.cwd(), "src", "routes");
 
 describe("Appearance navigation placement", () => {
-  it("exposes the Appearance tab only from the admin route", async () => {
+  it("keeps appearance controls out of routed client dashboards", async () => {
     const routeFiles = (await readdir(routesDirectory)).filter((file) => file.endsWith(".tsx"));
     const routesWithAppearanceTab: string[] = [];
 
@@ -15,17 +15,18 @@ describe("Appearance navigation placement", () => {
       if (/(?:label|id|en):\s*["']Appearance["']/.test(source)) routesWithAppearanceTab.push(file);
     }
 
-    assert.deepEqual(routesWithAppearanceTab, ["admin.tsx"]);
+    assert.deepEqual(routesWithAppearanceTab, []);
   });
 
-  it("keeps Appearance inside the authenticated admin section", async () => {
+  it("keeps appearance customization inside Elite client management", async () => {
     const adminSource = await readFile(join(routesDirectory, "admin.tsx"), "utf8");
 
     assert.match(adminSource, /session\.user\.role === ["']member["']/);
-    assert.match(adminSource, /active === ["']Appearance["']/);
-    assert.match(adminSource, /api\.updateVisualSettings\(visualDraft\)/);
-    assert.match(adminSource, /Automatic holiday themes/);
-    assert.match(adminSource, /automaticHolidayThemes/);
+    assert.doesNotMatch(adminSource, /active === ["']Appearance["']/);
+    assert.doesNotMatch(adminSource, /api\.updateVisualSettings\(visualDraft\)/);
+    assert.match(adminSource, /api\.updateClientVisualSettings/);
+    assert.match(adminSource, /Publish client appearance/);
+    assert.match(adminSource, /name="client-theme"/);
   });
 
   it("keeps automatic theme controls out of every non-admin route", async () => {

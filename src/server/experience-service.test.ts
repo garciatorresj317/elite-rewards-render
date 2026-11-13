@@ -15,7 +15,6 @@ import {
   getVisualSettings,
   joinWithReferral,
   updateClientVisualSettings,
-  updateVisualSettings,
 } from "./experience-service.ts";
 
 const owner: SessionUser = {
@@ -186,8 +185,9 @@ describe("referrals and visual experiences", () => {
     );
   });
 
-  it("persists owner-controlled visual settings per business", async () => {
-    const saved = await updateVisualSettings(owner, {
+  it("persists Elite-controlled visual settings per client business", async () => {
+    const platformOwner: SessionUser = { ...owner, platformAdmin: true };
+    const saved = await updateClientVisualSettings(platformOwner, owner.businessId, {
       themeKey: "mlk-day",
       occasionTitle: "A day of service",
       occasionMessage: "Honoring unity, service, and progress.",
@@ -198,20 +198,21 @@ describe("referrals and visual experiences", () => {
     assert.deepEqual(await getVisualSettings(member), saved);
     await assert.rejects(
       () =>
-        updateVisualSettings(member, {
+        updateClientVisualSettings(owner, owner.businessId, {
           themeKey: "elite-signature",
           occasionTitle: "",
           occasionMessage: "",
           automaticHolidayThemes: false,
           timeZone: "America/New_York",
         }),
-      /owner access required/i,
+      /Platform administrator access required/i,
     );
     assert.equal((await getVisualSettings(otherMember)).themeKey, "elite-signature");
   });
 
   it("temporarily applies automatic holiday themes without overwriting the manual theme", async () => {
-    await updateVisualSettings(owner, {
+    const platformOwner: SessionUser = { ...owner, platformAdmin: true };
+    await updateClientVisualSettings(platformOwner, owner.businessId, {
       themeKey: "community-event",
       occasionTitle: "Member appreciation",
       occasionMessage: "Thank you for being part of our community.",
@@ -229,7 +230,8 @@ describe("referrals and visual experiences", () => {
   });
 
   it("keeps the manual theme when automatic scheduling is disabled", async () => {
-    const saved = await updateVisualSettings(owner, {
+    const platformOwner: SessionUser = { ...owner, platformAdmin: true };
+    const saved = await updateClientVisualSettings(platformOwner, owner.businessId, {
       themeKey: "elite-signature",
       occasionTitle: "Welcome",
       occasionMessage: "Our regular experience.",
@@ -276,9 +278,10 @@ describe("referrals and visual experiences", () => {
   });
 
   it("rejects unsupported business time zones", async () => {
+    const platformOwner: SessionUser = { ...owner, platformAdmin: true };
     await assert.rejects(
       () =>
-        updateVisualSettings(owner, {
+        updateClientVisualSettings(platformOwner, owner.businessId, {
           themeKey: "elite-signature",
           occasionTitle: "",
           occasionMessage: "",

@@ -10,7 +10,6 @@ import {
   getClientLoyaltySettings,
   parsePointsPerDollar,
   updateClientLoyaltySettings,
-  updateLoyaltySettings,
 } from "./loyalty-settings-service.ts";
 import type { SessionUser } from "./auth.ts";
 
@@ -129,8 +128,11 @@ describe("per-business points or visits", () => {
     assert.equal((await getWallet(member)).balance, 500);
   });
 
-  it("lets the business owner switch to visits and uses the visit ledger", async () => {
-    assert.equal((await updateLoyaltySettings(owner, "visits", 5)).loyaltyMode, "visits");
+  it("lets Elite switch a client to visits and uses the visit ledger", async () => {
+    assert.equal(
+      (await updateClientLoyaltySettings(platform, "biz_client", "visits", 5)).loyaltyMode,
+      "visits",
+    );
     await awardPoints(owner, {
       memberId: member.id,
       units: 3,
@@ -155,6 +157,10 @@ describe("per-business points or visits", () => {
       "points",
     );
     assert.equal((await getClientLoyaltySettings(platform, "biz_client")).pointsPerDollar, 5);
+    await assert.rejects(
+      () => updateClientLoyaltySettings(platform, "biz_platform", "points", 5),
+      /Business not found/,
+    );
   });
 
   it("calculates points from purchase cents and the business rate", async () => {

@@ -32,13 +32,18 @@ describe("Holiday live-theme surface coverage", () => {
     }
   });
 
-  it("keeps automatic controls in authenticated admin while enabling platform client control", async () => {
+  it("keeps automatic controls exclusively in authenticated Elite client management", async () => {
     const admin = await read("src/routes/admin.tsx");
     const routes = ["wallet.tsx", "clients.$clientId.tsx", "join.tsx"];
-    assert.match(admin, /Client holiday experience/);
+    assert.match(admin, /Client appearance/);
+    assert.match(admin, /automatic-theme-toggle/);
     assert.match(admin, /updateClientVisualSettings/);
+    assert.doesNotMatch(admin, /updateVisualSettings\(visualDraft\)/);
     for (const route of routes) {
-      assert.doesNotMatch(await read(`src/routes/${route}`), /Publish holiday settings/);
+      assert.doesNotMatch(
+        await read(`src/routes/${route}`),
+        /Publish holiday settings|automatic-theme-toggle/,
+      );
     }
   });
 });

@@ -13,11 +13,11 @@ describe("client customization placement", () => {
     assert.match(admin, /resetClientBranding/);
     assert.match(admin, /Open client page/);
     assert.match(admin, /Copy NFC card link/);
-    const automaticStart = admin.indexOf('className="panel automatic-theme-editor"');
-    const liveMessage = admin.indexOf("Optional live message");
-    const themeGrid = admin.indexOf('className="theme-grid"');
-    assert.ok(automaticStart >= 0 && liveMessage > automaticStart && liveMessage < themeGrid);
-    assert.equal((admin.match(/Optional live message/g) ?? []).length, 1);
+    const appearanceStart = admin.indexOf('className="client-appearance-manager"');
+    const liveMessage = admin.indexOf("Live message headline", appearanceStart);
+    const themeGrid = admin.indexOf('className="theme-grid client-theme-grid"', appearanceStart);
+    assert.ok(appearanceStart >= 0 && themeGrid > appearanceStart && liveMessage > themeGrid);
+    assert.equal((admin.match(/Live message headline/g) ?? []).length, 1);
   });
 
   it("renders a bilingual suspend or activate control on every mapped client card", async () => {
@@ -33,20 +33,21 @@ describe("client customization placement", () => {
     assert.match(admin, /suspended: \["Suspended", "Suspendido"\]/);
   });
 
-  it("keeps the points-per-dollar setting and automatic award calculation in both admin workflows", async () => {
+  it("keeps points-per-dollar editing in Elite client management only", async () => {
     const [admin, apiClient, service, migration] = await Promise.all([
       readFile(join(process.cwd(), "src", "routes", "admin.tsx"), "utf8"),
       readFile(join(process.cwd(), "src", "lib", "api-client.ts"), "utf8"),
       readFile(join(process.cwd(), "src", "server", "rewards-service.ts"), "utf8"),
       readFile(join(process.cwd(), "migrations", "020_points_per_dollar.sql"), "utf8"),
     ]);
-    assert.equal((admin.match(/Points earned per \$1/g) ?? []).length, 2);
-    assert.equal((admin.match(/Puntos otorgados por cada \$1/g) ?? []).length, 2);
+    assert.equal((admin.match(/Points earned per \$1/g) ?? []).length, 1);
+    assert.equal((admin.match(/Puntos otorgados por cada \$1/g) ?? []).length, 1);
     assert.match(admin, /Save points rate/);
     assert.match(admin, /Guardar tasa de puntos/);
     assert.match(admin, /pointsPerDollar/);
     assert.doesNotMatch(admin, /value=\{award\.points\}/);
     assert.match(apiClient, /JSON\.stringify\(\{ loyaltyMode, pointsPerDollar \}\)/);
+    assert.doesNotMatch(apiClient, /updateLoyaltySettings:/);
     assert.match(
       service,
       /Math\.floor\(\(input\.amountCents \* Number\(businessRow\.points_per_dollar\)\) \/ 100\)/,
@@ -88,7 +89,7 @@ describe("client customization placement", () => {
     assert.doesNotMatch(admin, /URL de compra o detalles/);
     assert.match(admin, /Product details were saved, but the image upload failed/);
     assert.match(admin, /loyaltyMode === "visits" \? draft\.visitsCost : draft\.pointsCost/);
-    assert.match(admin, /Choose points or visits/);
+    assert.match(admin, /Choose what this business awards/);
     assert.match(admin, /Use visits/);
     assert.match(clientPage, /<ProductCatalog products=\{data\.products\}/);
     assert.match(wallet, /<ProductCatalog[\s\S]*products=\{data\.products\}/);
@@ -156,5 +157,20 @@ describe("client customization placement", () => {
     assert.match(repairMigration, /business\.product\.visibility\.repaired/);
     assert.match(repairMigration, /biz_18fedc53-78d9-46bc-a8b0-8eb375154399/);
     assert.match(repairMigration, /archived_at IS NULL/);
+  });
+
+  it("allows archived rewards to be restored as hidden in both management flows", async () => {
+    const [admin, apiClient, service] = await Promise.all([
+      readFile(join(process.cwd(), "src", "routes", "admin.tsx"), "utf8"),
+      readFile(join(process.cwd(), "src", "lib", "api-client.ts"), "utf8"),
+      readFile(join(process.cwd(), "src", "server", "reward-management-service.ts"), "utf8"),
+    ]);
+    assert.match(admin, /Unarchive reward/);
+    assert.match(admin, /Desarchivar recompensa/);
+    assert.match(admin, /restoreClientReward/);
+    assert.match(apiClient, /restoreReward:/);
+    assert.match(apiClient, /restoreClientReward:/);
+    assert.match(service, /reward\.restored/);
+    assert.match(service, /SET active = false, archived_at = NULL/);
   });
 });

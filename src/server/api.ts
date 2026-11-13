@@ -39,6 +39,8 @@ import {
   createReward,
   listClientRewards,
   listManagedRewards,
+  restoreClientReward,
+  restoreReward,
   updateClientReward,
   updateReward,
 } from "./reward-management-service.ts";
@@ -53,7 +55,6 @@ import {
   publicVisualSettings,
   themeKeys,
   updateClientVisualSettings,
-  updateVisualSettings,
 } from "./experience-service.ts";
 import {
   archiveClientProduct,
@@ -86,7 +87,6 @@ import {
   parseLoyaltyMode,
   parsePointsPerDollar,
   updateClientLoyaltySettings,
-  updateLoyaltySettings,
 } from "./loyalty-settings-service.ts";
 
 const jsonHeaders = {
@@ -486,22 +486,7 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       const settings = await getVisualSettings(user);
       return json(user.role === "member" ? publicVisualSettings(settings) : settings);
     }
-    if (url.pathname === "/api/admin/visual-settings" && request.method === "PUT") {
-      requireRole(user, ["owner"]);
-      const payload = await body(request);
-      const themeKey = text(payload["themeKey"], "Theme", 3, 40);
-      if (!themeKeys.includes(themeKey as (typeof themeKeys)[number]))
-        throw Object.assign(new Error("Theme is invalid"), { status: 400 });
-      return json(
-        await updateVisualSettings(user, {
-          themeKey: themeKey as (typeof themeKeys)[number],
-          occasionTitle: text(payload["occasionTitle"] ?? "", "Occasion title", 0, 80),
-          occasionMessage: text(payload["occasionMessage"] ?? "", "Occasion message", 0, 220),
-          automaticHolidayThemes: payload["automaticHolidayThemes"] === true,
-          timeZone: text(payload["timeZone"] ?? "UTC", "Time zone", 1, 100),
-        }),
-      );
-    }
+
     if (url.pathname === "/api/admin/clients" && request.method === "GET") {
       requirePlatformAdmin(user);
       return json({ clients: await listClients(user) });
@@ -694,6 +679,25 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       await archiveClientReward(user, businessId, rewardId);
       return json({ ok: true });
     }
+    const clientRewardRestoreMatch = url.pathname.match(
+      /^\/api\/admin\/clients\/([^/]+)\/rewards\/([^/]+)\/restore$/,
+    );
+    if (clientRewardRestoreMatch && request.method === "POST") {
+      requirePlatformAdmin(user);
+      const businessId = text(
+        decodeURIComponent(clientRewardRestoreMatch[1] ?? ""),
+        "Client",
+        8,
+        120,
+      );
+      const rewardId = text(
+        decodeURIComponent(clientRewardRestoreMatch[2] ?? ""),
+        "Reward",
+        8,
+        120,
+      );
+      return json({ reward: await restoreClientReward(user, businessId, rewardId) });
+    }
     const clientProductsMatch = url.pathname.match(/^\/api\/admin\/clients\/([^/]+)\/products$/);
     if (clientProductsMatch && request.method === "GET") {
       requirePlatformAdmin(user);
@@ -817,17 +821,7 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       requireRole(user, ["owner"]);
       return json(await getLoyaltySettings(user));
     }
-    if (url.pathname === "/api/admin/loyalty-settings" && request.method === "PUT") {
-      requireRole(user, ["owner"]);
-      const payload = await body(request);
-      return json(
-        await updateLoyaltySettings(
-          user,
-          parseLoyaltyMode(payload["loyaltyMode"]),
-          parsePointsPerDollar(payload["pointsPerDollar"]),
-        ),
-      );
-    }
+
     if (url.pathname === "/api/admin/rewards" && request.method === "POST") {
       requireRole(user, ["owner"]);
       const payload = await body(request);
@@ -871,6 +865,12 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       const rewardId = text(decodeURIComponent(rewardMatch[1] ?? ""), "Reward", 8, 120);
       await archiveReward(user, rewardId);
       return json({ ok: true });
+    }
+    const rewardRestoreMatch = url.pathname.match(/^\/api\/admin\/rewards\/([^/]+)\/restore$/);
+    if (rewardRestoreMatch && request.method === "POST") {
+      requireRole(user, ["owner"]);
+      const rewardId = text(decodeURIComponent(rewardRestoreMatch[1] ?? ""), "Reward", 8, 120);
+      return json({ reward: await restoreReward(user, rewardId) });
     }
     if (url.pathname === "/api/admin/products" && request.method === "GET") {
       requireRole(user, ["owner", "staff"]);

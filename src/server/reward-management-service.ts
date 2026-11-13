@@ -36,8 +36,15 @@ function requirePlatformAdmin(user: SessionUser): void {
     throw Object.assign(new Error("Platform administrator access required"), { status: 403 });
 }
 
-function clientOwnerContext(user: SessionUser, businessId: string): SessionUser {
+async function clientOwnerContext(user: SessionUser, businessId: string): Promise<SessionUser> {
   requirePlatformAdmin(user);
+  const client = await getPool().query(
+    `SELECT 1 FROM businesses
+      WHERE id = $1
+        AND id <> (SELECT business_id FROM platform_state WHERE singleton = true)`,
+    [businessId],
+  );
+  if (!client.rowCount) throw Object.assign(new Error("Client not found"), { status: 404 });
   return { ...user, businessId, role: "owner", platformAdmin: true };
 }
 
@@ -252,11 +259,35 @@ export async function archiveReward(user: SessionUser, rewardId: string): Promis
   }
 }
 
+export async function restoreReward(user: SessionUser, rewardId: string): Promise<ManagedReward> {
+  requireOwner(user);
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    const result = await client.query(
+      `UPDATE rewards
+          SET active = false, archived_at = NULL, updated_at = now()
+        WHERE id = $1 AND business_id = $2 AND archived_at IS NOT NULL`,
+      [rewardId, user.businessId],
+    );
+    if (!result.rowCount)
+      throw Object.assign(new Error("Reward not found or is not archived"), { status: 404 });
+    await audit(client, user, "reward.restored", rewardId, { active: false });
+    await client.query("COMMIT");
+    return (await listManagedRewards(user)).find((reward) => reward.id === rewardId)!;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export async function listClientRewards(
   user: SessionUser,
   businessId: string,
 ): Promise<ManagedReward[]> {
-  return listManagedRewards(clientOwnerContext(user, businessId));
+  return listManagedRewards(await clientOwnerContext(user, businessId));
 }
 
 export async function createClientReward(
@@ -264,7 +295,7 @@ export async function createClientReward(
   businessId: string,
   input: RewardInput,
 ): Promise<ManagedReward> {
-  return createReward(clientOwnerContext(user, businessId), input);
+  return createReward(await clientOwnerContext(user, businessId), input);
 }
 
 export async function updateClientReward(
@@ -273,7 +304,7 @@ export async function updateClientReward(
   rewardId: string,
   input: RewardInput,
 ): Promise<ManagedReward> {
-  return updateReward(clientOwnerContext(user, businessId), rewardId, input);
+  return updateReward(await clientOwnerContext(user, businessId), rewardId, input);
 }
 
 export async function archiveClientReward(
@@ -281,5 +312,13 @@ export async function archiveClientReward(
   businessId: string,
   rewardId: string,
 ): Promise<void> {
-  return archiveReward(clientOwnerContext(user, businessId), rewardId);
+  return archiveReward(await clientOwnerContext(user, businessId), rewardId);
+}
+
+export async function restoreClientReward(
+  user: SessionUser,
+  businessId: string,
+  rewardId: string,
+): Promise<ManagedReward> {
+  return restoreReward(await clientOwnerContext(user, businessId), rewardId);
 }

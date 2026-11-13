@@ -8,10 +8,13 @@ import type { SessionUser } from "./auth.ts";
 import { closeDatabase, setDatabasePoolForTests } from "./database.ts";
 import {
   archiveReward,
+  archiveClientReward,
   createClientReward,
   createReward,
   listClientRewards,
   listManagedRewards,
+  restoreReward,
+  restoreClientReward,
   updateReward,
 } from "./reward-management-service.ts";
 import { getWallet, redeemReward } from "./rewards-service.ts";
@@ -118,6 +121,9 @@ describe("editable business rewards", () => {
     await pool.query(
       "INSERT INTO member_balances(business_id,member_id,points) VALUES ('biz_one','usr_member',3000)",
     );
+    await pool.query(
+      "INSERT INTO platform_state(singleton,business_id) VALUES (true,'biz_platform')",
+    );
   });
 
   after(async () => closeDatabase());
@@ -172,6 +178,22 @@ describe("editable business rewards", () => {
       () => createClientReward(owner, "biz_two", input),
       /Platform administrator access required/,
     );
+    await assert.rejects(
+      () => createClientReward(platformAdmin, "biz_platform", input),
+      /Client not found/,
+    );
+  });
+
+  it("lets Elite restore an isolated client reward as hidden", async () => {
+    const reward = await createClientReward(platformAdmin, "biz_two", input);
+    await archiveClientReward(platformAdmin, "biz_two", reward.id);
+    const restored = await restoreClientReward(platformAdmin, "biz_two", reward.id);
+    assert.equal(restored.archivedAt, null);
+    assert.equal(restored.active, false);
+    await assert.rejects(
+      () => restoreClientReward(owner, "biz_two", reward.id),
+      /Platform administrator access required/,
+    );
   });
 
   it("publishes active inventory and consumes it atomically on redemption", async () => {
@@ -206,5 +228,26 @@ describe("editable business rewards", () => {
     assert.ok(!(await getWallet(member)).rewards.some((item) => item.id === reward.id));
     const wallet = await getWallet(member);
     assert.ok(wallet.redemptions.some((item) => item.name === input.name));
+  });
+
+  it("restores archived offers as hidden without erasing history", async () => {
+    const reward = await createReward(owner, { ...input, inventoryRemaining: null });
+    await archiveReward(owner, reward.id);
+    const restored = await restoreReward(owner, reward.id);
+    assert.equal(restored.archivedAt, null);
+    assert.equal(restored.active, false);
+    assert.ok(!(await getWallet(member)).rewards.some((item) => item.id === reward.id));
+    await assert.rejects(() => restoreReward(owner, reward.id), /not found or is not archived/i);
+  });
+
+  it("keeps reward restoration tenant-isolated", async () => {
+    const reward = await createReward(owner, input);
+    await archiveReward(owner, reward.id);
+    const otherOwner: SessionUser = { ...owner, id: "usr_other", businessId: "biz_two" };
+    await assert.rejects(
+      () => restoreReward(otherOwner, reward.id),
+      /not found or is not archived/i,
+    );
+    assert.ok((await listManagedRewards(owner)).find((item) => item.id === reward.id)?.archivedAt);
   });
 });

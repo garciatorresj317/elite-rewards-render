@@ -169,6 +169,11 @@ export const api = {
       `/api/admin/clients/${encodeURIComponent(businessId)}/rewards/${encodeURIComponent(rewardId)}`,
       { method: "DELETE", body: "{}" },
     ),
+  restoreClientReward: (businessId: string, rewardId: string) =>
+    request<{ reward: ManagedReward }>(
+      `/api/admin/clients/${encodeURIComponent(businessId)}/rewards/${encodeURIComponent(rewardId)}/restore`,
+      { method: "POST", body: "{}" },
+    ),
   clientProducts: (businessId: string) =>
     request<{ products: ManagedProduct[] }>(
       `/api/admin/clients/${encodeURIComponent(businessId)}/products`,
@@ -207,11 +212,7 @@ export const api = {
       { method: "POST", body: JSON.stringify({ productIds }) },
     ),
   loyaltySettings: () => request<LoyaltySettings>("/api/admin/loyalty-settings"),
-  updateLoyaltySettings: (loyaltyMode: LoyaltyMode, pointsPerDollar: number) =>
-    request<LoyaltySettings>("/api/admin/loyalty-settings", {
-      method: "PUT",
-      body: JSON.stringify({ loyaltyMode, pointsPerDollar }),
-    }),
+
   award: (payload: {
     memberId: string;
     units?: number;
@@ -259,6 +260,11 @@ export const api = {
       method: "DELETE",
       body: "{}",
     }),
+  restoreReward: (rewardId: string) =>
+    request<{ reward: ManagedReward }>(
+      `/api/admin/rewards/${encodeURIComponent(rewardId)}/restore`,
+      { method: "POST", body: "{}" },
+    ),
   managedProducts: () => request<{ products: ManagedProduct[] }>("/api/admin/products"),
   createProduct: (payload: ProductDraft) =>
     request<{ product: ManagedProduct }>("/api/admin/products", {
@@ -319,11 +325,6 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   visualSettings: () => request<VisualSettings>("/api/visual-settings"),
-  updateVisualSettings: (payload: VisualSettingsUpdate) =>
-    request<VisualSettings>("/api/admin/visual-settings", {
-      method: "PUT",
-      body: JSON.stringify(payload),
-    }),
   wallet: () => request<WalletData>("/api/wallet"),
   referral: () => request<{ sharePath: string; referralCount: number }>("/api/wallet/referral"),
   redeem: (rewardId: string) =>
