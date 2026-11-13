@@ -1,6 +1,6 @@
-const CACHE_NAME = "elite-rewards-shell-v1";
+const CACHE_PREFIX = "elite-rewards-shell-";
+const CACHE_NAME = `${CACHE_PREFIX}v1`;
 const APP_SHELL = [
-  "/manifest.webmanifest",
   "/pwa/icon-192.png",
   "/pwa/icon-512.png",
   "/pwa/icon-maskable-192.png",
@@ -18,7 +18,11 @@ self.addEventListener("activate", (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))),
+        Promise.all(
+          keys
+            .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
+            .map((key) => caches.delete(key)),
+        ),
       )
       .then(() => self.clients.claim()),
   );

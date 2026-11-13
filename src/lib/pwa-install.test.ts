@@ -46,7 +46,11 @@ describe("Elite Rewards home-screen installation", () => {
     for (const [name, size] of icons) {
       const path = join(root, "public", "pwa", name);
       assert.ok((await stat(path)).size > 1_000, `${name} must contain the branded icon`);
-      assert.deepEqual(pngDimensions(await readFile(path)), { width: size, height: size });
+      const icon = await readFile(path);
+      assert.deepEqual(pngDimensions(icon), { width: size, height: size });
+      if (name.startsWith("icon-maskable") || name === "apple-touch-icon.png") {
+        assert.equal(icon[25], 2, `${name} must be an opaque RGB PNG`);
+      }
     }
   });
 
@@ -70,10 +74,14 @@ describe("Elite Rewards home-screen installation", () => {
     assert.match(component, /aria-modal="true"/);
     assert.match(component, /event\.key === "Escape"/);
     assert.match(component, /Choose Add to Home Screen, then tap Add/);
+    assert.match(component, /navigator\.platform === "MacIntel"/);
+    assert.match(component, /navigator\.maxTouchPoints > 1/);
     assert.match(translations, /Agregar Elite Rewards a la pantalla de inicio/);
     assert.match(styles, /\.app-install-button/);
     assert.match(styles, /\.app-install-dialog/);
-    assert.match(worker, /elite-rewards-shell-v1/);
+    assert.match(worker, /elite-rewards-shell-/);
+    assert.match(worker, /key\.startsWith\(CACHE_PREFIX\)/);
+    assert.doesNotMatch(worker, /"\/manifest\.webmanifest"/);
     assert.doesNotMatch(worker, /event\.request\.mode === "navigate"/);
   });
 });

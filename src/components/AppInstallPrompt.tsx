@@ -21,7 +21,10 @@ function isStandalone() {
 
 function isAppleMobileDevice() {
   if (typeof window === "undefined") return false;
-  return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+  return (
+    /iphone|ipad|ipod/i.test(window.navigator.userAgent) ||
+    (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1)
+  );
 }
 
 export function AppInstallPrompt() {
