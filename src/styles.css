@@ -1875,3 +1875,83 @@ td { border-color: rgba(0, 184, 255, .12); }
     display: none;
   }
 }
+
+
+/* Install Elite Rewards on a phone or tablet home screen. */
+.app-install-button {
+  position: fixed;
+  z-index: 499;
+  right: max(10px, env(safe-area-inset-right));
+  bottom: calc(70px + env(safe-area-inset-bottom));
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 46px;
+  max-width: min(290px, calc(100vw - 20px));
+  padding: 0 15px;
+  border: 1px solid rgba(20, 230, 255, .72);
+  border-radius: 999px;
+  color: var(--text);
+  background: linear-gradient(145deg, rgba(4, 20, 37, .96), rgba(2, 7, 19, .98));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .5), 0 0 20px rgba(20, 230, 255, .13);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+}
+.app-install-button svg { width: 18px; height: 18px; flex: 0 0 auto; color: var(--cyan); }
+.app-install-button:hover { border-color: var(--gold-bright); transform: translateY(-1px); }
+.app-install-backdrop { z-index: 950; }
+.app-install-dialog {
+  position: relative;
+  width: min(540px, calc(100vw - 28px));
+  max-height: min(720px, calc(100dvh - 28px));
+  overflow: auto;
+  padding: clamp(28px, 5vw, 48px);
+  border: 1px solid rgba(20, 230, 255, .72);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 12% 4%, rgba(246, 185, 0, .15), transparent 14rem),
+    linear-gradient(150deg, #071524, #020713 70%);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .72), 0 0 34px rgba(20, 230, 255, .12);
+}
+.app-install-dialog h2 { margin: 12px 48px 12px 0; color: var(--gold-pale); font: 800 clamp(25px, 5vw, 38px)/1.12 var(--serif); }
+.app-install-dialog > p { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.65; }
+.app-install-dialog > .button { width: 100%; justify-content: center; margin-top: 24px; }
+.app-install-icon {
+  width: 88px;
+  height: 88px;
+  margin-bottom: 20px;
+  border-radius: 22px;
+  box-shadow: 0 0 28px rgba(20, 230, 255, .18);
+}
+.app-install-steps { display: grid; gap: 12px; margin: 24px 0 0; padding: 0; list-style: none; }
+.app-install-steps li {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 16px;
+  border: 1px solid var(--navy-line);
+  border-radius: 16px;
+  background: rgba(7, 17, 31, .8);
+  color: var(--text);
+  font-weight: 700;
+  line-height: 1.45;
+}
+.app-install-steps svg { width: 24px; height: 24px; color: var(--cyan); }
+@media (max-width: 560px) {
+  .app-install-button {
+    right: 50%;
+    bottom: calc(70px + env(safe-area-inset-bottom));
+    transform: translateX(50%);
+  }
+  .app-install-button:hover { transform: translateX(50%) translateY(-1px); }
+  .app-install-dialog { width: calc(100vw - 20px); max-height: calc(100dvh - 20px); padding: 26px 20px 22px; border-radius: 22px; }
+  .app-install-dialog h2 { font-size: 25px; }
+  .app-install-icon { width: 76px; height: 76px; border-radius: 19px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-install-button { transition: none; }
+}

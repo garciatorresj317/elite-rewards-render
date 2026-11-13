@@ -1,0 +1,32 @@
+const CACHE_NAME = "elite-rewards-shell-v1";
+const APP_SHELL = [
+  "/manifest.webmanifest",
+  "/pwa/icon-192.png",
+  "/pwa/icon-512.png",
+  "/pwa/icon-maskable-192.png",
+  "/pwa/icon-maskable-512.png",
+  "/pwa/apple-touch-icon.png",
+];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))),
+      )
+      .then(() => self.clients.claim()),
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin || !APP_SHELL.includes(url.pathname)) return;
+  event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request)));
+});

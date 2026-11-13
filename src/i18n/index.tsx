@@ -45,6 +45,19 @@ const es: Record<string, Translation> = {
   "Elite Rewards gives growing businesses a simple way to recognize their best customers, reward real loyalty, and bring people back.":
     "Elite Rewards ofrece a los negocios en crecimiento una forma sencilla de reconocer a sus mejores clientes, premiar la lealtad real y hacer que regresen.",
   "Open Elite Rewards": "Abrir Elite Rewards",
+  "Add Elite Rewards to home screen": "Agregar Elite Rewards a la pantalla de inicio",
+  "Elite Rewards app": "Aplicación Elite Rewards",
+  "Add Elite Rewards to your home screen": "Agrega Elite Rewards a tu pantalla de inicio",
+  "Open Elite Rewards like an app with the official Elite Rewards logo on your phone or tablet.":
+    "Abre Elite Rewards como una aplicación con el logotipo oficial de Elite Rewards en tu teléfono o tableta.",
+  "In Safari, tap the Share button.": "En Safari, toca el botón Compartir.",
+  "Choose Add to Home Screen, then tap Add.":
+    "Elige Agregar a la pantalla de inicio y luego toca Agregar.",
+  "Open your browser menu.": "Abre el menú de tu navegador.",
+  "Choose Install app or Add to Home screen.":
+    "Elige Instalar aplicación o Agregar a la pantalla de inicio.",
+  "Close install instructions": "Cerrar instrucciones de instalación",
+  "Got it": "Entendido",
   "Open business dashboard": "Abrir panel del negocio",
   "No app required": "No requiere aplicación",
   "Secure member access": "Acceso seguro para miembros",

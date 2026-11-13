@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { I18nProvider, LanguageSwitcher, useI18n } from "../i18n";
+import { AppInstallPrompt } from "../components/AppInstallPrompt";
 
 function NotFoundComponent() {
   const { t } = useI18n();
@@ -61,6 +62,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "A modern rewards program for growing businesses." },
       { name: "author", content: "Elite Rewards" },
       { name: "theme-color", content: "#020713" },
+      { name: "application-name", content: "Elite Rewards" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-title", content: "Elite Rewards" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { property: "og:type", content: "website" },
     ],
     links: [
@@ -72,6 +78,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@500;600;700;800;900&display=swap",
       },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", sizes: "180x180", href: "/pwa/apple-touch-icon.png" },
     ],
   }),
   shellComponent: RootShell,
@@ -97,6 +105,7 @@ function RootComponent() {
   return (
     <I18nProvider>
       <LanguageSwitcher />
+      <AppInstallPrompt />
       <QueryClientProvider client={queryClient}>
         <Outlet />
       </QueryClientProvider>
