@@ -116,6 +116,14 @@ type SectionId = (typeof sections)[number]["id"];
 
 type TranslatePair = (english: string, spanish: string) => string;
 
+function productDraftForSave(draft: ProductDraft): ProductDraft {
+  const managedImageUrl =
+    draft.imageUrl?.startsWith("/api/admin/products/") ||
+    draft.imageUrl?.startsWith("/api/admin/clients/") ||
+    draft.imageUrl?.startsWith("/api/public/products/");
+  return managedImageUrl ? { ...draft, imageUrl: null } : draft;
+}
+
 function localizeStatus(status: string, tr: TranslatePair) {
   const labels: Record<string, [string, string]> = {
     active: ["Active", "Activo"],
@@ -774,7 +782,7 @@ function Admin() {
     setError("");
     let savedProductId: string | null = null;
     try {
-      const publishedDraft = { ...clientProductDraft, active: true };
+      const publishedDraft = productDraftForSave({ ...clientProductDraft, active: true });
       const saved = clientProductEditingId
         ? await api.updateClientProduct(clientEditor.id, clientProductEditingId, publishedDraft)
         : await api.createClientProduct(clientEditor.id, publishedDraft);
@@ -791,14 +799,17 @@ function Admin() {
           "Producto publicado en la página del cliente y las billeteras de miembros.",
         ),
       );
-    } catch {
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "";
       setError(
         savedProductId && clientProductImage
-          ? tr(
-              "Product details were saved, but the image upload failed. Try the image again.",
-              "Los datos del producto se guardaron, pero falló la carga de la imagen. Intenta cargarla de nuevo.",
-            )
-          : tr("Client product update failed", "No se pudo actualizar el producto del cliente"),
+          ? message ||
+              tr(
+                "Product details were saved, but the image upload failed. Try the image again.",
+                "Los datos del producto se guardaron, pero falló la carga de la imagen. Intenta cargarla de nuevo.",
+              )
+          : message ||
+              tr("Client product update failed", "No se pudo actualizar el producto del cliente"),
       );
       if (savedProductId) {
         setClientProductEditingId(savedProductId);
@@ -898,9 +909,10 @@ function Admin() {
     setError("");
     let savedProductId: string | null = null;
     try {
+      const productPayload = productDraftForSave(productForm);
       const saved = editingProductId
-        ? await api.updateProduct(editingProductId, productForm)
-        : await api.createProduct(productForm);
+        ? await api.updateProduct(editingProductId, productPayload)
+        : await api.createProduct(productPayload);
       savedProductId = saved.product.id;
       if (productImage) await api.uploadProductImage(saved.product.id, productImage);
       setProductModal(false);

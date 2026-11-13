@@ -128,7 +128,7 @@ export function requireRole(user: SessionUser | null, roles: Role[]): asserts us
 }
 
 export function requirePlatformAdmin(user: SessionUser | null): asserts user is SessionUser {
-  requireRole(user, ["owner"]);
+  if (!user) throw Object.assign(new Error("Authentication required"), { status: 401 });
   if (!user.platformAdmin)
     throw Object.assign(new Error("Platform administrator access required"), { status: 403 });
 }

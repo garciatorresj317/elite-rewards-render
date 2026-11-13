@@ -33,4 +33,14 @@ describe("product input limits", () => {
     assert.throws(() => productInput(input({ pointsCost: 100_000 })), /Points is invalid/);
     assert.throws(() => productInput(input({ visitsCost: 1_000_001 })), /Visits is invalid/);
   });
+
+  it("keeps legacy image URLs restricted to public HTTPS addresses", () => {
+    assert.throws(
+      () =>
+        productInput(
+          input({ imageUrl: "/api/admin/clients/biz_client/products/prd_product/image" }),
+        ),
+      /Product image is invalid/,
+    );
+  });
 });

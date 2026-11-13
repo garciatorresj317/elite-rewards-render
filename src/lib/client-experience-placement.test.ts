@@ -46,6 +46,8 @@ describe("client customization placement", () => {
     assert.match(admin, /accept="image\/png,image\/jpeg,image\/webp"/);
     assert.match(admin, /className="product-image-preview"/);
     assert.match(admin, /selectedImagePreview \?\? draft\.imageUrl/);
+    assert.match(admin, /productDraftForSave\(\{ \.\.\.clientProductDraft, active: true \}\)/);
+    assert.match(admin, /productPayload = productDraftForSave\(productForm\)/);
     assert.match(uploadLimits, /PRODUCT_IMAGE_MAX_MEGABYTES = 10/);
     assert.match(admin, /Price \(\$0–\$99,999\)/);
     assert.match(admin, /Points \(0–99,999\)/);
@@ -108,7 +110,10 @@ describe("client customization placement", () => {
         "utf8",
       ),
     ]);
-    assert.match(admin, /const publishedDraft = \{ \.\.\.clientProductDraft, active: true \}/);
+    assert.match(
+      admin,
+      /const publishedDraft = productDraftForSave\(\{ \.\.\.clientProductDraft, active: true \}\)/,
+    );
     assert.match(admin, /publishingRequired/);
     assert.match(admin, /Published for customers/);
     assert.match(admin, /client page and member wallets/);
