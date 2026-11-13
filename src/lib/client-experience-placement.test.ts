@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 
 describe("client customization placement", () => {
-  it("keeps file upload, client preview, NFC links, and the live message in their required admin areas", async () => {
+  it("keeps file upload, client preview, NFC links, and the dedicated appearance tab in their required admin areas", async () => {
     const admin = await readFile(join(process.cwd(), "src", "routes", "admin.tsx"), "utf8");
     assert.match(admin, /type="file"/);
     assert.match(admin, /Choose logo from files/);
@@ -13,11 +13,20 @@ describe("client customization placement", () => {
     assert.match(admin, /resetClientBranding/);
     assert.match(admin, /Open client page/);
     assert.match(admin, /Copy NFC card link/);
+    assert.match(admin, /id: "Customization"/);
     const appearanceStart = admin.indexOf('className="client-appearance-manager"');
     const liveMessage = admin.indexOf("Live message headline", appearanceStart);
     const themeGrid = admin.indexOf('className="theme-grid client-theme-grid"', appearanceStart);
     assert.ok(appearanceStart >= 0 && themeGrid > appearanceStart && liveMessage > themeGrid);
     assert.equal((admin.match(/Live message headline/g) ?? []).length, 1);
+    assert.ok(admin.indexOf('active === "Customization"') < appearanceStart);
+    const clientEditorStart = admin.indexOf("{clientEditor && (");
+    const appearanceEditorStart = admin.indexOf("{appearanceClient && (");
+    assert.ok(clientEditorStart >= 0 && appearanceEditorStart > clientEditorStart);
+    assert.doesNotMatch(
+      admin.slice(clientEditorStart, appearanceEditorStart),
+      /Live message headline/,
+    );
   });
 
   it("renders a bilingual suspend or activate control on every mapped client card", async () => {
@@ -100,7 +109,7 @@ describe("client customization placement", () => {
   it("opens client customization without letting one failed section collapse the editor", async () => {
     const admin = await readFile(join(process.cwd(), "src", "routes", "admin.tsx"), "utf8");
     const loaderStart = admin.indexOf("const openClientEditor");
-    const loaderEnd = admin.indexOf("const saveClientBranding", loaderStart);
+    const loaderEnd = admin.indexOf("const openClientAppearance", loaderStart);
     const loader = admin.slice(loaderStart, loaderEnd);
     assert.ok(loaderStart >= 0 && loaderEnd > loaderStart);
     assert.match(loader, /setClientEditor\(client\)/);
@@ -108,8 +117,14 @@ describe("client customization placement", () => {
     assert.match(loader, /brandingResult\.status === "fulfilled"/);
     assert.match(loader, /rewardsResult\.status === "fulfilled"/);
     assert.match(loader, /productsResult\.status === "fulfilled"/);
-    assert.match(loader, /appearanceResult\.status === "fulfilled"/);
+    assert.match(loader, /loyaltyResult\.status === "fulfilled"/);
+    assert.doesNotMatch(loader, /api\.clientVisualSettings/);
     assert.doesNotMatch(loader, /Client customization failed to load/);
+    const appearanceStart = admin.indexOf("const openClientAppearance");
+    const appearanceEnd = admin.indexOf("const saveClientBranding", appearanceStart);
+    const appearanceLoader = admin.slice(appearanceStart, appearanceEnd);
+    assert.match(appearanceLoader, /api\.clientVisualSettings/);
+    assert.match(appearanceLoader, /setAppearanceClient\(client\)/);
   });
 
   it("provides confirmed bilingual single and bulk product deletion in both admin workflows", async () => {

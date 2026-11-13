@@ -63,10 +63,10 @@ Elite Rewards is now a live, database-backed rewards platform on Render rather t
 
 ### Appearance and automatic holidays
 
-- Appearance controls exist only inside authenticated Admin.
+- Appearance controls exist only in the platform administrator's dedicated **Customization** tab.
 - Member wallets display the effective theme but expose no editing controls.
 - Per-business manual theme, title, and message persistence.
-- Owner-only appearance updates.
+- Platform-administrator-only appearance updates; business owners and staff have read-only effective themes.
 - Optional automatic holiday toggle and business time-zone setting.
 - Server-side schedules for MLK Day, Easter Sunday/Spring Celebration, September 11 Remembrance, and December 24–26 Winter Holiday.
 - Scheduled themes temporarily override but never overwrite the saved manual theme or message.

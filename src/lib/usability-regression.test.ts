@@ -45,8 +45,8 @@ describe("user-friendly experience regression coverage", () => {
     assert.match(admin, /setActive\(user\.platformAdmin \? "Clients" : "Members"\)/);
     assert.match(admin, /setActive\(user\.platformAdmin \? "Clients" : "Rewards"\)/);
     assert.match(admin, /setActive\(user\.platformAdmin \? "Clients" : "Products"\)/);
-    assert.match(admin, /onClick=\{\(\) => setActive\("Clients"\)\}/);
     assert.doesNotMatch(admin, /setActive\([^)]*"Appearance"/);
+    assert.match(admin, /onClick=\{\(\) => setActive\("Customization"\)\}/);
     assert.match(admin, /active === "Dashboard" \|\| active === "Transactions"/);
     assert.match(admin, /initialLoadFailed/);
   });

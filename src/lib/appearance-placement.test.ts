@@ -6,27 +6,34 @@ import { describe, it } from "node:test";
 const routesDirectory = join(process.cwd(), "src", "routes");
 
 describe("Appearance navigation placement", () => {
-  it("keeps appearance controls out of routed client dashboards", async () => {
+  it("keeps appearance controls out of routed business dashboards", async () => {
     const routeFiles = (await readdir(routesDirectory)).filter((file) => file.endsWith(".tsx"));
     const routesWithAppearanceTab: string[] = [];
 
     for (const file of routeFiles) {
       const source = await readFile(join(routesDirectory, file), "utf8");
-      if (/(?:label|id|en):\s*["']Appearance["']/.test(source)) routesWithAppearanceTab.push(file);
+      if (
+        file !== "admin.tsx" &&
+        /(?:label|id|en):\s*["'](?:Appearance|Customization)["']/.test(source)
+      )
+        routesWithAppearanceTab.push(file);
     }
 
     assert.deepEqual(routesWithAppearanceTab, []);
   });
 
-  it("keeps appearance customization inside Elite client management", async () => {
+  it("keeps appearance customization in a dedicated Elite-only dashboard tab", async () => {
     const adminSource = await readFile(join(routesDirectory, "admin.tsx"), "utf8");
 
     assert.match(adminSource, /session\.user\.role === ["']member["']/);
-    assert.doesNotMatch(adminSource, /active === ["']Appearance["']/);
+    assert.match(adminSource, /id: "Customization"/);
+    assert.match(adminSource, /active === "Customization" && user\.platformAdmin/);
     assert.doesNotMatch(adminSource, /api\.updateVisualSettings\(visualDraft\)/);
     assert.match(adminSource, /api\.updateClientVisualSettings/);
     assert.match(adminSource, /Publish client appearance/);
-    assert.match(adminSource, /name="client-theme"/);
+    assert.match(adminSource, /name="client-appearance-theme"/);
+    assert.match(adminSource, /Only Elite Rewards administrators can publish/);
+    assert.equal((adminSource.match(/className="client-appearance-manager"/g) ?? []).length, 1);
   });
 
   it("keeps automatic theme controls out of every non-admin route", async () => {
