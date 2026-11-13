@@ -30,6 +30,14 @@ const es: Record<string, Translation> = {
   "Join rewards | Elite Rewards": "Únete a recompensas | Elite Rewards",
   "Rewards program | Elite Rewards": "Programa de recompensas | Elite Rewards",
   "My wallet | Elite Rewards": "Mi billetera | Elite Rewards",
+  "Membership anniversary": "Aniversario de membresía",
+  "Happy {count}-year anniversary!": "¡Feliz aniversario de {count} años!",
+  "Your {count}-year anniversary is coming in {days} days":
+    "Tu aniversario de {count} años llega en {days} días",
+  "Your next membership milestone is {count} years":
+    "Tu próximo logro de membresía es de {count} años",
+  "Member since {date}. Next celebration: {nextDate}.":
+    "Miembro desde {date}. Próxima celebración: {nextDate}.",
   Language: "Idioma",
   English: "English",
   Spanish: "Español",

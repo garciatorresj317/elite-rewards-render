@@ -80,7 +80,7 @@ describe("user-friendly experience regression coverage", () => {
     assert.match(admin, /!user\.platformAdmin && \(/);
     assert.match(admin, /className="panel dashboard-members-panel"/);
     assert.match(admin, /Your members/);
-    assert.match(admin, /members\.slice\(0, 6\)\.map/);
+    assert.match(admin, /\.sort\([\s\S]*anniversary\.daysUntil[\s\S]*\.slice\(0, 6\)/);
     assert.match(admin, /View all members/);
     assert.match(admin, /setActive\("Members"\)/);
     assert.match(admin, /window\.setInterval\(\(\) => void refreshMembers\(\), 30_000\)/);

@@ -30,6 +30,7 @@ import {
   createMemberInvitation,
   getMemberInvitation,
   listMembers,
+  updateAnniversaryGift,
 } from "./members-service.ts";
 import { awardPoints, getDashboard, getWallet, redeemReward } from "./rewards-service.ts";
 import {
@@ -905,6 +906,25 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
         email: text(payload["email"], "Member email", 5, 254).toLowerCase(),
       });
       return json(result, 201);
+    }
+    const anniversaryGiftMatch = url.pathname.match(
+      /^\/api\/admin\/members\/([^/]+)\/anniversary-gift$/,
+    );
+    if (anniversaryGiftMatch && request.method === "PUT") {
+      requireRole(user, ["owner", "staff"]);
+      const memberId = text(decodeURIComponent(anniversaryGiftMatch[1] ?? ""), "Member", 8, 120);
+      const payload = await body(request);
+      const rawStatus = payload["status"];
+      if (rawStatus !== null && rawStatus !== "planned" && rawStatus !== "sent")
+        throw Object.assign(new Error("Gift status is invalid"), { status: 400 });
+      const member = await updateAnniversaryGift(
+        user,
+        memberId,
+        integer(payload["milestoneYears"], "Anniversary milestone", 1, 200),
+        rawStatus,
+        text(payload["note"] ?? "", "Gift note", 0, 300),
+      );
+      return json({ member });
     }
     if (url.pathname === "/api/admin/rewards" && request.method === "GET") {
       requireRole(user, ["owner"]);

@@ -5,6 +5,7 @@ import type { SessionUser } from "./auth.ts";
 import { clientLogoPath } from "./business-branding.ts";
 import type { LoyaltyMode } from "./loyalty-settings-service.ts";
 import { countBusinessMembers } from "./member-count.ts";
+import { calculateMembershipAnniversary } from "../lib/member-anniversary.ts";
 
 export type PublicReward = { id: string; name: string; description: string; cost: number };
 
@@ -153,7 +154,12 @@ export async function getWallet(user: SessionUser) {
   const mode: LoyaltyMode = contextRow?.loyalty_mode ?? "points";
   const units = unitColumn(mode);
   const cost = rewardCostColumn(mode);
-  const [balance, ledger, rewards, redemptions, products] = await Promise.all([
+  const [memberRecord, balance, ledger, rewards, redemptions, products] = await Promise.all([
+    database.query<{ created_at: Date }>(
+      `SELECT u.created_at FROM users u
+        WHERE u.id=$1 AND u.business_id=$2 AND u.role='member' AND u.active=true`,
+      [user.id, user.businessId],
+    ),
     database.query<{ balance: number }>(
       `SELECT ${units} AS balance FROM member_balances WHERE business_id=$1 AND member_id=$2`,
       [user.businessId, user.id],
@@ -216,6 +222,9 @@ export async function getWallet(user: SessionUser) {
   ]);
   return {
     member: user,
+    anniversary: memberRecord.rows[0]
+      ? calculateMembershipAnniversary(memberRecord.rows[0].created_at, new Date(), "UTC")
+      : null,
     context: contextRow
       ? {
           business_name: contextRow.business_name,

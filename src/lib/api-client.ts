@@ -244,6 +244,16 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  updateAnniversaryGift: (
+    memberId: string,
+    milestoneYears: number,
+    status: "planned" | "sent" | null,
+    note = "",
+  ) =>
+    request<{ member: MemberSummary }>(
+      `/api/admin/members/${encodeURIComponent(memberId)}/anniversary-gift`,
+      { method: "PUT", body: JSON.stringify({ milestoneYears, status, note }) },
+    ),
   managedRewards: () => request<{ rewards: ManagedReward[] }>("/api/admin/rewards"),
   createReward: (payload: RewardDraft) =>
     request<{ reward: ManagedReward }>("/api/admin/rewards", {
@@ -372,6 +382,7 @@ export type DashboardData = {
 
 export type WalletData = {
   member: SessionUser;
+  anniversary: MembershipAnniversary | null;
   context: BusinessContext;
   balance: number;
   points: number;
@@ -573,6 +584,21 @@ export type MemberSummary = {
   status: "active" | "invited";
   units: number;
   createdAt: string;
+  anniversary: MembershipAnniversary | null;
+  anniversaryGift: {
+    status: "planned" | "sent";
+    note: string;
+    updatedAt: string;
+  } | null;
+};
+
+export type MembershipAnniversary = {
+  membershipStartDate: string;
+  nextAnniversaryDate: string;
+  milestoneYears: number;
+  daysUntil: number;
+  isToday: boolean;
+  isUpcoming: boolean;
 };
 
 export type RewardDraft = {

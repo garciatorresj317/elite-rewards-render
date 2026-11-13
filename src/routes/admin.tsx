@@ -13,6 +13,7 @@ import {
   PackageOpen,
   Palette,
   Pencil,
+  PartyPopper,
   Plus,
   KeyRound,
   ReceiptText,
@@ -215,6 +216,8 @@ function Admin() {
   const [passwordResetBusyId, setPasswordResetBusyId] = useState<string | null>(null);
   const [passwordResetLink, setPasswordResetLink] = useState("");
   const [members, setMembers] = useState<MemberSummary[]>([]);
+  const [anniversaryGiftBusyId, setAnniversaryGiftBusyId] = useState<string | null>(null);
+  const [anniversaryGiftNotes, setAnniversaryGiftNotes] = useState<Record<string, string>>({});
   const [active, setActive] = useState<SectionId>("Dashboard");
   const [mobile, setMobile] = useState(false);
   const [modal, setModal] = useState(false);
@@ -988,6 +991,31 @@ function Admin() {
       setMemberInvitationBusy(false);
     }
   };
+  const setAnniversaryGift = async (member: MemberSummary, status: "planned" | "sent" | null) => {
+    if (!member.anniversary || anniversaryGiftBusyId) return;
+    setError("");
+    setAnniversaryGiftBusyId(member.id);
+    try {
+      const result = await api.updateAnniversaryGift(
+        member.id,
+        member.anniversary.milestoneYears,
+        status,
+        anniversaryGiftNotes[member.id] ?? member.anniversaryGift?.note ?? "",
+      );
+      setMembers((current) =>
+        current.map((item) => (item.id === result.member.id ? result.member : item)),
+      );
+    } catch {
+      setError(
+        tr(
+          "The anniversary gift status could not be updated.",
+          "No se pudo actualizar el estado del regalo de aniversario.",
+        ),
+      );
+    } finally {
+      setAnniversaryGiftBusyId(null);
+    }
+  };
   const emptyProductForm = (): ProductDraft => ({
     name: "",
     description: "",
@@ -1606,44 +1634,69 @@ function Admin() {
                     </button>
                   </div>
                   <div className="dashboard-member-preview">
-                    {members.slice(0, 6).map((member) => (
-                      <button
-                        type="button"
-                        key={member.id}
-                        disabled={member.status !== "active"}
-                        onClick={() => {
-                          if (member.status === "active") {
-                            setAward({ ...award, memberId: member.id });
-                            setModal(true);
+                    {[...members]
+                      .sort((left, right) =>
+                        left.anniversary && right.anniversary
+                          ? left.anniversary.daysUntil - right.anniversary.daysUntil
+                          : left.anniversary
+                            ? -1
+                            : right.anniversary
+                              ? 1
+                              : 0,
+                      )
+                      .slice(0, 6)
+                      .map((member) => (
+                        <button
+                          type="button"
+                          key={member.id}
+                          disabled={member.status !== "active"}
+                          onClick={() => {
+                            if (member.status === "active") {
+                              setAward({ ...award, memberId: member.id });
+                              setModal(true);
+                            }
+                          }}
+                          aria-label={
+                            member.status === "active"
+                              ? tr(
+                                  `Open ${member.name} to add ${data.business.loyalty_mode}`,
+                                  `Abrir ${member.name} para agregar ${data.business.loyalty_mode === "visits" ? "visitas" : "puntos"}`,
+                                )
+                              : tr(`${member.name} is invited`, `${member.name} está invitado`)
                           }
-                        }}
-                        aria-label={
-                          member.status === "active"
-                            ? tr(
-                                `Open ${member.name} to add ${data.business.loyalty_mode}`,
-                                `Abrir ${member.name} para agregar ${data.business.loyalty_mode === "visits" ? "visitas" : "puntos"}`,
-                              )
-                            : tr(`${member.name} is invited`, `${member.name} está invitado`)
-                        }
-                      >
-                        <span className="member-avatar">{initials(member.name)}</span>
-                        <span className="dashboard-member-details">
-                          <strong>{member.name}</strong>
-                          <small>{member.email}</small>
-                        </span>
-                        <span className="dashboard-member-balance">
-                          <strong>{formatNumber(member.units)}</strong>
-                          <small>
-                            {data.business.loyalty_mode === "visits"
-                              ? tr("visits", "visitas")
-                              : tr("points", "puntos")}
-                          </small>
-                        </span>
-                        <span className={`client-status ${member.status}`}>
-                          {localizeStatus(member.status, tr)}
-                        </span>
-                      </button>
-                    ))}
+                        >
+                          <span className="member-avatar">{initials(member.name)}</span>
+                          <span className="dashboard-member-details">
+                            <strong>{member.name}</strong>
+                            <small>{member.email}</small>
+                            {member.anniversary?.isUpcoming && (
+                              <small className="anniversary-due">
+                                <PartyPopper size={13} />
+                                {member.anniversary.isToday
+                                  ? tr(
+                                      `${member.anniversary.milestoneYears}-year anniversary today`,
+                                      `Aniversario de ${member.anniversary.milestoneYears} años hoy`,
+                                    )
+                                  : tr(
+                                      `${member.anniversary.milestoneYears}-year anniversary in ${member.anniversary.daysUntil} days`,
+                                      `Aniversario de ${member.anniversary.milestoneYears} años en ${member.anniversary.daysUntil} días`,
+                                    )}
+                              </small>
+                            )}
+                          </span>
+                          <span className="dashboard-member-balance">
+                            <strong>{formatNumber(member.units)}</strong>
+                            <small>
+                              {data.business.loyalty_mode === "visits"
+                                ? tr("visits", "visitas")
+                                : tr("points", "puntos")}
+                            </small>
+                          </span>
+                          <span className={`client-status ${member.status}`}>
+                            {localizeStatus(member.status, tr)}
+                          </span>
+                        </button>
+                      ))}
                     {!members.length && (
                       <div className="dashboard-members-empty">
                         <UserPlus />
@@ -2053,6 +2106,87 @@ function Admin() {
                   <UserPlus /> {tr("Enroll member", "Inscribir miembro")}
                 </button>
               </div>
+              {members.some((member) => member.anniversary?.isUpcoming) && (
+                <div className="anniversary-alert-list">
+                  <span className="section-kicker">
+                    {tr("Upcoming membership anniversaries", "Próximos aniversarios de membresía")}
+                  </span>
+                  {[...members]
+                    .filter((member) => member.anniversary?.isUpcoming)
+                    .sort(
+                      (left, right) =>
+                        (left.anniversary?.daysUntil ?? 999) -
+                        (right.anniversary?.daysUntil ?? 999),
+                    )
+                    .map((member) => (
+                      <article key={`anniversary-${member.id}`}>
+                        <PartyPopper />
+                        <div>
+                          <strong>
+                            {member.name} · {member.anniversary?.milestoneYears}{" "}
+                            {tr("years", "años")}
+                          </strong>
+                          <small>
+                            {member.anniversary?.isToday
+                              ? tr("Anniversary is today", "El aniversario es hoy")
+                              : tr(
+                                  `In ${member.anniversary?.daysUntil} days · ${formatDateTime(new Date(`${member.anniversary?.nextAnniversaryDate}T12:00:00`), { month: "long", day: "numeric" })}`,
+                                  `En ${member.anniversary?.daysUntil} días · ${formatDateTime(new Date(`${member.anniversary?.nextAnniversaryDate}T12:00:00`), { month: "long", day: "numeric" })}`,
+                                )}
+                          </small>
+                        </div>
+                        <div className="anniversary-gift-actions">
+                          <label>
+                            <span>{tr("Private gift note", "Nota privada del regalo")}</span>
+                            <input
+                              value={
+                                anniversaryGiftNotes[member.id] ??
+                                member.anniversaryGift?.note ??
+                                ""
+                              }
+                              maxLength={300}
+                              placeholder={tr(
+                                "Optional celebration details",
+                                "Detalles opcionales de la celebración",
+                              )}
+                              onChange={(event) =>
+                                setAnniversaryGiftNotes((current) => ({
+                                  ...current,
+                                  [member.id]: event.target.value,
+                                }))
+                              }
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            disabled={anniversaryGiftBusyId === member.id}
+                            className={member.anniversaryGift?.status === "planned" ? "active" : ""}
+                            onClick={() => void setAnniversaryGift(member, "planned")}
+                          >
+                            {tr("Gift planned", "Regalo planeado")}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={anniversaryGiftBusyId === member.id}
+                            className={member.anniversaryGift?.status === "sent" ? "active" : ""}
+                            onClick={() => void setAnniversaryGift(member, "sent")}
+                          >
+                            {tr("Gift sent", "Regalo enviado")}
+                          </button>
+                          {member.anniversaryGift && (
+                            <button
+                              type="button"
+                              disabled={anniversaryGiftBusyId === member.id}
+                              onClick={() => void setAnniversaryGift(member, null)}
+                            >
+                              {tr("Clear", "Borrar")}
+                            </button>
+                          )}
+                        </div>
+                      </article>
+                    ))}
+                </div>
+              )}
               <div className="member-list">
                 {members.map((member) => (
                   <button
@@ -2074,6 +2208,15 @@ function Admin() {
                           ? tr("visits", "visitas")
                           : tr("points", "puntos")}
                       </small>
+                      {member.anniversary && (
+                        <small className="anniversary-member-meta">
+                          <PartyPopper size={13} />
+                          {tr(
+                            `Member since ${formatDateTime(new Date(`${member.anniversary.membershipStartDate}T12:00:00`), { year: "numeric", month: "short", day: "numeric" })} · ${member.anniversary.milestoneYears}-year milestone ${member.anniversary.isToday ? "today" : `in ${member.anniversary.daysUntil} days`}`,
+                            `Miembro desde ${formatDateTime(new Date(`${member.anniversary.membershipStartDate}T12:00:00`), { year: "numeric", month: "short", day: "numeric" })} · Meta de ${member.anniversary.milestoneYears} años ${member.anniversary.isToday ? "hoy" : `en ${member.anniversary.daysUntil} días`}`,
+                          )}
+                        </small>
+                      )}
                     </span>
                     <span className={`client-status ${member.status}`}>
                       {localizeStatus(member.status, tr)}

@@ -12,6 +12,7 @@ import {
   createMemberInvitation,
   getMemberInvitation,
   listMembers,
+  updateAnniversaryGift,
 } from "./members-service.ts";
 
 const owner: SessionUser = {
@@ -59,6 +60,7 @@ describe("member enrollment", () => {
       "010_client_suspension.sql",
       "021_full_client_experience_customization.sql",
       "022_business_name_color.sql",
+      "024_member_anniversaries.sql",
     ]) {
       await pool.query(await readFile(join(process.cwd(), "migrations", file), "utf8"));
     }
@@ -123,6 +125,7 @@ describe("member enrollment", () => {
     );
     assert.equal(Number(balance.rows[0]?.points), 0);
     assert.equal((await listMembers(owner))[0]?.status, "active");
+    assert.equal((await listMembers(owner))[0]?.anniversary?.milestoneYears, 1);
     assert.equal(await countBusinessMembers(pool, owner.businessId), 1);
     const activatedAudit = await pool.query<{ count: string }>(
       "SELECT count(*) AS count FROM audit_events WHERE business_id = $1 AND action = 'member.activated' AND target_id = (SELECT id FROM users WHERE email = 'member@example.com')",
@@ -132,6 +135,46 @@ describe("member enrollment", () => {
     await assert.rejects(
       () => activateMember(token, "member-secure-password"),
       /invalid or expired/,
+    );
+  });
+
+  it("tracks anniversary gifts only inside the member business", async () => {
+    const member = (await listMembers(owner)).find((item) => item.email === "member@example.com");
+    assert.ok(member?.anniversary);
+    const milestoneYears = member.anniversary.milestoneYears;
+    const updated = await updateAnniversaryGift(
+      owner,
+      member.id,
+      milestoneYears,
+      "planned",
+      "Prepare a thank-you gift",
+    );
+    assert.equal(updated.anniversaryGift?.status, "planned");
+    assert.equal(updated.anniversaryGift?.note, "Prepare a thank-you gift");
+    const timestamp = await pool.query<{ created_at: Date }>(
+      "SELECT created_at FROM users WHERE id = $1",
+      [member.id],
+    );
+    assert.equal(timestamp.rows[0]?.created_at.toISOString(), member.createdAt);
+    await assert.rejects(
+      () =>
+        pool.query(
+          `INSERT INTO member_anniversary_gifts(
+             business_id,member_id,milestone_years,status,updated_by_user_id
+           ) VALUES ('biz_two',$1,99,'planned','usr_other')`,
+          [member.id],
+        ),
+      /violates foreign key constraint|foreign key constraint/i,
+    );
+    await assert.rejects(
+      () => updateAnniversaryGift(otherOwner, member.id, milestoneYears, "sent", ""),
+      /Member not found/,
+    );
+    const cleared = await updateAnniversaryGift(owner, member.id, milestoneYears, null, "");
+    assert.equal(cleared.anniversaryGift, null);
+    await assert.rejects(
+      () => updateAnniversaryGift(owner, member.id, milestoneYears, "planned", "x".repeat(301)),
+      /check constraint|violates check constraint/i,
     );
   });
 

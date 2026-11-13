@@ -4,6 +4,7 @@ import {
   ChevronRight,
   Copy,
   Gift,
+  PartyPopper,
   History,
   LogOut,
   QrCode,
@@ -179,6 +180,53 @@ function Wallet() {
             <span>{unitLabel}</span>
           </div>
         </section>
+        {data.anniversary && (
+          <section
+            className={`membership-anniversary-card${data.anniversary.isToday ? " celebrating" : ""}`}
+            aria-label={t("Membership anniversary")}
+          >
+            <span className="anniversary-glyph">
+              <PartyPopper />
+            </span>
+            <div>
+              <small>{t("Membership anniversary")}</small>
+              <h2>
+                {data.anniversary.isToday
+                  ? t("Happy {count}-year anniversary!", {
+                      count: data.anniversary.milestoneYears,
+                    })
+                  : data.anniversary.isUpcoming
+                    ? t("Your {count}-year anniversary is coming in {days} days", {
+                        count: data.anniversary.milestoneYears,
+                        days: data.anniversary.daysUntil,
+                      })
+                    : t("Your next membership milestone is {count} years", {
+                        count: data.anniversary.milestoneYears,
+                      })}
+              </h2>
+              <p>
+                {t("Member since {date}. Next celebration: {nextDate}.", {
+                  date: formatDateTime(
+                    new Date(`${data.anniversary.membershipStartDate}T12:00:00`),
+                    {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    },
+                  ),
+                  nextDate: formatDateTime(
+                    new Date(`${data.anniversary.nextAnniversaryDate}T12:00:00`),
+                    {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    },
+                  ),
+                })}
+              </p>
+            </div>
+          </section>
+        )}
         {settings?.showRewards !== false && (
           <>
             <section className="next-reward-card">
