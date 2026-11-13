@@ -524,7 +524,7 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 .health-panel p { margin: 0; display: grid; gap: 4px; }
 .health-panel p small { color: var(--muted); font-size: 10px; }
 .uptime { color: #8cff9f; border-color: rgba(32,231,79,.4); background: rgba(32,231,79,.08); }
-.modal-backdrop { position: fixed; z-index: 200; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(0,0,0,.82); backdrop-filter: blur(8px); }
+.modal-backdrop { position: fixed; z-index: 600; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(0,0,0,.82); backdrop-filter: blur(8px); }
 .award-modal {
   width: min(100%, 490px); padding: 33px; border: 1px solid var(--gold-bright); border-radius: 17px; background: linear-gradient(145deg, #121007, #050504);
   box-shadow: 0 0 65px rgba(246,185,0,.18); position: relative;

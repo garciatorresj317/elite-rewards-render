@@ -112,6 +112,7 @@ describe("user-friendly experience regression coverage", () => {
     assert.match(catalog, /event\.key === "Tab"/);
     assert.match(catalog, /document\.body\.style\.overflow = "hidden"/);
     assert.match(catalog, /returnFocus\.current\?\.focus\(\)/);
+    assert.match(styles, /\.modal-backdrop \{ position: fixed; z-index: 600;/);
     assert.match(styles, /\.product-card-media > img[\s\S]*object-fit: contain/);
     assert.match(styles, /\.product-detail-media > img[\s\S]*object-fit: contain/);
     assert.match(
