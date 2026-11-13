@@ -61,18 +61,22 @@ function Wallet() {
     if (redeemingId !== null) return;
     if (
       !window.confirm(
-        data?.loyaltyMode === "visits"
-          ? t(
-              "Redeem {rewardName} for {count} visits? This will deduct the visits from your balance.",
-              {
-                rewardName: name,
-                count: cost,
-              },
-            )
-          : t(
-              "Redeem {rewardName} for {count} points? This will deduct the points from your balance.",
-              { rewardName: name, count: cost },
-            ),
+        cost === 0
+          ? t("Redeem {rewardName} for free? No points or visits will be deducted.", {
+              rewardName: name,
+            })
+          : data?.loyaltyMode === "visits"
+            ? t(
+                "Redeem {rewardName} for {count} visits? This will deduct the visits from your balance.",
+                {
+                  rewardName: name,
+                  count: cost,
+                },
+              )
+            : t(
+                "Redeem {rewardName} for {count} points? This will deduct the points from your balance.",
+                { rewardName: name, count: cost },
+              ),
       )
     )
       return;
@@ -238,7 +242,9 @@ function Wallet() {
                       <Gift />
                     </span>
                     <span className="reward-cost">
-                      {formatNumber(reward.cost)} {shortUnitLabel}
+                      {reward.cost === 0
+                        ? t("Free")
+                        : `${formatNumber(reward.cost)} ${shortUnitLabel}`}
                     </span>
                     <h3>{reward.name}</h3>
                     <p>{reward.description}</p>

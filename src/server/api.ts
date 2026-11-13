@@ -729,8 +729,8 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
           reward: await createClientReward(user, businessId, {
             name: text(payload["name"], "Reward name", 2, 120),
             description: text(payload["description"] ?? "", "Description", 0, 500),
-            points: integer(payload["points"], "Points cost", 1, 1_000_000),
-            visits: integer(payload["visits"], "Visits cost", 1, 1_000_000),
+            points: integer(payload["points"], "Points cost", 0, 1_000_000),
+            visits: integer(payload["visits"], "Visits cost", 0, 1_000_000),
             active: payload["active"],
             inventoryRemaining:
               payload["inventoryRemaining"] === null || payload["inventoryRemaining"] === undefined
@@ -755,8 +755,8 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
         reward: await updateClientReward(user, businessId, rewardId, {
           name: text(payload["name"], "Reward name", 2, 120),
           description: text(payload["description"] ?? "", "Description", 0, 500),
-          points: integer(payload["points"], "Points cost", 1, 1_000_000),
-          visits: integer(payload["visits"], "Visits cost", 1, 1_000_000),
+          points: integer(payload["points"], "Points cost", 0, 1_000_000),
+          visits: integer(payload["visits"], "Visits cost", 0, 1_000_000),
           active: payload["active"],
           inventoryRemaining:
             payload["inventoryRemaining"] === null || payload["inventoryRemaining"] === undefined
@@ -923,8 +923,8 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       const reward = await createReward(user, {
         name: text(payload["name"], "Reward name", 2, 120),
         description: text(payload["description"] ?? "", "Description", 0, 500),
-        points: integer(payload["points"], "Points cost", 1, 1_000_000),
-        visits: integer(payload["visits"], "Visits cost", 1, 1_000_000),
+        points: integer(payload["points"], "Points cost", 0, 1_000_000),
+        visits: integer(payload["visits"], "Visits cost", 0, 1_000_000),
         active: payload["active"],
         inventoryRemaining:
           payload["inventoryRemaining"] === null || payload["inventoryRemaining"] === undefined
@@ -943,8 +943,8 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       const reward = await updateReward(user, rewardId, {
         name: text(payload["name"], "Reward name", 2, 120),
         description: text(payload["description"] ?? "", "Description", 0, 500),
-        points: integer(payload["points"], "Points cost", 1, 1_000_000),
-        visits: integer(payload["visits"], "Visits cost", 1, 1_000_000),
+        points: integer(payload["points"], "Points cost", 0, 1_000_000),
+        visits: integer(payload["visits"], "Visits cost", 0, 1_000_000),
         active: payload["active"],
         inventoryRemaining:
           payload["inventoryRemaining"] === null || payload["inventoryRemaining"] === undefined

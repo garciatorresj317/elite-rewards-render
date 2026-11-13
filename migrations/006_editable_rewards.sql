@@ -14,7 +14,9 @@ UPDATE ledger_entries
 
 ALTER TABLE redemptions
   ADD COLUMN IF NOT EXISTS reward_name_snapshot text,
-  ADD COLUMN IF NOT EXISTS points_cost_snapshot integer CHECK (points_cost_snapshot IS NULL OR points_cost_snapshot > 0);
+  ADD COLUMN IF NOT EXISTS points_cost_snapshot integer
+    CONSTRAINT redemptions_points_cost_snapshot_check
+    CHECK (points_cost_snapshot IS NULL OR points_cost_snapshot > 0);
 
 UPDATE redemptions
    SET reward_name_snapshot = rewards.name,

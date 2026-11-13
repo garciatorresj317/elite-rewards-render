@@ -58,6 +58,9 @@ const es: Record<string, Translation> = {
   "Record visits": "Registrar visitas",
   "Post visits": "Registrar visitas",
   "Visits cost": "Costo en visitas",
+  Free: "Gratis",
+  "Redeem {rewardName} for free? No points or visits will be deducted.":
+    "¿Canjear {rewardName} gratis? No se descontarán puntos ni visitas.",
   "Loyalty model": "Modelo de lealtad",
   "Choose points or visits": "Elige puntos o visitas",
   "Use points": "Usar puntos",

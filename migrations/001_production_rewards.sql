@@ -54,8 +54,8 @@ CREATE TABLE IF NOT EXISTS rewards (
   business_id text NOT NULL REFERENCES businesses(id) ON DELETE RESTRICT,
   name text NOT NULL CHECK (char_length(name) BETWEEN 2 AND 120),
   description text NOT NULL DEFAULT '',
-  points_cost integer NOT NULL CHECK (points_cost > 0),
-  visits_cost integer NOT NULL DEFAULT 1 CHECK (visits_cost > 0),
+  points_cost integer NOT NULL CONSTRAINT rewards_points_cost_check CHECK (points_cost > 0),
+  visits_cost integer NOT NULL DEFAULT 1 CONSTRAINT rewards_visits_cost_check CHECK (visits_cost > 0),
   active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now()
 );
@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS ledger_entries (
   idempotency_key text NOT NULL,
   note text NOT NULL DEFAULT '',
   created_at timestamptz NOT NULL DEFAULT now(),
-  CHECK (
+  CONSTRAINT ledger_entries_check CHECK (
     (loyalty_mode = 'points' AND points_delta <> 0 AND visits_delta = 0)
     OR (loyalty_mode = 'visits' AND visits_delta <> 0 AND points_delta = 0)
   ),
@@ -112,7 +112,8 @@ CREATE TABLE IF NOT EXISTS redemptions (
   ledger_entry_id text NOT NULL UNIQUE REFERENCES ledger_entries(id) ON DELETE RESTRICT,
   status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'used', 'void')),
   code text NOT NULL UNIQUE,
-  visits_cost_snapshot integer CHECK (visits_cost_snapshot IS NULL OR visits_cost_snapshot > 0),
+  visits_cost_snapshot integer CONSTRAINT redemptions_visits_cost_snapshot_check
+    CHECK (visits_cost_snapshot IS NULL OR visits_cost_snapshot > 0),
   created_at timestamptz NOT NULL DEFAULT now(),
   used_at timestamptz
 );

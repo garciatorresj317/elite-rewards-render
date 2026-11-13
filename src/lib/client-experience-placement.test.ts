@@ -188,6 +188,28 @@ describe("client customization placement", () => {
     assert.match(service, /reward\.restored/);
     assert.match(service, /SET active = false, archived_at = NULL/);
   });
+
+  it("supports bilingual free rewards in both editors and customer-facing catalogs", async () => {
+    const [admin, publicPage, wallet, api, database, migration] = await Promise.all([
+      readFile(join(process.cwd(), "src", "routes", "admin.tsx"), "utf8"),
+      readFile(join(process.cwd(), "src", "routes", "clients.$clientId.tsx"), "utf8"),
+      readFile(join(process.cwd(), "src", "routes", "wallet.tsx"), "utf8"),
+      readFile(join(process.cwd(), "src", "server", "api.ts"), "utf8"),
+      readFile(join(process.cwd(), "src", "server", "database.ts"), "utf8"),
+      readFile(join(process.cwd(), "migrations", "023_free_rewards.sql"), "utf8"),
+    ]);
+    assert.equal((admin.match(/Make this reward free/g) ?? []).length, 2);
+    assert.equal((admin.match(/Hacer esta recompensa gratis/g) ?? []).length, 2);
+    assert.equal((admin.match(/min="0"/g) ?? []).length >= 2, true);
+    assert.match(publicPage, /reward\.cost === 0/);
+    assert.match(wallet, /reward\.cost === 0/);
+    assert.match(wallet, /No points or visits will be deducted/);
+    assert.equal((api.match(/"Points cost", 0, 1_000_000/g) ?? []).length, 4);
+    assert.equal((api.match(/"Visits cost", 0, 1_000_000/g) ?? []).length, 4);
+    assert.match(database, /023_free_rewards\.sql/);
+    assert.match(migration, /points_cost >= 0/);
+    assert.match(migration, /entry_type = 'redeem'/);
+  });
 });
 
 describe("complete Elite-only client experience customization", () => {

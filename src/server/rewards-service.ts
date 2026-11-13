@@ -433,6 +433,8 @@ export async function redeemReward(
   user: SessionUser,
   input: { rewardId: string; idempotencyKey: string },
 ) {
+  if (user.role !== "member")
+    throw Object.assign(new Error("Member access required"), { status: 403 });
   if (!/^[A-Za-z0-9._:-]{8,120}$/.test(input.idempotencyKey))
     throw Object.assign(new Error("A valid idempotency key is required"), { status: 400 });
   const client = await getPool().connect();

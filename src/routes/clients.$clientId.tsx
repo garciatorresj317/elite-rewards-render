@@ -108,8 +108,11 @@ function ClientExperience() {
                     <Gift />
                   </span>
                   <span className="reward-cost">
-                    {formatNumber(reward.cost)}{" "}
-                    {data.business.loyalty_mode === "visits" ? t("visits") : t("pts")}
+                    {reward.cost === 0
+                      ? t("Free")
+                      : `${formatNumber(reward.cost)} ${
+                          data.business.loyalty_mode === "visits" ? t("visits") : t("pts")
+                        }`}
                   </span>
                   <h3>{reward.name}</h3>
                   <p>{reward.description}</p>

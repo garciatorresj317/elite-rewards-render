@@ -112,6 +112,14 @@ const sections = [
   },
 ] as const;
 
+const rewardUnits = (
+  reward: Pick<ManagedReward, "points" | "visits">,
+  mode: "points" | "visits",
+) =>
+  mode === "visits"
+    ? (reward.visits ?? (reward.points === 0 ? 0 : Math.max(1, Math.ceil(reward.points / 100))))
+    : reward.points;
+
 type SectionId = (typeof sections)[number]["id"];
 
 type TranslatePair = (english: string, spanish: string) => string;
@@ -1254,7 +1262,7 @@ function Admin() {
       name: reward.name,
       description: reward.description,
       points: reward.points,
-      visits: reward.visits ?? Math.max(1, Math.ceil(reward.points / 100)),
+      visits: rewardUnits(reward, "visits"),
       active: reward.active,
       inventoryRemaining: reward.inventoryRemaining,
     });
@@ -1296,7 +1304,7 @@ function Admin() {
       name: reward.name,
       description: reward.description,
       points: reward.points,
-      visits: reward.visits ?? Math.max(1, Math.ceil(reward.points / 100)),
+      visits: rewardUnits(reward, "visits"),
       active: reward.active,
       inventoryRemaining: reward.inventoryRemaining,
     });
@@ -2144,14 +2152,13 @@ function Admin() {
                       <Gift />
                     </span>
                     <span className="reward-cost">
-                      {formatNumber(
-                        data.business.loyalty_mode === "visits"
-                          ? (reward.visits ?? Math.max(1, Math.ceil(reward.points / 100)))
-                          : reward.points,
-                      )}{" "}
-                      {data.business.loyalty_mode === "visits"
-                        ? tr("visits", "visitas")
-                        : tr("pts", "pts")}
+                      {rewardUnits(reward, data.business.loyalty_mode) === 0
+                        ? tr("Free", "Gratis")
+                        : `${formatNumber(rewardUnits(reward, data.business.loyalty_mode))} ${
+                            data.business.loyalty_mode === "visits"
+                              ? tr("visits", "visitas")
+                              : tr("pts", "pts")
+                          }`}
                     </span>
                     <h3>{reward.name}</h3>
                     <p>
@@ -2746,14 +2753,13 @@ function Admin() {
                     <span>
                       <strong>{reward.name}</strong>
                       <small>
-                        {formatNumber(
-                          clientEditor.loyaltyMode === "visits"
-                            ? (reward.visits ?? Math.max(1, Math.ceil(reward.points / 100)))
-                            : reward.points,
-                        )}{" "}
-                        {clientEditor.loyaltyMode === "visits"
-                          ? tr("visits", "visitas")
-                          : tr("points", "puntos")}
+                        {rewardUnits(reward, clientEditor.loyaltyMode) === 0
+                          ? tr("Free", "Gratis")
+                          : `${formatNumber(rewardUnits(reward, clientEditor.loyaltyMode))} ${
+                              clientEditor.loyaltyMode === "visits"
+                                ? tr("visits", "visitas")
+                                : tr("points", "puntos")
+                            }`}
                       </small>
                     </span>
                     <span className={`client-status ${reward.active ? "active" : "invited"}`}>
@@ -2815,8 +2821,9 @@ function Admin() {
                       : tr("Points", "Puntos")}
                     <input
                       type="number"
-                      min="1"
+                      min="0"
                       max="1000000"
+                      disabled={clientRewardDraft.points === 0 && clientRewardDraft.visits === 0}
                       value={
                         clientEditor.loyaltyMode === "visits"
                           ? clientRewardDraft.visits
@@ -2850,6 +2857,28 @@ function Admin() {
                     />
                   </label>
                 </div>
+                <label className="reward-active-check">
+                  <input
+                    type="checkbox"
+                    checked={clientRewardDraft.points === 0 && clientRewardDraft.visits === 0}
+                    onChange={(event) =>
+                      setClientRewardDraft({
+                        ...clientRewardDraft,
+                        points: event.target.checked ? 0 : 100,
+                        visits: event.target.checked ? 0 : 10,
+                      })
+                    }
+                  />
+                  <span>
+                    <strong>{tr("Make this reward free", "Hacer esta recompensa gratis")}</strong>
+                    <small>
+                      {tr(
+                        "Members can redeem it without spending points or visits.",
+                        "Los miembros pueden canjearla sin gastar puntos ni visitas.",
+                      )}
+                    </small>
+                  </span>
+                </label>
                 <label className="reward-active-check">
                   <input
                     type="checkbox"
@@ -3629,9 +3658,10 @@ function Admin() {
                 <input
                   required
                   type="number"
-                  min="1"
+                  min="0"
                   max="1000000"
                   step="1"
+                  disabled={rewardForm.points === 0 && rewardForm.visits === 0}
                   value={
                     data.business.loyalty_mode === "visits" ? rewardForm.visits : rewardForm.points
                   }
@@ -3664,6 +3694,28 @@ function Admin() {
                 />
               </label>
             </div>
+            <label className="reward-active-check">
+              <input
+                type="checkbox"
+                checked={rewardForm.points === 0 && rewardForm.visits === 0}
+                onChange={(event) =>
+                  setRewardForm({
+                    ...rewardForm,
+                    points: event.target.checked ? 0 : 100,
+                    visits: event.target.checked ? 0 : 10,
+                  })
+                }
+              />
+              <span>
+                <strong>{tr("Make this reward free", "Hacer esta recompensa gratis")}</strong>
+                <small>
+                  {tr(
+                    "Members can redeem it without spending points or visits.",
+                    "Los miembros pueden canjearla sin gastar puntos ni visitas.",
+                  )}
+                </small>
+              </span>
+            </label>
             <label className="reward-active-check">
               <input
                 type="checkbox"

@@ -51,17 +51,22 @@ async function clientOwnerContext(user: SessionUser, businessId: string): Promis
 function validate(input: RewardInput): RewardInput {
   const name = input.name.trim();
   const description = input.description.trim();
-  const visits = input.visits ?? Math.max(1, Math.ceil(input.points / 100));
+  const visits =
+    input.visits ?? (input.points === 0 ? 0 : Math.max(1, Math.ceil(input.points / 100)));
   if (name.length < 2 || name.length > 120)
     throw Object.assign(new Error("Reward name must contain 2 to 120 characters"), { status: 400 });
   if (description.length > 500)
     throw Object.assign(new Error("Reward description cannot exceed 500 characters"), {
       status: 400,
     });
-  if (!Number.isSafeInteger(input.points) || input.points < 1 || input.points > 1_000_000)
-    throw Object.assign(new Error("Points cost must be a positive whole number"), { status: 400 });
-  if (!Number.isSafeInteger(visits) || visits < 1 || visits > 1_000_000)
-    throw Object.assign(new Error("Visits cost must be a positive whole number"), { status: 400 });
+  if (!Number.isSafeInteger(input.points) || input.points < 0 || input.points > 1_000_000)
+    throw Object.assign(new Error("Points cost must be a non-negative whole number"), {
+      status: 400,
+    });
+  if (!Number.isSafeInteger(visits) || visits < 0 || visits > 1_000_000)
+    throw Object.assign(new Error("Visits cost must be a non-negative whole number"), {
+      status: 400,
+    });
   if (
     input.inventoryRemaining !== null &&
     (!Number.isSafeInteger(input.inventoryRemaining) ||

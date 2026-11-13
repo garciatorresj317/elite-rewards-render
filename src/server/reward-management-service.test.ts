@@ -37,6 +37,12 @@ const member: SessionUser = {
   email: "member@example.com",
   memberCode: "ELITE-MEMBER",
 };
+const zeroBalanceMember: SessionUser = {
+  ...member,
+  id: "usr_zero_member",
+  email: "zero@example.com",
+  memberCode: "ELITE-ZERO",
+};
 const otherOwner: SessionUser = {
   ...owner,
   id: "usr_other_owner",
@@ -92,6 +98,7 @@ describe("editable business rewards", () => {
       "009_public_enrollment_and_products.sql",
       "010_client_suspension.sql",
       "011_product_images_and_points.sql",
+      "023_free_rewards.sql",
     ]) {
       await pool.query(await readFile(join(process.cwd(), "migrations", file), "utf8"));
     }
@@ -116,10 +123,11 @@ describe("editable business rewards", () => {
       VALUES ('usr_owner','biz_one','loc_one','owner','Owner','owner@example.com','test',NULL),
              ('usr_staff','biz_one','loc_one','staff','Staff','staff@example.com','test',NULL),
              ('usr_member','biz_one','loc_one','member','Member','member@example.com','test','ELITE-MEMBER'),
+             ('usr_zero_member','biz_one','loc_one','member','Zero Balance','zero@example.com','test','ELITE-ZERO'),
              ('usr_other_owner','biz_two','loc_two','owner','Other','other@example.com','test',NULL),
              ('usr_platform','biz_platform','loc_platform','owner','Platform','platform@example.com','test',NULL)`);
     await pool.query(
-      "INSERT INTO member_balances(business_id,member_id,points) VALUES ('biz_one','usr_member',3000)",
+      "INSERT INTO member_balances(business_id,member_id,points) VALUES ('biz_one','usr_member',3000),('biz_one','usr_zero_member',0)",
     );
     await pool.query(
       "INSERT INTO platform_state(singleton,business_id) VALUES (true,'biz_platform')",
@@ -210,6 +218,51 @@ describe("editable business rewards", () => {
     await assert.rejects(
       () => redeemReward(member, { rewardId: reward.id, idempotencyKey: "redeem-inventory-3" }),
       /not found/i,
+    );
+  });
+
+  it("redeems a free reward once without changing the member balance", async () => {
+    const reward = await createReward(owner, {
+      ...input,
+      name: "Complimentary member gift",
+      points: 0,
+      visits: 0,
+      inventoryRemaining: 1,
+    });
+    assert.equal(reward.points, 0);
+    assert.equal(reward.visits, 0);
+    assert.equal((await getWallet(member)).rewards.find((item) => item.id === reward.id)?.cost, 0);
+    const balanceBefore = (await getWallet(zeroBalanceMember)).balance;
+    assert.equal(balanceBefore, 0);
+    const first = await redeemReward(zeroBalanceMember, {
+      rewardId: reward.id,
+      idempotencyKey: "redeem-free-reward-1",
+    });
+    const duplicate = await redeemReward(zeroBalanceMember, {
+      rewardId: reward.id,
+      idempotencyKey: "redeem-free-reward-1",
+    });
+    assert.equal(first.duplicate, false);
+    assert.equal(duplicate.duplicate, true);
+    assert.equal((await getWallet(zeroBalanceMember)).balance, balanceBefore);
+    assert.ok(!(await getWallet(zeroBalanceMember)).rewards.some((item) => item.id === reward.id));
+    const redemption = await pool.query<{ ledger_entry_id: string }>(
+      "SELECT ledger_entry_id FROM redemptions WHERE id = $1",
+      [first.id],
+    );
+    const ledger = await pool.query<{ points_delta: number; visits_delta: number }>(
+      "SELECT points_delta, visits_delta FROM ledger_entries WHERE id = $1",
+      [redemption.rows[0]?.ledger_entry_id],
+    );
+    assert.equal(Number(ledger.rows[0]?.points_delta), 0);
+    assert.equal(Number(ledger.rows[0]?.visits_delta), 0);
+    await assert.rejects(
+      () =>
+        redeemReward(owner, {
+          rewardId: reward.id,
+          idempotencyKey: "owner-free-reward-1",
+        }),
+      /Member access required/,
     );
   });
 
