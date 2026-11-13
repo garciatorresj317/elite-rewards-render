@@ -201,6 +201,42 @@ function themeSpanish(key: ThemeKey) {
   return translations[key];
 }
 
+function visualDraftFromSettings(settings: VisualSettings): VisualSettingsUpdate {
+  return {
+    themeKey: settings.configuredThemeKey,
+    occasionTitle: settings.configuredOccasionTitle,
+    occasionMessage: settings.configuredOccasionMessage,
+    automaticHolidayThemes: settings.automaticHolidayThemes,
+    timeZone: settings.timeZone,
+    companySlogan: settings.companySlogan,
+    companySloganEs: settings.companySloganEs,
+    publicHeadline: settings.publicHeadline,
+    publicHeadlineEs: settings.publicHeadlineEs,
+    publicMessage: settings.publicMessage,
+    publicMessageEs: settings.publicMessageEs,
+    joinHeadline: settings.joinHeadline,
+    joinHeadlineEs: settings.joinHeadlineEs,
+    joinMessage: settings.joinMessage,
+    joinMessageEs: settings.joinMessageEs,
+    memberHeadline: settings.memberHeadline,
+    memberHeadlineEs: settings.memberHeadlineEs,
+    memberMessage: settings.memberMessage,
+    memberMessageEs: settings.memberMessageEs,
+    businessNameColor: settings.businessNameColor,
+    primaryColor: settings.primaryColor,
+    accentColor: settings.accentColor,
+    backgroundColor: settings.backgroundColor,
+    surfaceColor: settings.surfaceColor,
+    textColor: settings.textColor,
+    mutedColor: settings.mutedColor,
+    fontStyle: settings.fontStyle,
+    cornerStyle: settings.cornerStyle,
+    showRewards: settings.showRewards,
+    showProducts: settings.showProducts,
+    showReferrals: settings.showReferrals,
+  };
+}
+
 function Admin() {
   const navigate = useNavigate();
   const { locale, formatDateTime, formatNumber } = useI18n();
@@ -297,9 +333,9 @@ function Admin() {
   });
   const [clientStatusBusyId, setClientStatusBusyId] = useState<string | null>(null);
   const [clientAppearanceBusy, setClientAppearanceBusy] = useState(false);
-  const clientAppearanceBusyRef = useRef(false);
-  const appearanceDialogRef = useRef<HTMLDivElement | null>(null);
-  const appearanceTriggerRef = useRef<HTMLElement | null>(null);
+  const [clientAppearanceLoading, setClientAppearanceLoading] = useState(false);
+  const [clientAppearanceBaseline, setClientAppearanceBaseline] = useState("");
+  const clientAppearanceRequestRef = useRef(0);
   const [loyaltyModeBusy, setLoyaltyModeBusy] = useState(false);
   const [pointsPerDollar, setPointsPerDollar] = useState(1);
   const [clientPointsPerDollar, setClientPointsPerDollar] = useState(1);
@@ -449,45 +485,7 @@ function Admin() {
       window.removeEventListener("keydown", closeOnEscape);
     };
   }, [mobile]);
-  useEffect(() => {
-    if (!appearanceClient) return;
-    const previousOverflow = document.body.style.overflow;
-    const previousFocus =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    appearanceTriggerRef.current = previousFocus;
-    document.body.style.overflow = "hidden";
-    const focusables = () =>
-      Array.from(
-        appearanceDialogRef.current?.querySelectorAll<HTMLElement>(
-          "button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), a[href]",
-        ) ?? [],
-      ).filter((element) => element.offsetParent !== null);
-    requestAnimationFrame(() => focusables()[0]?.focus());
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !clientAppearanceBusyRef.current) {
-        setAppearanceClient(null);
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const items = focusables();
-      if (!items.length) return;
-      const first = items[0]!;
-      const last = items[items.length - 1]!;
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-      (appearanceTriggerRef.current ?? previousFocus)?.focus();
-    };
-  }, [appearanceClient]);
+
   const submitAward = async (event: FormEvent) => {
     event.preventDefault();
     setError("");
@@ -667,46 +665,22 @@ function Admin() {
     }
   };
   const openClientAppearance = async (client: ClientSummary) => {
+    const requestId = clientAppearanceRequestRef.current + 1;
+    clientAppearanceRequestRef.current = requestId;
     setError("");
     setAppearanceClient(client);
     setClientVisualSettings(null);
+    setClientAppearanceBaseline("");
+    setClientAppearanceLoading(true);
     try {
       const clientAppearance = await api.clientVisualSettings(client.id);
+      if (clientAppearanceRequestRef.current !== requestId) return;
+      const draft = visualDraftFromSettings(clientAppearance);
       setClientVisualSettings(clientAppearance);
-      setClientVisualDraft({
-        themeKey: clientAppearance.configuredThemeKey,
-        occasionTitle: clientAppearance.configuredOccasionTitle,
-        occasionMessage: clientAppearance.configuredOccasionMessage,
-        automaticHolidayThemes: clientAppearance.automaticHolidayThemes,
-        timeZone: clientAppearance.timeZone,
-        companySlogan: clientAppearance.companySlogan,
-        companySloganEs: clientAppearance.companySloganEs,
-        publicHeadline: clientAppearance.publicHeadline,
-        publicHeadlineEs: clientAppearance.publicHeadlineEs,
-        publicMessage: clientAppearance.publicMessage,
-        publicMessageEs: clientAppearance.publicMessageEs,
-        joinHeadline: clientAppearance.joinHeadline,
-        joinHeadlineEs: clientAppearance.joinHeadlineEs,
-        joinMessage: clientAppearance.joinMessage,
-        joinMessageEs: clientAppearance.joinMessageEs,
-        memberHeadline: clientAppearance.memberHeadline,
-        memberHeadlineEs: clientAppearance.memberHeadlineEs,
-        memberMessage: clientAppearance.memberMessage,
-        memberMessageEs: clientAppearance.memberMessageEs,
-        businessNameColor: clientAppearance.businessNameColor,
-        primaryColor: clientAppearance.primaryColor,
-        accentColor: clientAppearance.accentColor,
-        backgroundColor: clientAppearance.backgroundColor,
-        surfaceColor: clientAppearance.surfaceColor,
-        textColor: clientAppearance.textColor,
-        mutedColor: clientAppearance.mutedColor,
-        fontStyle: clientAppearance.fontStyle,
-        cornerStyle: clientAppearance.cornerStyle,
-        showRewards: clientAppearance.showRewards,
-        showProducts: clientAppearance.showProducts,
-        showReferrals: clientAppearance.showReferrals,
-      });
+      setClientVisualDraft(draft);
+      setClientAppearanceBaseline(JSON.stringify(draft));
     } catch {
+      if (clientAppearanceRequestRef.current !== requestId) return;
       setAppearanceClient(null);
       setError(
         tr(
@@ -714,6 +688,8 @@ function Admin() {
           "No se pudo cargar la apariencia del cliente. Actualiza la página e inténtalo de nuevo.",
         ),
       );
+    } finally {
+      if (clientAppearanceRequestRef.current === requestId) setClientAppearanceLoading(false);
     }
   };
   const saveClientBranding = async () => {
@@ -749,44 +725,13 @@ function Admin() {
   const saveClientAppearance = async () => {
     if (!appearanceClient) return;
     setError("");
-    clientAppearanceBusyRef.current = true;
     setClientAppearanceBusy(true);
     try {
       const saved = await api.updateClientVisualSettings(appearanceClient.id, clientVisualDraft);
+      const draft = visualDraftFromSettings(saved);
       setClientVisualSettings(saved);
-      setClientVisualDraft({
-        themeKey: saved.configuredThemeKey,
-        occasionTitle: saved.configuredOccasionTitle,
-        occasionMessage: saved.configuredOccasionMessage,
-        automaticHolidayThemes: saved.automaticHolidayThemes,
-        timeZone: saved.timeZone,
-        companySlogan: saved.companySlogan,
-        companySloganEs: saved.companySloganEs,
-        publicHeadline: saved.publicHeadline,
-        publicHeadlineEs: saved.publicHeadlineEs,
-        publicMessage: saved.publicMessage,
-        publicMessageEs: saved.publicMessageEs,
-        joinHeadline: saved.joinHeadline,
-        joinHeadlineEs: saved.joinHeadlineEs,
-        joinMessage: saved.joinMessage,
-        joinMessageEs: saved.joinMessageEs,
-        memberHeadline: saved.memberHeadline,
-        memberHeadlineEs: saved.memberHeadlineEs,
-        memberMessage: saved.memberMessage,
-        memberMessageEs: saved.memberMessageEs,
-        businessNameColor: saved.businessNameColor,
-        primaryColor: saved.primaryColor,
-        accentColor: saved.accentColor,
-        backgroundColor: saved.backgroundColor,
-        surfaceColor: saved.surfaceColor,
-        textColor: saved.textColor,
-        mutedColor: saved.mutedColor,
-        fontStyle: saved.fontStyle,
-        cornerStyle: saved.cornerStyle,
-        showRewards: saved.showRewards,
-        showProducts: saved.showProducts,
-        showReferrals: saved.showReferrals,
-      });
+      setClientVisualDraft(draft);
+      setClientAppearanceBaseline(JSON.stringify(draft));
       setNotice(
         tr(
           `${appearanceClient.name} appearance settings were published.`,
@@ -798,7 +743,6 @@ function Admin() {
         tr("Client appearance update failed", "No se pudo actualizar la apariencia del cliente"),
       );
     } finally {
-      clientAppearanceBusyRef.current = false;
       setClientAppearanceBusy(false);
     }
   };
@@ -1939,7 +1883,9 @@ function Admin() {
             </section>
           )}
           {active === "Customization" && user.platformAdmin && (
-            <section className="panel client-panel customization-panel">
+            <section
+              className={`panel client-panel customization-panel ${appearanceClient ? "editor-open" : ""}`}
+            >
               <div className="panel-title client-panel-title">
                 <div>
                   <span>
@@ -1949,52 +1895,66 @@ function Admin() {
                     <h3>{tr("Client appearance", "Apariencia del cliente")}</h3>
                     <small>
                       {tr(
-                        "Choose a business to manage its theme, live message, automatic holiday themes, and time zone.",
-                        "Elige un negocio para administrar su tema, mensaje en vivo, temas festivos automáticos y zona horaria.",
+                        "Choose a business to open its complete customization workspace.",
+                        "Elige un negocio para abrir su espacio completo de personalización.",
                       )}
                     </small>
                   </div>
                 </div>
               </div>
-              <div className="customization-client-list">
-                {clients.map((client) => (
-                  <article className="customization-client-row" key={client.id}>
-                    <div className="customization-client-identity">
-                      {client.logoUrl ? (
-                        <img className="client-logo" src={client.logoUrl} alt="" />
-                      ) : (
-                        <span
-                          className="client-avatar"
-                          style={{
-                            background: `linear-gradient(135deg, ${client.secondaryColor}, ${client.primaryColor})`,
-                          }}
-                        >
-                          {initials(client.name)}
+              {!appearanceClient && (
+                <>
+                  <div className="customization-start-guide">
+                    <strong>
+                      {tr("Simple three-step workflow", "Flujo sencillo de tres pasos")}
+                    </strong>
+                    <ol>
+                      <li>{tr("Choose a client", "Elige un cliente")}</li>
+                      <li>{tr("Adjust its experience", "Ajusta su experiencia")}</li>
+                      <li>{tr("Preview and publish", "Revisa y publica")}</li>
+                    </ol>
+                  </div>
+                  <div className="customization-client-list">
+                    {clients.map((client) => (
+                      <article className="customization-client-row" key={client.id}>
+                        <div className="customization-client-identity">
+                          {client.logoUrl ? (
+                            <img className="client-logo" src={client.logoUrl} alt="" />
+                          ) : (
+                            <span
+                              className="client-avatar"
+                              style={{
+                                background: `linear-gradient(135deg, ${client.secondaryColor}, ${client.primaryColor})`,
+                              }}
+                            >
+                              {initials(client.name)}
+                            </span>
+                          )}
+                          <div>
+                            <strong>{client.name}</strong>
+                            <small>{client.locationName}</small>
+                          </div>
+                        </div>
+                        <span className={`client-status ${client.status}`}>
+                          {localizeStatus(client.status, tr)}
                         </span>
-                      )}
-                      <div>
-                        <strong>{client.name}</strong>
-                        <small>{client.locationName}</small>
-                      </div>
-                    </div>
-                    <span className={`client-status ${client.status}`}>
-                      {localizeStatus(client.status, tr)}
-                    </span>
-                    <button
-                      type="button"
-                      className="client-customize"
-                      onClick={() => void openClientAppearance(client)}
-                    >
-                      <Palette size={16} /> {tr("Customize appearance", "Personalizar apariencia")}
-                    </button>
-                  </article>
-                ))}
-                {!clients.length && (
-                  <p className="empty-table">
-                    {tr("No business clients yet.", "Aún no hay clientes comerciales.")}
-                  </p>
-                )}
-              </div>
+                        <button
+                          type="button"
+                          className="client-customize"
+                          onClick={() => void openClientAppearance(client)}
+                        >
+                          <Palette size={16} /> {tr("Open customization", "Abrir personalización")}
+                        </button>
+                      </article>
+                    ))}
+                    {!clients.length && (
+                      <p className="empty-table">
+                        {tr("No business clients yet.", "Aún no hay clientes comerciales.")}
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
             </section>
           )}
           {active === "Password resets" && user.platformAdmin && (
@@ -3060,430 +3020,552 @@ function Admin() {
           </div>
         </div>
       )}
-      {appearanceClient && (
-        <div
-          className="modal-backdrop"
-          onMouseDown={() => {
-            if (!clientAppearanceBusy) setAppearanceClient(null);
-          }}
-        >
-          <div
-            ref={appearanceDialogRef}
-            className="award-modal client-modal appearance-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="customize-appearance-title"
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <button
-              type="button"
-              className="modal-close"
-              onClick={() => setAppearanceClient(null)}
-              disabled={clientAppearanceBusy}
-              aria-label={tr("Close", "Cerrar")}
-            >
-              <X />
-            </button>
-            <span className="modal-icon">
-              <Palette />
-            </span>
-            <span className="section-kicker">
-              {tr("Elite appearance control", "Control de apariencia Elite")}
-            </span>
-            <h2 id="customize-appearance-title">
-              {tr("Customize", "Personalizar")} {appearanceClient.name}
-            </h2>
-            <p>
-              {tr(
-                "Only Elite Rewards administrators can publish this client’s complete customer experience.",
-                "Solo los administradores de Elite Rewards pueden publicar la experiencia completa de este cliente.",
-              )}
-            </p>
-            <section className="client-appearance-manager">
-              <div>
-                <span className="section-kicker">
-                  {tr("Client appearance", "Apariencia del cliente")}
-                </span>
-                <h3>{tr("Complete experience customization", "Personalización completa")}</h3>
-                <p>
-                  {tr(
-                    "Control the slogan, page messages, colors, typography, visible sections, live theme, and holiday schedule.",
-                    "Controla el eslogan, los mensajes de página, los colores, la tipografía, las secciones visibles, el tema en vivo y el calendario festivo.",
-                  )}
-                </p>
-              </div>
-              <div
-                className="theme-grid client-theme-grid"
-                role="radiogroup"
-                aria-label={tr("Client theme", "Tema del cliente")}
+      {appearanceClient && active === "Customization" && user.platformAdmin && (
+        <section className="customization-screen" aria-labelledby="customize-appearance-title">
+          <div className="customization-screen-shell">
+            <header className="customization-screen-header">
+              <button
+                type="button"
+                className="customization-back-button"
+                onClick={() => {
+                  const dirty =
+                    clientAppearanceBaseline &&
+                    clientAppearanceBaseline !== JSON.stringify(clientVisualDraft);
+                  if (
+                    !dirty ||
+                    window.confirm(
+                      tr(
+                        "Discard your unpublished customization changes?",
+                        "¿Descartar los cambios de personalización sin publicar?",
+                      ),
+                    )
+                  ) {
+                    clientAppearanceRequestRef.current += 1;
+                    setAppearanceClient(null);
+                    setClientAppearanceLoading(false);
+                  }
+                }}
+                disabled={clientAppearanceBusy || clientAppearanceLoading}
               >
-                {themeCatalog.map((theme) => (
-                  <label
-                    className={`theme-card ${clientVisualDraft.themeKey === theme.key ? "selected" : ""}`}
-                    key={theme.key}
-                  >
-                    <input
-                      type="radio"
-                      name="client-appearance-theme"
-                      value={theme.key}
-                      checked={clientVisualDraft.themeKey === theme.key}
-                      onChange={() =>
-                        setClientVisualDraft({ ...clientVisualDraft, themeKey: theme.key })
-                      }
-                    />
-                    <img src={theme.image} alt="" loading="lazy" width="320" height="180" />
-                    <span>
-                      <small>{tr(theme.category, themeSpanish(theme.key).category)}</small>
-                      <strong>{tr(theme.name, themeSpanish(theme.key).name)}</strong>
+                <X /> {tr("Back to clients", "Volver a clientes")}
+              </button>
+              <div className="customization-screen-title">
+                <span className="modal-icon">
+                  <Palette />
+                </span>
+                <div>
+                  <span className="section-kicker">
+                    {tr("Elite customization workspace", "Espacio de personalización Elite")}
+                  </span>
+                  <h2 id="customize-appearance-title">
+                    {tr("Customize", "Personalizar")} {appearanceClient.name}
+                  </h2>
+                  <p>
+                    {tr(
+                      "Everything for this client’s customer experience is organized on one screen. Only Elite Rewards administrators can publish these settings.",
+                      "Todo para la experiencia de este cliente está organizado en una sola pantalla. Solo los administradores de Elite Rewards pueden publicar estos ajustes.",
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="customization-client-switcher">
+                <label htmlFor="customization-client-select">
+                  {tr("Editing client", "Cliente en edición")}
+                </label>
+                <select
+                  id="customization-client-select"
+                  value={appearanceClient.id}
+                  disabled={clientAppearanceBusy || clientAppearanceLoading}
+                  onChange={(event) => {
+                    const nextClient = clients.find((client) => client.id === event.target.value);
+                    if (!nextClient) return;
+                    const dirty =
+                      clientAppearanceBaseline &&
+                      clientAppearanceBaseline !== JSON.stringify(clientVisualDraft);
+                    if (
+                      !dirty ||
+                      window.confirm(
+                        tr(
+                          "Discard your unpublished customization changes?",
+                          "¿Descartar los cambios de personalización sin publicar?",
+                        ),
+                      )
+                    ) {
+                      void openClientAppearance(nextClient);
+                    }
+                  }}
+                >
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.name}
+                    </option>
+                  ))}
+                </select>
+                <a href={appearanceClient.previewPath} target="_blank" rel="noreferrer">
+                  <ExternalLink size={16} /> {tr("Preview client page", "Ver página del cliente")}
+                </a>
+              </div>
+            </header>
+            {clientAppearanceLoading ? (
+              <div className="customization-loading" role="status">
+                <span className="spinner" aria-hidden="true" />
+                <strong>
+                  {tr("Loading client customization…", "Cargando personalización del cliente…")}
+                </strong>
+              </div>
+            ) : (
+              <>
+                <nav
+                  className="customization-jump-nav"
+                  aria-label={tr("Customization sections", "Secciones de personalización")}
+                >
+                  <a href="#customize-theme">{tr("Theme", "Tema")}</a>
+                  <a href="#customize-voice">{tr("Messages", "Mensajes")}</a>
+                  <a href="#customize-colors">{tr("Colors", "Colores")}</a>
+                  <a href="#customize-style">{tr("Style", "Estilo")}</a>
+                  <a href="#customize-sections">{tr("Page sections", "Secciones")}</a>
+                  <a href="#customize-live">{tr("Live & automatic", "En vivo y automático")}</a>
+                </nav>
+                <section className="client-appearance-manager">
+                  <div>
+                    <span className="section-kicker">
+                      {tr("Client appearance", "Apariencia del cliente")}
                     </span>
-                  </label>
-                ))}
-              </div>
-              <div className="customization-editor-section">
-                <div className="customization-section-heading">
-                  <span className="section-kicker">{tr("Brand voice", "Voz de la marca")}</span>
-                  <h3>{tr("Slogan and page messages", "Eslogan y mensajes de página")}</h3>
-                  <p>
-                    {tr(
-                      "Use the language switcher to edit each translation. Blank fields keep the built-in default.",
-                      "Usa el selector de idioma para editar cada traducción. Los campos vacíos conservan el valor predeterminado.",
-                    )}
-                  </p>
-                </div>
-                <label className="customization-full-field">
-                  {tr("Company slogan", "Eslogan de la empresa")}
-                  <input
-                    maxLength={120}
-                    value={
-                      locale === "es"
-                        ? clientVisualDraft.companySloganEs
-                        : clientVisualDraft.companySlogan
-                    }
-                    onChange={(event) =>
-                      setClientVisualDraft({
-                        ...clientVisualDraft,
-                        [locale === "es" ? "companySloganEs" : "companySlogan"]: event.target.value,
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  {tr("Public page headline", "Título de la página pública")}
-                  <input
-                    maxLength={120}
-                    value={
-                      locale === "es"
-                        ? clientVisualDraft.publicHeadlineEs
-                        : clientVisualDraft.publicHeadline
-                    }
-                    onChange={(event) =>
-                      setClientVisualDraft({
-                        ...clientVisualDraft,
-                        [locale === "es" ? "publicHeadlineEs" : "publicHeadline"]:
-                          event.target.value,
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  {tr("Public page message", "Mensaje de la página pública")}
-                  <textarea
-                    maxLength={300}
-                    value={
-                      locale === "es"
-                        ? clientVisualDraft.publicMessageEs
-                        : clientVisualDraft.publicMessage
-                    }
-                    onChange={(event) =>
-                      setClientVisualDraft({
-                        ...clientVisualDraft,
-                        [locale === "es" ? "publicMessageEs" : "publicMessage"]: event.target.value,
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  {tr("Join Rewards headline", "Título de Únete a Recompensas")}
-                  <input
-                    maxLength={120}
-                    value={
-                      locale === "es"
-                        ? clientVisualDraft.joinHeadlineEs
-                        : clientVisualDraft.joinHeadline
-                    }
-                    onChange={(event) =>
-                      setClientVisualDraft({
-                        ...clientVisualDraft,
-                        [locale === "es" ? "joinHeadlineEs" : "joinHeadline"]: event.target.value,
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  {tr("Join Rewards message", "Mensaje de Únete a Recompensas")}
-                  <textarea
-                    maxLength={300}
-                    value={
-                      locale === "es"
-                        ? clientVisualDraft.joinMessageEs
-                        : clientVisualDraft.joinMessage
-                    }
-                    onChange={(event) =>
-                      setClientVisualDraft({
-                        ...clientVisualDraft,
-                        [locale === "es" ? "joinMessageEs" : "joinMessage"]: event.target.value,
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  {tr("Member wallet headline", "Título de la billetera del miembro")}
-                  <input
-                    maxLength={120}
-                    value={
-                      locale === "es"
-                        ? clientVisualDraft.memberHeadlineEs
-                        : clientVisualDraft.memberHeadline
-                    }
-                    onChange={(event) =>
-                      setClientVisualDraft({
-                        ...clientVisualDraft,
-                        [locale === "es" ? "memberHeadlineEs" : "memberHeadline"]:
-                          event.target.value,
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  {tr("Member wallet message", "Mensaje de la billetera del miembro")}
-                  <textarea
-                    maxLength={300}
-                    value={
-                      locale === "es"
-                        ? clientVisualDraft.memberMessageEs
-                        : clientVisualDraft.memberMessage
-                    }
-                    onChange={(event) =>
-                      setClientVisualDraft({
-                        ...clientVisualDraft,
-                        [locale === "es" ? "memberMessageEs" : "memberMessage"]: event.target.value,
-                      })
-                    }
-                  />
-                </label>
-              </div>
-              <div className="customization-editor-section customization-color-section">
-                <div className="customization-section-heading">
-                  <span className="section-kicker">{tr("Color system", "Sistema de colores")}</span>
-                  <h3>{tr("Full customer palette", "Paleta completa del cliente")}</h3>
-                  <p>
-                    {tr(
-                      "Colors apply to public, enrollment, and member rewards pages.",
-                      "Los colores se aplican a las páginas pública, de inscripción y de recompensas.",
-                    )}
-                  </p>
-                </div>
-                {(
-                  [
-                    ["businessNameColor", tr("Business name", "Nombre del negocio")],
-                    ["primaryColor", tr("Primary", "Principal")],
-                    ["accentColor", tr("Accent", "Acento")],
-                    ["backgroundColor", tr("Background", "Fondo")],
-                    ["surfaceColor", tr("Cards and surfaces", "Tarjetas y superficies")],
-                    ["textColor", tr("Main text", "Texto principal")],
-                    ["mutedColor", tr("Secondary text", "Texto secundario")],
-                  ] as const
-                ).map(([key, label]) => (
-                  <label className="customization-color-field" key={key}>
-                    {label}
-                    <span>
+                    <h3>{tr("Complete experience customization", "Personalización completa")}</h3>
+                    <p>
+                      {tr(
+                        "Control the slogan, page messages, colors, typography, visible sections, live theme, and holiday schedule.",
+                        "Controla el eslogan, los mensajes de página, los colores, la tipografía, las secciones visibles, el tema en vivo y el calendario festivo.",
+                      )}
+                    </p>
+                  </div>
+                  <div
+                    id="customize-theme"
+                    className="theme-grid client-theme-grid"
+                    role="radiogroup"
+                    aria-label={tr("Client theme", "Tema del cliente")}
+                  >
+                    {themeCatalog.map((theme) => (
+                      <label
+                        className={`theme-card ${clientVisualDraft.themeKey === theme.key ? "selected" : ""}`}
+                        key={theme.key}
+                      >
+                        <input
+                          type="radio"
+                          name="client-appearance-theme"
+                          value={theme.key}
+                          checked={clientVisualDraft.themeKey === theme.key}
+                          onChange={() =>
+                            setClientVisualDraft({ ...clientVisualDraft, themeKey: theme.key })
+                          }
+                        />
+                        <img src={theme.image} alt="" loading="lazy" width="320" height="180" />
+                        <span>
+                          <small>{tr(theme.category, themeSpanish(theme.key).category)}</small>
+                          <strong>{tr(theme.name, themeSpanish(theme.key).name)}</strong>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <div id="customize-voice" className="customization-editor-section">
+                    <div className="customization-section-heading">
+                      <span className="section-kicker">{tr("Brand voice", "Voz de la marca")}</span>
+                      <h3>{tr("Slogan and page messages", "Eslogan y mensajes de página")}</h3>
+                      <p>
+                        {tr(
+                          "Use the language switcher to edit each translation. Blank fields keep the built-in default.",
+                          "Usa el selector de idioma para editar cada traducción. Los campos vacíos conservan el valor predeterminado.",
+                        )}
+                      </p>
+                    </div>
+                    <label className="customization-full-field">
+                      {tr("Company slogan", "Eslogan de la empresa")}
                       <input
-                        type="color"
-                        value={clientVisualDraft[key]}
+                        maxLength={120}
+                        value={
+                          locale === "es"
+                            ? clientVisualDraft.companySloganEs
+                            : clientVisualDraft.companySlogan
+                        }
                         onChange={(event) =>
                           setClientVisualDraft({
                             ...clientVisualDraft,
-                            [key]: event.target.value.toUpperCase(),
+                            [locale === "es" ? "companySloganEs" : "companySlogan"]:
+                              event.target.value,
                           })
                         }
                       />
-                      <code>{clientVisualDraft[key]}</code>
-                    </span>
-                  </label>
-                ))}
-                <div
-                  className="business-name-color-preview"
-                  aria-live="polite"
-                  style={{ backgroundColor: clientVisualDraft.backgroundColor }}
-                >
-                  <small>{tr("Business name preview", "Vista previa del negocio")}</small>
-                  <strong style={{ color: clientVisualDraft.businessNameColor }}>
-                    {appearanceClient.name}
-                  </strong>
-                </div>
-              </div>
-              <div className="customization-editor-section customization-style-section">
-                <div className="customization-section-heading">
-                  <span className="section-kicker">{tr("Visual style", "Estilo visual")}</span>
-                  <h3>{tr("Typography and shape", "Tipografía y forma")}</h3>
-                </div>
-                <label>
-                  {tr("Heading style", "Estilo de títulos")}
-                  <select
-                    value={clientVisualDraft.fontStyle}
-                    onChange={(event) =>
-                      setClientVisualDraft({
-                        ...clientVisualDraft,
-                        fontStyle: event.target.value as typeof clientVisualDraft.fontStyle,
-                      })
-                    }
+                    </label>
+                    <label>
+                      {tr("Public page headline", "Título de la página pública")}
+                      <input
+                        maxLength={120}
+                        value={
+                          locale === "es"
+                            ? clientVisualDraft.publicHeadlineEs
+                            : clientVisualDraft.publicHeadline
+                        }
+                        onChange={(event) =>
+                          setClientVisualDraft({
+                            ...clientVisualDraft,
+                            [locale === "es" ? "publicHeadlineEs" : "publicHeadline"]:
+                              event.target.value,
+                          })
+                        }
+                      />
+                    </label>
+                    <label>
+                      {tr("Public page message", "Mensaje de la página pública")}
+                      <textarea
+                        maxLength={300}
+                        value={
+                          locale === "es"
+                            ? clientVisualDraft.publicMessageEs
+                            : clientVisualDraft.publicMessage
+                        }
+                        onChange={(event) =>
+                          setClientVisualDraft({
+                            ...clientVisualDraft,
+                            [locale === "es" ? "publicMessageEs" : "publicMessage"]:
+                              event.target.value,
+                          })
+                        }
+                      />
+                    </label>
+                    <label>
+                      {tr("Join Rewards headline", "Título de Únete a Recompensas")}
+                      <input
+                        maxLength={120}
+                        value={
+                          locale === "es"
+                            ? clientVisualDraft.joinHeadlineEs
+                            : clientVisualDraft.joinHeadline
+                        }
+                        onChange={(event) =>
+                          setClientVisualDraft({
+                            ...clientVisualDraft,
+                            [locale === "es" ? "joinHeadlineEs" : "joinHeadline"]:
+                              event.target.value,
+                          })
+                        }
+                      />
+                    </label>
+                    <label>
+                      {tr("Join Rewards message", "Mensaje de Únete a Recompensas")}
+                      <textarea
+                        maxLength={300}
+                        value={
+                          locale === "es"
+                            ? clientVisualDraft.joinMessageEs
+                            : clientVisualDraft.joinMessage
+                        }
+                        onChange={(event) =>
+                          setClientVisualDraft({
+                            ...clientVisualDraft,
+                            [locale === "es" ? "joinMessageEs" : "joinMessage"]: event.target.value,
+                          })
+                        }
+                      />
+                    </label>
+                    <label>
+                      {tr("Member wallet headline", "Título de la billetera del miembro")}
+                      <input
+                        maxLength={120}
+                        value={
+                          locale === "es"
+                            ? clientVisualDraft.memberHeadlineEs
+                            : clientVisualDraft.memberHeadline
+                        }
+                        onChange={(event) =>
+                          setClientVisualDraft({
+                            ...clientVisualDraft,
+                            [locale === "es" ? "memberHeadlineEs" : "memberHeadline"]:
+                              event.target.value,
+                          })
+                        }
+                      />
+                    </label>
+                    <label>
+                      {tr("Member wallet message", "Mensaje de la billetera del miembro")}
+                      <textarea
+                        maxLength={300}
+                        value={
+                          locale === "es"
+                            ? clientVisualDraft.memberMessageEs
+                            : clientVisualDraft.memberMessage
+                        }
+                        onChange={(event) =>
+                          setClientVisualDraft({
+                            ...clientVisualDraft,
+                            [locale === "es" ? "memberMessageEs" : "memberMessage"]:
+                              event.target.value,
+                          })
+                        }
+                      />
+                    </label>
+                  </div>
+                  <div
+                    id="customize-colors"
+                    className="customization-editor-section customization-color-section"
                   >
-                    <option value="futuristic">{tr("Futuristic", "Futurista")}</option>
-                    <option value="modern">{tr("Modern", "Moderno")}</option>
-                    <option value="classic">{tr("Classic", "Clásico")}</option>
-                  </select>
-                </label>
-                <label>
-                  {tr("Corner style", "Estilo de esquinas")}
-                  <select
-                    value={clientVisualDraft.cornerStyle}
-                    onChange={(event) =>
-                      setClientVisualDraft({
-                        ...clientVisualDraft,
-                        cornerStyle: event.target.value as typeof clientVisualDraft.cornerStyle,
-                      })
-                    }
-                  >
-                    <option value="sharp">{tr("Sharp", "Rectas")}</option>
-                    <option value="soft">{tr("Soft", "Suaves")}</option>
-                    <option value="rounded">{tr("Rounded", "Redondeadas")}</option>
-                  </select>
-                </label>
-              </div>
-              <fieldset className="customization-visibility-section">
-                <legend>
-                  {tr("Customer page sections", "Secciones de la página del cliente")}
-                </legend>
-                {(
-                  [
-                    ["showRewards", tr("Show rewards catalog", "Mostrar catálogo de recompensas")],
-                    ["showProducts", tr("Show products catalog", "Mostrar catálogo de productos")],
-                    ["showReferrals", tr("Show member referrals", "Mostrar referidos de miembros")],
-                  ] as const
-                ).map(([key, label]) => (
-                  <label key={key}>
-                    <input
-                      type="checkbox"
-                      checked={clientVisualDraft[key]}
-                      onChange={(event) =>
-                        setClientVisualDraft({ ...clientVisualDraft, [key]: event.target.checked })
-                      }
-                    />
-                    <span>{label}</span>
-                  </label>
-                ))}
-              </fieldset>
-              <label>
-                {tr("Live message headline", "Título del mensaje en vivo")}
-                <input
-                  maxLength={80}
-                  value={clientVisualDraft.occasionTitle}
-                  onChange={(event) =>
-                    setClientVisualDraft({
-                      ...clientVisualDraft,
-                      occasionTitle: event.target.value,
-                    })
-                  }
-                />
-              </label>
-              <label>
-                {tr("Live message", "Mensaje en vivo")}
-                <textarea
-                  maxLength={220}
-                  value={clientVisualDraft.occasionMessage}
-                  onChange={(event) =>
-                    setClientVisualDraft({
-                      ...clientVisualDraft,
-                      occasionMessage: event.target.value,
-                    })
-                  }
-                />
-              </label>
-              <label className="automatic-theme-toggle">
-                <input
-                  type="checkbox"
-                  checked={clientVisualDraft.automaticHolidayThemes}
-                  onChange={(event) =>
-                    setClientVisualDraft({
-                      ...clientVisualDraft,
-                      automaticHolidayThemes: event.target.checked,
-                    })
-                  }
-                />
-                <span>
-                  {clientVisualDraft.automaticHolidayThemes
-                    ? tr("Automatic themes on", "Temas automáticos activos")
-                    : tr("Automatic themes off", "Temas automáticos desactivados")}
-                </span>
-              </label>
-              <label>
-                {tr("Business time zone", "Zona horaria del negocio")}
-                <select
-                  value={clientVisualDraft.timeZone}
-                  onChange={(event) =>
-                    setClientVisualDraft({ ...clientVisualDraft, timeZone: event.target.value })
-                  }
-                >
-                  <option value="UTC">UTC</option>
-                  <option value="America/New_York">{tr("Eastern Time", "Hora del Este")}</option>
-                  <option value="America/Chicago">{tr("Central Time", "Hora Central")}</option>
-                  <option value="America/Denver">
-                    {tr("Mountain Time", "Hora de la Montaña")}
-                  </option>
-                  <option value="America/Los_Angeles">
-                    {tr("Pacific Time", "Hora del Pacífico")}
-                  </option>
-                  <option value="America/Anchorage">{tr("Alaska Time", "Hora de Alaska")}</option>
-                  <option value="Pacific/Honolulu">{tr("Hawaii Time", "Hora de Hawái")}</option>
-                </select>
-              </label>
-              <div className="automatic-theme-status" role="status">
-                <strong>
-                  {clientVisualSettings?.automaticThemeActive
-                    ? tr(
-                        `${clientVisualSettings.automaticThemeName} is live now.`,
-                        `${themeSpanish(clientVisualSettings.themeKey).name} está activo ahora.`,
-                      )
-                    : clientVisualDraft.automaticHolidayThemes
-                      ? tr(
-                          "The automatic schedule is enabled.",
-                          "La programación automática está activa.",
-                        )
-                      : tr(
-                          "This business uses its manual theme.",
-                          "Este negocio usa su tema manual.",
+                    <div className="customization-section-heading">
+                      <span className="section-kicker">
+                        {tr("Color system", "Sistema de colores")}
+                      </span>
+                      <h3>{tr("Full customer palette", "Paleta completa del cliente")}</h3>
+                      <p>
+                        {tr(
+                          "Colors apply to public, enrollment, and member rewards pages.",
+                          "Los colores se aplican a las páginas pública, de inscripción y de recompensas.",
                         )}
-                </strong>
-                <span>
-                  {tr(
-                    "Manual appearance settings remain saved and return after each holiday.",
-                    "Los ajustes manuales permanecen guardados y vuelven después de cada día festivo.",
-                  )}
-                </span>
-              </div>
-              <button
-                type="button"
-                className="admin-primary full"
-                disabled={clientAppearanceBusy}
-                onClick={() => void saveClientAppearance()}
-              >
-                {clientAppearanceBusy
-                  ? tr("Publishing customization…", "Publicando personalización…")
-                  : tr("Publish client customization", "Publicar personalización del cliente")}
-              </button>
-            </section>
+                      </p>
+                    </div>
+                    {(
+                      [
+                        ["businessNameColor", tr("Business name", "Nombre del negocio")],
+                        ["primaryColor", tr("Primary", "Principal")],
+                        ["accentColor", tr("Accent", "Acento")],
+                        ["backgroundColor", tr("Background", "Fondo")],
+                        ["surfaceColor", tr("Cards and surfaces", "Tarjetas y superficies")],
+                        ["textColor", tr("Main text", "Texto principal")],
+                        ["mutedColor", tr("Secondary text", "Texto secundario")],
+                      ] as const
+                    ).map(([key, label]) => (
+                      <label className="customization-color-field" key={key}>
+                        {label}
+                        <span>
+                          <input
+                            type="color"
+                            value={clientVisualDraft[key]}
+                            onChange={(event) =>
+                              setClientVisualDraft({
+                                ...clientVisualDraft,
+                                [key]: event.target.value.toUpperCase(),
+                              })
+                            }
+                          />
+                          <code>{clientVisualDraft[key]}</code>
+                        </span>
+                      </label>
+                    ))}
+                    <div
+                      className="business-name-color-preview"
+                      aria-live="polite"
+                      style={{ backgroundColor: clientVisualDraft.backgroundColor }}
+                    >
+                      <small>{tr("Business name preview", "Vista previa del negocio")}</small>
+                      <strong style={{ color: clientVisualDraft.businessNameColor }}>
+                        {appearanceClient.name}
+                      </strong>
+                    </div>
+                  </div>
+                  <div
+                    id="customize-style"
+                    className="customization-editor-section customization-style-section"
+                  >
+                    <div className="customization-section-heading">
+                      <span className="section-kicker">{tr("Visual style", "Estilo visual")}</span>
+                      <h3>{tr("Typography and shape", "Tipografía y forma")}</h3>
+                    </div>
+                    <label>
+                      {tr("Heading style", "Estilo de títulos")}
+                      <select
+                        value={clientVisualDraft.fontStyle}
+                        onChange={(event) =>
+                          setClientVisualDraft({
+                            ...clientVisualDraft,
+                            fontStyle: event.target.value as typeof clientVisualDraft.fontStyle,
+                          })
+                        }
+                      >
+                        <option value="futuristic">{tr("Futuristic", "Futurista")}</option>
+                        <option value="modern">{tr("Modern", "Moderno")}</option>
+                        <option value="classic">{tr("Classic", "Clásico")}</option>
+                      </select>
+                    </label>
+                    <label>
+                      {tr("Corner style", "Estilo de esquinas")}
+                      <select
+                        value={clientVisualDraft.cornerStyle}
+                        onChange={(event) =>
+                          setClientVisualDraft({
+                            ...clientVisualDraft,
+                            cornerStyle: event.target.value as typeof clientVisualDraft.cornerStyle,
+                          })
+                        }
+                      >
+                        <option value="sharp">{tr("Sharp", "Rectas")}</option>
+                        <option value="soft">{tr("Soft", "Suaves")}</option>
+                        <option value="rounded">{tr("Rounded", "Redondeadas")}</option>
+                      </select>
+                    </label>
+                  </div>
+                  <fieldset id="customize-sections" className="customization-visibility-section">
+                    <legend>
+                      {tr("Customer page sections", "Secciones de la página del cliente")}
+                    </legend>
+                    {(
+                      [
+                        [
+                          "showRewards",
+                          tr("Show rewards catalog", "Mostrar catálogo de recompensas"),
+                        ],
+                        [
+                          "showProducts",
+                          tr("Show products catalog", "Mostrar catálogo de productos"),
+                        ],
+                        [
+                          "showReferrals",
+                          tr("Show member referrals", "Mostrar referidos de miembros"),
+                        ],
+                      ] as const
+                    ).map(([key, label]) => (
+                      <label key={key}>
+                        <input
+                          type="checkbox"
+                          checked={clientVisualDraft[key]}
+                          onChange={(event) =>
+                            setClientVisualDraft({
+                              ...clientVisualDraft,
+                              [key]: event.target.checked,
+                            })
+                          }
+                        />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </fieldset>
+                  <div
+                    id="customize-live"
+                    className="customization-editor-section customization-live-section"
+                  >
+                    <div className="customization-section-heading">
+                      <span className="section-kicker">
+                        {tr("Live experience", "Experiencia en vivo")}
+                      </span>
+                      <h3>{tr("Messages and automatic themes", "Mensajes y temas automáticos")}</h3>
+                      <p>
+                        {tr(
+                          "Set a live announcement or let Elite Rewards switch themes for holidays.",
+                          "Configura un anuncio en vivo o permite que Elite Rewards cambie los temas en días festivos.",
+                        )}
+                      </p>
+                    </div>
+                    <label>
+                      {tr("Live message headline", "Título del mensaje en vivo")}
+                      <input
+                        maxLength={80}
+                        value={clientVisualDraft.occasionTitle}
+                        onChange={(event) =>
+                          setClientVisualDraft({
+                            ...clientVisualDraft,
+                            occasionTitle: event.target.value,
+                          })
+                        }
+                      />
+                    </label>
+                    <label>
+                      {tr("Live message", "Mensaje en vivo")}
+                      <textarea
+                        maxLength={220}
+                        value={clientVisualDraft.occasionMessage}
+                        onChange={(event) =>
+                          setClientVisualDraft({
+                            ...clientVisualDraft,
+                            occasionMessage: event.target.value,
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="automatic-theme-toggle">
+                      <input
+                        type="checkbox"
+                        checked={clientVisualDraft.automaticHolidayThemes}
+                        onChange={(event) =>
+                          setClientVisualDraft({
+                            ...clientVisualDraft,
+                            automaticHolidayThemes: event.target.checked,
+                          })
+                        }
+                      />
+                      <span>
+                        {clientVisualDraft.automaticHolidayThemes
+                          ? tr("Automatic themes on", "Temas automáticos activos")
+                          : tr("Automatic themes off", "Temas automáticos desactivados")}
+                      </span>
+                    </label>
+                    <label>
+                      {tr("Business time zone", "Zona horaria del negocio")}
+                      <select
+                        value={clientVisualDraft.timeZone}
+                        onChange={(event) =>
+                          setClientVisualDraft({
+                            ...clientVisualDraft,
+                            timeZone: event.target.value,
+                          })
+                        }
+                      >
+                        <option value="UTC">UTC</option>
+                        <option value="America/New_York">
+                          {tr("Eastern Time", "Hora del Este")}
+                        </option>
+                        <option value="America/Chicago">
+                          {tr("Central Time", "Hora Central")}
+                        </option>
+                        <option value="America/Denver">
+                          {tr("Mountain Time", "Hora de la Montaña")}
+                        </option>
+                        <option value="America/Los_Angeles">
+                          {tr("Pacific Time", "Hora del Pacífico")}
+                        </option>
+                        <option value="America/Anchorage">
+                          {tr("Alaska Time", "Hora de Alaska")}
+                        </option>
+                        <option value="Pacific/Honolulu">
+                          {tr("Hawaii Time", "Hora de Hawái")}
+                        </option>
+                      </select>
+                    </label>
+                    <div className="automatic-theme-status" role="status">
+                      <strong>
+                        {clientVisualSettings?.automaticThemeActive
+                          ? tr(
+                              `${clientVisualSettings.automaticThemeName} is live now.`,
+                              `${themeSpanish(clientVisualSettings.themeKey).name} está activo ahora.`,
+                            )
+                          : clientVisualDraft.automaticHolidayThemes
+                            ? tr(
+                                "The automatic schedule is enabled.",
+                                "La programación automática está activa.",
+                              )
+                            : tr(
+                                "This business uses its manual theme.",
+                                "Este negocio usa su tema manual.",
+                              )}
+                      </strong>
+                      <span>
+                        {tr(
+                          "Manual appearance settings remain saved and return after each holiday.",
+                          "Los ajustes manuales permanecen guardados y vuelven después de cada día festivo.",
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="admin-primary full"
+                    disabled={clientAppearanceBusy}
+                    onClick={() => void saveClientAppearance()}
+                  >
+                    {clientAppearanceBusy
+                      ? tr("Publishing customization…", "Publicando personalización…")
+                      : tr("Publish client customization", "Publicar personalización del cliente")}
+                  </button>
+                </section>
+              </>
+            )}
           </div>
-        </div>
+        </section>
       )}
       {clientModal && (
         <div className="modal-backdrop" onMouseDown={() => setClientModal(false)}>

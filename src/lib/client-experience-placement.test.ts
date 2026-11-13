@@ -21,7 +21,7 @@ describe("client customization placement", () => {
     assert.equal((admin.match(/Live message headline/g) ?? []).length, 1);
     assert.ok(admin.indexOf('active === "Customization"') < appearanceStart);
     const clientEditorStart = admin.indexOf("{clientEditor && (");
-    const appearanceEditorStart = admin.indexOf("{appearanceClient && (");
+    const appearanceEditorStart = admin.indexOf('{appearanceClient && active === "Customization"');
     assert.ok(clientEditorStart >= 0 && appearanceEditorStart > clientEditorStart);
     assert.doesNotMatch(
       admin.slice(clientEditorStart, appearanceEditorStart),
@@ -272,6 +272,7 @@ describe("complete Elite-only client experience customization", () => {
     assert.match(migration, /show_products/);
     assert.match(nameColorMigration, /business_name_color/);
     assert.match(admin, /clientAppearanceBusy/);
-    assert.match(admin, /appearanceDialogRef/);
+    assert.match(admin, /className="customization-screen"/);
+    assert.doesNotMatch(admin, /appearanceDialogRef|appearanceTriggerRef|appearance-modal/);
   });
 });

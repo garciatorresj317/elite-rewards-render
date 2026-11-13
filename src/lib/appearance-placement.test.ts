@@ -34,6 +34,20 @@ describe("Appearance navigation placement", () => {
     assert.match(adminSource, /name="client-appearance-theme"/);
     assert.match(adminSource, /Only Elite Rewards administrators can publish/);
     assert.equal((adminSource.match(/className="client-appearance-manager"/g) ?? []).length, 1);
+    assert.match(adminSource, /className="customization-screen"/);
+    assert.match(adminSource, /Elite customization workspace/);
+    assert.match(adminSource, /Back to clients/);
+    assert.match(adminSource, /Preview client page/);
+    assert.match(adminSource, /Loading client customization/);
+    assert.match(adminSource, /Discard your unpublished customization changes/);
+    assert.match(adminSource, /clientAppearanceRequestRef/);
+    assert.doesNotMatch(
+      adminSource.slice(
+        adminSource.indexOf("{appearanceClient && active"),
+        adminSource.indexOf("{clientModal &&"),
+      ),
+      /role="dialog"|aria-modal="true"|modal-backdrop|appearance-modal/,
+    );
   });
 
   it("keeps automatic theme controls out of every non-admin route", async () => {
