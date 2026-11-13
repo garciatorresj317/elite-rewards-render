@@ -1854,12 +1854,6 @@ function Admin() {
                         {tr("Copy Join Rewards link", "Copiar enlace para unirse")}
                       </button>
                       <button
-                        className="client-customize"
-                        onClick={() => void openClientEditor(client)}
-                      >
-                        <Palette size={16} /> {tr("Customize client", "Personalizar cliente")}
-                      </button>
-                      <button
                         className={`client-customize client-status-action ${client.status === "suspended" ? "activate" : "suspend"}`}
                         onClick={() => void toggleClientActive(client)}
                         disabled={clientStatusBusyId === client.id}

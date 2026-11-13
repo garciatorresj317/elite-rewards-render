@@ -35,6 +35,12 @@ describe("client customization placement", () => {
     const action = admin.indexOf("client-status-action", cards);
     const end = admin.indexOf("</article>", cards);
     assert.ok(cards >= 0 && action > cards && action < end);
+    const clientCard = admin.slice(cards, end);
+    assert.doesNotMatch(clientCard, /openClientEditor/);
+    assert.doesNotMatch(clientCard, /Customize client/);
+    assert.doesNotMatch(clientCard, /Personalizar cliente/);
+    assert.match(clientCard, /Open client page/);
+    assert.match(clientCard, /Copy Join Rewards link/);
     assert.match(admin, /Suspend client/);
     assert.match(admin, /Suspender cliente/);
     assert.match(admin, /Activate client/);
