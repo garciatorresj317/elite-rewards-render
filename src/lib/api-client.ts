@@ -41,6 +41,20 @@ async function uploadImage<T>(path: string, file: File): Promise<T> {
   return payload;
 }
 
+export type ProductBackground =
+  | { mode: "original" }
+  | { mode: "transparent" }
+  | {
+      mode: "color";
+      color: string;
+    };
+
+function productImagePath(path: string, background: ProductBackground): string {
+  const params = new URLSearchParams({ backgroundMode: background.mode });
+  if (background.mode === "color") params.set("backgroundColor", background.color);
+  return `${path}?${params.toString()}`;
+}
+
 export const api = {
   session: () => request<{ user: SessionUser | null }>("/api/auth/session"),
   login: (email: string, password: string) =>
@@ -169,9 +183,17 @@ export const api = {
       `/api/admin/clients/${encodeURIComponent(businessId)}/products/${encodeURIComponent(productId)}`,
       { method: "PUT", body: JSON.stringify(payload) },
     ),
-  uploadClientProductImage: (businessId: string, productId: string, file: File) =>
+  uploadClientProductImage: (
+    businessId: string,
+    productId: string,
+    file: File,
+    background: ProductBackground,
+  ) =>
     uploadImage<{ product: ManagedProduct }>(
-      `/api/admin/clients/${encodeURIComponent(businessId)}/products/${encodeURIComponent(productId)}/image`,
+      productImagePath(
+        `/api/admin/clients/${encodeURIComponent(businessId)}/products/${encodeURIComponent(productId)}/image`,
+        background,
+      ),
       file,
     ),
   archiveClientProduct: (businessId: string, productId: string) =>
@@ -248,9 +270,9 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(payload),
     }),
-  uploadProductImage: (productId: string, file: File) =>
+  uploadProductImage: (productId: string, file: File, background: ProductBackground) =>
     uploadImage<{ product: ManagedProduct }>(
-      `/api/admin/products/${encodeURIComponent(productId)}/image`,
+      productImagePath(`/api/admin/products/${encodeURIComponent(productId)}/image`, background),
       file,
     ),
   archiveProduct: (productId: string) =>

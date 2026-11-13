@@ -1,7 +1,11 @@
 import type { SessionUser } from "./auth.ts";
 import { getPool, id } from "./database.ts";
 import { PRODUCT_IMAGE_MAX_BYTES, PRODUCT_IMAGE_MAX_MEGABYTES } from "../lib/upload-limits.ts";
-import { HIGH_RES_IMAGE_VERSION, normalizeUploadedImage } from "./image-processing.ts";
+import {
+  normalizeUploadedImage,
+  PRODUCT_IMAGE_PROCESSING_VERSION,
+  type ImageBackgroundOptions,
+} from "./image-processing.ts";
 
 export type ProductDraft = {
   name: string;
@@ -387,9 +391,15 @@ async function updateImageForBusiness(
   businessId: string,
   productId: string,
   input: ProductImageInput,
+  background: ImageBackgroundOptions,
 ): Promise<ManagedProduct> {
   validateProductImage(input);
-  const processed = await normalizeUploadedImage(input, PRODUCT_IMAGE_MAX_BYTES, "Product image");
+  const processed = await normalizeUploadedImage(
+    input,
+    PRODUCT_IMAGE_MAX_BYTES,
+    "Product image",
+    background,
+  );
   const result = await getPool().query(
     `UPDATE business_products
         SET image_data=$4,image_mime=$5,image_url=NULL,
@@ -405,7 +415,7 @@ async function updateImageForBusiness(
       processed.mime,
       processed.width,
       processed.height,
-      HIGH_RES_IMAGE_VERSION,
+      PRODUCT_IMAGE_PROCESSING_VERSION,
     ],
   );
   const row = result.rows[0];
@@ -427,7 +437,8 @@ async function updateImageForBusiness(
         sourceBytes: input.data.length,
         sourceWidth: processed.sourceWidth,
         sourceHeight: processed.sourceHeight,
-        processingVersion: HIGH_RES_IMAGE_VERSION,
+        processingVersion: PRODUCT_IMAGE_PROCESSING_VERSION,
+        background,
       }),
     ],
   );
@@ -443,9 +454,10 @@ export async function updateProductImage(
   user: SessionUser,
   productId: string,
   input: ProductImageInput,
+  background: ImageBackgroundOptions = { mode: "original" },
 ): Promise<ManagedProduct> {
   requireBusinessOwner(user);
-  return updateImageForBusiness(user, user.businessId, productId, input);
+  return updateImageForBusiness(user, user.businessId, productId, input, background);
 }
 
 export async function updateClientProductImage(
@@ -453,10 +465,11 @@ export async function updateClientProductImage(
   businessId: string,
   productId: string,
   input: ProductImageInput,
+  background: ImageBackgroundOptions = { mode: "original" },
 ): Promise<ManagedProduct> {
   requirePlatformAdmin(user);
   await assertClientBusiness(businessId);
-  return updateImageForBusiness(user, businessId, productId, input);
+  return updateImageForBusiness(user, businessId, productId, input, background);
 }
 
 export async function getProductImage(

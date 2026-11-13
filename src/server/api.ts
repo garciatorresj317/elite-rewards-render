@@ -137,6 +137,18 @@ async function imageUpload(
   return { mime, data };
 }
 
+function productBackground(url: URL) {
+  const mode = url.searchParams.get("backgroundMode") ?? "original";
+  if (mode === "original" || mode === "transparent") return { mode } as const;
+  if (mode === "color") {
+    const color = url.searchParams.get("backgroundColor") ?? "";
+    if (!/^#[0-9a-f]{6}$/i.test(color))
+      throw Object.assign(new Error("Product background color is invalid"), { status: 400 });
+    return { mode, color } as const;
+  }
+  throw Object.assign(new Error("Product background mode is invalid"), { status: 400 });
+}
+
 async function body(request: Request): Promise<Record<string, unknown>> {
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json"))
@@ -760,6 +772,7 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
           businessId,
           productId,
           await imageUpload(request, "Product image", PRODUCT_IMAGE_MAX_BYTES),
+          productBackground(url),
         ),
       });
     }
@@ -895,6 +908,7 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
           user,
           productId,
           await imageUpload(request, "Product image", PRODUCT_IMAGE_MAX_BYTES),
+          productBackground(url),
         ),
       });
     }

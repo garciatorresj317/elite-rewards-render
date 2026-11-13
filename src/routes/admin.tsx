@@ -49,6 +49,7 @@ import {
   type ManagedReward,
   type MemberSummary,
   type PasswordResetRequest,
+  type ProductBackground,
   type ProductDraft,
   type RewardDraft,
   type SessionUser,
@@ -209,6 +210,9 @@ function Admin() {
     active: true,
   });
   const [clientProductImage, setClientProductImage] = useState<File | null>(null);
+  const [clientProductBackground, setClientProductBackground] = useState<ProductBackground>({
+    mode: "original",
+  });
   const [clientRewardDraft, setClientRewardDraft] = useState<RewardDraft>({
     name: "",
     description: "",
@@ -260,6 +264,9 @@ function Admin() {
     active: true,
   });
   const [productImage, setProductImage] = useState<File | null>(null);
+  const [productBackground, setProductBackground] = useState<ProductBackground>({
+    mode: "original",
+  });
   const [rewardModal, setRewardModal] = useState(false);
   const [editingRewardId, setEditingRewardId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -864,10 +871,16 @@ function Admin() {
         : await api.createClientProduct(clientEditor.id, publishedDraft);
       savedProductId = saved.product.id;
       if (clientProductImage)
-        await api.uploadClientProductImage(clientEditor.id, saved.product.id, clientProductImage);
+        await api.uploadClientProductImage(
+          clientEditor.id,
+          saved.product.id,
+          clientProductImage,
+          clientProductBackground,
+        );
       setClientProducts((await api.clientProducts(clientEditor.id)).products);
       setClientProductEditingId(null);
       setClientProductImage(null);
+      setClientProductBackground({ mode: "original" });
       setClientProductDraft(emptyProductForm());
       setNotice(
         tr(
@@ -911,6 +924,7 @@ function Admin() {
       active: product.active,
     });
     setClientProductImage(null);
+    setClientProductBackground({ mode: "original" });
   };
   const archiveSelectedClientProduct = async () => {
     if (!clientEditor || !clientProductEditingId) return;
@@ -965,6 +979,7 @@ function Admin() {
   const openNewProduct = () => {
     setEditingProductId(null);
     setProductImage(null);
+    setProductBackground({ mode: "original" });
     setProductForm(emptyProductForm());
     setProductModal(true);
   };
@@ -982,6 +997,7 @@ function Admin() {
       active: product.active,
     });
     setProductImage(null);
+    setProductBackground({ mode: "original" });
     setProductModal(true);
   };
   const submitProduct = async (event: FormEvent) => {
@@ -994,7 +1010,8 @@ function Admin() {
         ? await api.updateProduct(editingProductId, productPayload)
         : await api.createProduct(productPayload);
       savedProductId = saved.product.id;
-      if (productImage) await api.uploadProductImage(saved.product.id, productImage);
+      if (productImage)
+        await api.uploadProductImage(saved.product.id, productImage, productBackground);
       setProductModal(false);
       setNotice(
         tr(
@@ -2864,6 +2881,8 @@ function Admin() {
                 onClick={() => {
                   setClientProductEditingId(null);
                   setClientProductDraft(emptyProductForm());
+                  setClientProductImage(null);
+                  setClientProductBackground({ mode: "original" });
                 }}
               >
                 <Plus size={16} /> {tr("New client product", "Nuevo producto del cliente")}
@@ -2873,6 +2892,9 @@ function Admin() {
                 setDraft={setClientProductDraft}
                 imageFile={clientProductImage}
                 setImageFile={setClientProductImage}
+                imageBackground={clientProductBackground}
+                setImageBackground={setClientProductBackground}
+                backgroundControlName="client-product-image-background"
                 tr={tr}
                 onSubmit={saveClientProduct}
                 editing={Boolean(clientProductEditingId)}
@@ -3274,6 +3296,9 @@ function Admin() {
               setDraft={setProductForm}
               imageFile={productImage}
               setImageFile={setProductImage}
+              imageBackground={productBackground}
+              setImageBackground={setProductBackground}
+              backgroundControlName="business-product-image-background"
               tr={tr}
               onSubmit={submitProduct}
               editing={Boolean(editingProductId)}
@@ -3693,6 +3718,9 @@ function ProductEditorFields({
   setDraft,
   imageFile,
   setImageFile,
+  imageBackground,
+  setImageBackground,
+  backgroundControlName,
   tr,
   onSubmit,
   editing,
@@ -3706,6 +3734,9 @@ function ProductEditorFields({
   setDraft: (draft: ProductDraft) => void;
   imageFile: File | null;
   setImageFile: (file: File | null) => void;
+  imageBackground: ProductBackground;
+  setImageBackground: (background: ProductBackground) => void;
+  backgroundControlName: string;
   tr: TranslatePair;
   onSubmit: (event: FormEvent) => void | Promise<void>;
   editing: boolean;
@@ -3805,50 +3836,123 @@ function ProductEditorFields({
           />
         </label>
       </div>
-      <label className="client-logo-upload product-image-upload">
-        {tr("Choose product image from files", "Elegir imagen del producto desde archivos")}
-        <input
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          onChange={(event) => {
-            const file = event.target.files?.[0] ?? null;
-            if (file && file.size > PRODUCT_IMAGE_MAX_BYTES) {
-              event.currentTarget.setCustomValidity(
-                tr(
-                  `Product images must be ${PRODUCT_IMAGE_MAX_MEGABYTES} MB or smaller.`,
-                  `Las imágenes de productos deben tener ${PRODUCT_IMAGE_MAX_MEGABYTES} MB o menos.`,
-                ),
-              );
-              event.currentTarget.reportValidity();
-              event.currentTarget.value = "";
-              setImageFile(null);
-              return;
-            }
-            event.currentTarget.setCustomValidity("");
-            setImageFile(file);
-          }}
-        />
-        <small>
-          {imageFile
-            ? imageFile.name
-            : draft.imageUrl
+      <div className="client-logo-upload product-image-upload">
+        <label>
+          {tr("Choose product image from files", "Elegir imagen del producto desde archivos")}
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(event) => {
+              const file = event.target.files?.[0] ?? null;
+              if (file && file.size > PRODUCT_IMAGE_MAX_BYTES) {
+                event.currentTarget.setCustomValidity(
+                  tr(
+                    `Product images must be ${PRODUCT_IMAGE_MAX_MEGABYTES} MB or smaller.`,
+                    `Las imágenes de productos deben tener ${PRODUCT_IMAGE_MAX_MEGABYTES} MB o menos.`,
+                  ),
+                );
+                event.currentTarget.reportValidity();
+                event.currentTarget.value = "";
+                setImageFile(null);
+                return;
+              }
+              event.currentTarget.setCustomValidity("");
+              setImageFile(file);
+            }}
+          />
+          <small>
+            {imageFile
+              ? imageFile.name
+              : draft.imageUrl
+                ? tr(
+                    "Current image will remain unless replaced.",
+                    "La imagen actual permanecerá salvo que se reemplace.",
+                  )
+                : tr(
+                    `PNG, JPEG, or WebP up to ${PRODUCT_IMAGE_MAX_MEGABYTES} MB. Automatically enhanced to high resolution.`,
+                    `PNG, JPEG o WebP de hasta ${PRODUCT_IMAGE_MAX_MEGABYTES} MB. Se mejora automáticamente a alta resolución.`,
+                  )}
+          </small>
+        </label>
+        <fieldset className="product-background-editor" disabled={!imageFile}>
+          <legend>{tr("Image background", "Fondo de la imagen")}</legend>
+          <div className="product-background-options">
+            <label>
+              <input
+                type="radio"
+                name={backgroundControlName}
+                checked={imageBackground.mode === "original"}
+                onChange={() => setImageBackground({ mode: "original" })}
+              />
+              {tr("Keep original", "Conservar original")}
+            </label>
+            <label>
+              <input
+                type="radio"
+                name={backgroundControlName}
+                checked={imageBackground.mode === "transparent"}
+                onChange={() => setImageBackground({ mode: "transparent" })}
+              />
+              {tr("Make transparent", "Hacer transparente")}
+            </label>
+            <label>
+              <input
+                type="radio"
+                name={backgroundControlName}
+                checked={imageBackground.mode === "color"}
+                onChange={() =>
+                  setImageBackground({
+                    mode: "color",
+                    color: imageBackground.mode === "color" ? imageBackground.color : "#FFFFFF",
+                  })
+                }
+              />
+              {tr("Use any color", "Usar cualquier color")}
+            </label>
+          </div>
+          {imageBackground.mode === "color" && (
+            <label className="product-background-color">
+              {tr("Choose background color", "Elegir color de fondo")}
+              <input
+                type="color"
+                value={imageBackground.color}
+                onChange={(event) =>
+                  setImageBackground({ mode: "color", color: event.target.value.toUpperCase() })
+                }
+              />
+              <output>{imageBackground.color.toUpperCase()}</output>
+            </label>
+          )}
+          <small>
+            {imageFile
               ? tr(
-                  "Current image will remain unless replaced.",
-                  "La imagen actual permanecerá salvo que se reemplace.",
+                  "The selected background is applied when you save. Best results come from a solid or nearly solid background.",
+                  "El fondo seleccionado se aplica al guardar. Los mejores resultados se obtienen con un fondo sólido o casi sólido.",
                 )
               : tr(
-                  `PNG, JPEG, or WebP up to ${PRODUCT_IMAGE_MAX_MEGABYTES} MB. Automatically enhanced to high resolution.`,
-                  `PNG, JPEG o WebP de hasta ${PRODUCT_IMAGE_MAX_MEGABYTES} MB. Se mejora automáticamente a alta resolución.`,
+                  "Choose a new image to change its background.",
+                  "Elige una imagen nueva para cambiar su fondo.",
                 )}
-        </small>
+          </small>
+        </fieldset>
         {(selectedImagePreview || draft.imageUrl) && (
-          <img
-            className="product-image-preview"
-            src={selectedImagePreview ?? draft.imageUrl ?? undefined}
-            alt={draft.name || tr("Selected product", "Producto seleccionado")}
-          />
+          <div className="product-image-preview-frame">
+            <img
+              className="product-image-preview"
+              src={selectedImagePreview ?? draft.imageUrl ?? undefined}
+              alt={draft.name || tr("Selected product", "Producto seleccionado")}
+            />
+            {imageFile && imageBackground.mode !== "original" && (
+              <span className="product-image-preview-note">
+                {tr(
+                  "Source image — the background change is applied when saved.",
+                  "Imagen original: el cambio de fondo se aplica al guardar.",
+                )}
+              </span>
+            )}
+          </div>
         )}
-      </label>
+      </div>
       {publishingRequired ? (
         <div className="reward-active-check product-publish-assurance">
           <Check size={18} aria-hidden="true" />

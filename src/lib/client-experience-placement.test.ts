@@ -69,6 +69,14 @@ describe("client customization placement", () => {
     assert.match(admin, /accept="image\/png,image\/jpeg,image\/webp"/);
     assert.match(admin, /className="product-image-preview"/);
     assert.match(admin, /selectedImagePreview \?\? draft\.imageUrl/);
+    assert.match(admin, /Image background/);
+    assert.match(admin, /Fondo de la imagen/);
+    assert.match(admin, /Make transparent/);
+    assert.match(admin, /Hacer transparente/);
+    assert.match(admin, /Use any color/);
+    assert.match(admin, /type="color"/);
+    assert.match(admin, /imageBackground=\{clientProductBackground\}/);
+    assert.match(admin, /imageBackground=\{productBackground\}/);
     assert.match(admin, /productDraftForSave\(\{ \.\.\.clientProductDraft, active: true \}\)/);
     assert.match(admin, /productPayload = productDraftForSave\(productForm\)/);
     assert.match(uploadLimits, /PRODUCT_IMAGE_MAX_MEGABYTES = 10/);

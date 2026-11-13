@@ -175,7 +175,7 @@ describe("tenant product catalogs", () => {
     assert.deepEqual(dimensions.rows[0], {
       image_width: 1638,
       image_height: 2048,
-      image_processing_version: 1,
+      image_processing_version: 2,
     });
     assert.equal(
       (await getManagedProductImage(clientOwner, created.id))?.data.equals(publicImage!.data),
@@ -228,7 +228,7 @@ describe("tenant product catalogs", () => {
     assert.deepEqual(dimensions.rows[0], {
       image_width: 2048,
       image_height: 1024,
-      image_processing_version: 1,
+      image_processing_version: 2,
     });
 
     const tooLarge = Buffer.alloc(10 * 1024 * 1024 + 1, 0x20);
