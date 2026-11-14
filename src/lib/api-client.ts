@@ -79,6 +79,17 @@ export const api = {
   setup: (payload: Record<string, string>) =>
     request<{ ok: boolean }>("/api/setup", { method: "POST", body: JSON.stringify(payload) }),
   dashboard: () => request<DashboardData>("/api/admin/dashboard"),
+  dashboardAppearance: () => request<DashboardAppearance>("/api/admin/dashboard-appearance"),
+  updateDashboardAppearance: (payload: DashboardAppearanceUpdate) =>
+    request<DashboardAppearance>("/api/admin/dashboard-appearance", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  resetDashboardAppearance: () =>
+    request<DashboardAppearance>("/api/admin/dashboard-appearance", {
+      method: "DELETE",
+      body: "{}",
+    }),
   clients: () => request<{ clients: ClientSummary[] }>("/api/admin/clients"),
   passwordResetRequests: () =>
     request<{ requests: PasswordResetRequest[] }>("/api/admin/password-resets"),
@@ -384,6 +395,23 @@ export type DashboardData = {
   members: Array<{ id: string; name: string; email: string; member_code: string; units: number }>;
   rewards: Array<{ id: string; name: string; description: string; cost: number }>;
 };
+
+export type DashboardBackgroundStyle = "orbital" | "grid" | "aurora";
+export type DashboardInterfaceStyle = "command" | "executive" | "minimal";
+
+export type DashboardAppearance = {
+  primaryColor: string;
+  accentColor: string;
+  backgroundColor: string;
+  surfaceColor: string;
+  textColor: string;
+  mutedColor: string;
+  backgroundStyle: DashboardBackgroundStyle;
+  interfaceStyle: DashboardInterfaceStyle;
+  updatedAt: string | null;
+};
+
+export type DashboardAppearanceUpdate = Omit<DashboardAppearance, "updatedAt">;
 
 export type WalletData = {
   member: SessionUser;

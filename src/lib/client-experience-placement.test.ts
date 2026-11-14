@@ -307,7 +307,10 @@ describe("complete Elite-only client experience customization", () => {
     assert.match(wallet, /memberHeadline/);
     assert.match(wallet, /nameColor=\{settings\?\.businessNameColor\}/);
     assert.match(wallet, /showReferrals/);
-    assert.match(admin, /style=\{experienceStyle\(visualSettings\)\}/);
+    assert.match(
+      admin,
+      /user\.platformAdmin[\s\S]*dashboardAppearanceStyle\(dashboardAppearanceDraft\)[\s\S]*experienceStyle\(visualSettings\)/,
+    );
     assert.match(
       activateMember,
       /style=\{experienceStyle\(invitation\?\.visualSettings \?\? null\)\}/,

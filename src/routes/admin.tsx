@@ -20,6 +20,7 @@ import {
   RotateCcw,
   Search,
   ShieldCheck,
+  Sparkles,
   Store,
   Trash2,
   Trophy,
@@ -46,6 +47,8 @@ import {
   type ClientBrandingDraft,
   type ClientSummary,
   type DashboardData,
+  type DashboardAppearance,
+  type DashboardAppearanceUpdate,
   type ManagedProduct,
   type ManagedReward,
   type MemberSummary,
@@ -71,6 +74,13 @@ const sections = [
     en: "Password resets",
     es: "Contraseñas",
     icon: KeyRound,
+    platformOnly: true,
+  },
+  {
+    id: "Elite Dashboard",
+    en: "Elite Dashboard",
+    es: "Panel Elite",
+    icon: Sparkles,
     platformOnly: true,
   },
   {
@@ -123,6 +133,62 @@ const rewardUnits = (
     : reward.points;
 
 type SectionId = (typeof sections)[number]["id"];
+
+const defaultDashboardAppearance: DashboardAppearanceUpdate = {
+  primaryColor: "#F6B900",
+  accentColor: "#14E6FF",
+  backgroundColor: "#020713",
+  surfaceColor: "#07111F",
+  textColor: "#FFFAF0",
+  mutedColor: "#C7BEA8",
+  backgroundStyle: "orbital",
+  interfaceStyle: "command",
+};
+
+const dashboardPresets = [
+  {
+    id: "elite-command",
+    en: "Elite Command",
+    es: "Comando Elite",
+    descriptionEn: "Electric cyan, gold energy, and a deep command-center background.",
+    descriptionEs: "Cian eléctrico, energía dorada y un fondo profundo de centro de mando.",
+    settings: defaultDashboardAppearance,
+  },
+  {
+    id: "executive-gold",
+    en: "Executive Gold",
+    es: "Dorado Ejecutivo",
+    descriptionEn: "Warm metallic gold with quieter executive surfaces.",
+    descriptionEs: "Dorado metálico cálido con superficies ejecutivas más discretas.",
+    settings: {
+      primaryColor: "#D6A629",
+      accentColor: "#FFE49A",
+      backgroundColor: "#0B0905",
+      surfaceColor: "#171208",
+      textColor: "#FFF9E8",
+      mutedColor: "#CFC4A5",
+      backgroundStyle: "aurora",
+      interfaceStyle: "executive",
+    } as DashboardAppearanceUpdate,
+  },
+  {
+    id: "midnight-tech",
+    en: "Midnight Tech",
+    es: "Tecnología Nocturna",
+    descriptionEn: "Focused blue-violet signals with a clean technical grid.",
+    descriptionEs: "Señales azul violeta enfocadas con una cuadrícula técnica limpia.",
+    settings: {
+      primaryColor: "#6EA8FF",
+      accentColor: "#B9A7FF",
+      backgroundColor: "#050817",
+      surfaceColor: "#0C1329",
+      textColor: "#F7F8FF",
+      mutedColor: "#B7C0D9",
+      backgroundStyle: "grid",
+      interfaceStyle: "command",
+    } as DashboardAppearanceUpdate,
+  },
+] as const;
 
 type TranslatePair = (english: string, spanish: string) => string;
 
@@ -393,6 +459,10 @@ function Admin() {
   const [busy, setBusy] = useState(true);
   const [initialLoadFailed, setInitialLoadFailed] = useState(false);
   const [visualSettings, setVisualSettings] = useState<VisualSettings | null>(null);
+  const [dashboardAppearance, setDashboardAppearance] = useState<DashboardAppearance | null>(null);
+  const [dashboardAppearanceDraft, setDashboardAppearanceDraft] =
+    useState<DashboardAppearanceUpdate>(defaultDashboardAppearance);
+  const [dashboardAppearanceBusy, setDashboardAppearanceBusy] = useState(false);
 
   const [award, setAward] = useState({
     memberId: "",
@@ -431,6 +501,7 @@ function Admin() {
         passwordResetResult,
         memberResult,
         visualResult,
+        dashboardAppearanceResult,
         rewardResult,
         productResult,
       ] = await Promise.all([
@@ -441,6 +512,7 @@ function Admin() {
           : Promise.resolve({ requests: [] as PasswordResetRequest[] }),
         api.members(),
         api.visualSettings(),
+        api.dashboardAppearance(),
         session.user.role === "owner"
           ? api.managedRewards()
           : Promise.resolve({ rewards: [] as ManagedReward[] }),
@@ -452,6 +524,8 @@ function Admin() {
       setPasswordResetRequests(passwordResetResult.requests);
       setMembers(memberResult.members);
       setVisualSettings(visualResult);
+      setDashboardAppearance(dashboardAppearanceResult);
+      setDashboardAppearanceDraft(dashboardAppearanceFromSettings(dashboardAppearanceResult));
       setManagedRewards(rewardResult.rewards);
       setManagedProducts(productResult.products);
 
@@ -1415,6 +1489,64 @@ function Admin() {
       setError(tr("Reward restore failed", "No se pudo restaurar la recompensa"));
     }
   };
+  const saveDashboardAppearance = async () => {
+    setError("");
+    setDashboardAppearanceBusy(true);
+    try {
+      const saved = await api.updateDashboardAppearance(dashboardAppearanceDraft);
+      setDashboardAppearance(saved);
+      setDashboardAppearanceDraft(dashboardAppearanceFromSettings(saved));
+      setNotice(
+        tr(
+          "Elite Rewards dashboard appearance was published.",
+          "Se publicó la apariencia del panel de Elite Rewards.",
+        ),
+      );
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : tr(
+              "Dashboard appearance update failed.",
+              "No se pudo actualizar la apariencia del panel.",
+            ),
+      );
+    } finally {
+      setDashboardAppearanceBusy(false);
+    }
+  };
+  const resetDashboardAppearance = async () => {
+    if (
+      !window.confirm(
+        tr(
+          "Restore the complete Elite Rewards dashboard design to its default colors, background, and interface style? Client rewards pages will not change.",
+          "¿Restablecer el diseño completo del panel de Elite Rewards a sus colores, fondo y estilo de interfaz predeterminados? Las páginas de recompensas de clientes no cambiarán.",
+        ),
+      )
+    )
+      return;
+    setError("");
+    setDashboardAppearanceBusy(true);
+    try {
+      const saved = await api.resetDashboardAppearance();
+      setDashboardAppearance(saved);
+      setDashboardAppearanceDraft(dashboardAppearanceFromSettings(saved));
+      setNotice(
+        tr(
+          "Elite Rewards dashboard design was restored to default.",
+          "El diseño del panel de Elite Rewards volvió al predeterminado.",
+        ),
+      );
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : tr("Dashboard reset failed.", "No se pudo restablecer el panel."),
+      );
+    } finally {
+      setDashboardAppearanceBusy(false);
+    }
+  };
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return (data?.transactions ?? []).filter(
@@ -1438,10 +1570,18 @@ function Admin() {
     );
   return (
     <div
-      className={`admin-shell theme-${visualSettings?.themeKey ?? "elite-signature"}`}
-      style={experienceStyle(visualSettings)}
+      className={`admin-shell theme-${visualSettings?.themeKey ?? "elite-signature"}${
+        user.platformAdmin
+          ? ` dashboard-customized dashboard-background-${dashboardAppearanceDraft.backgroundStyle} dashboard-interface-${dashboardAppearanceDraft.interfaceStyle}`
+          : ""
+      }`}
+      style={
+        user.platformAdmin
+          ? dashboardAppearanceStyle(dashboardAppearanceDraft)
+          : experienceStyle(visualSettings)
+      }
     >
-      <ExperienceBackdrop settings={visualSettings} audience="admin" />
+      {!user.platformAdmin && <ExperienceBackdrop settings={visualSettings} audience="admin" />}
       {notice && (
         <div className="toast" role="status">
           <Check size={18} />
@@ -1802,6 +1942,20 @@ function Admin() {
                   </span>
                 </button>
                 {user.platformAdmin && (
+                  <button type="button" onClick={() => setActive("Elite Dashboard")}>
+                    <Sparkles />
+                    <span>
+                      <strong>{tr("Style Elite Dashboard", "Diseñar Panel Elite")}</strong>
+                      <small>
+                        {tr(
+                          "Set the dashboard colors, background, and interface design",
+                          "Configura colores, fondo y diseño de la interfaz del panel",
+                        )}
+                      </small>
+                    </span>
+                  </button>
+                )}
+                {user.platformAdmin && (
                   <button type="button" onClick={() => setActive("Customization")}>
                     <Palette />
                     <span>
@@ -1952,6 +2106,236 @@ function Admin() {
                     </div>
                   </article>
                 ))}
+              </div>
+            </section>
+          )}
+          {active === "Elite Dashboard" && user.platformAdmin && (
+            <section
+              className="dashboard-appearance-workspace"
+              aria-labelledby="elite-dashboard-title"
+            >
+              <div className="dashboard-appearance-intro panel">
+                <div>
+                  <span className="modal-icon">
+                    <Sparkles />
+                  </span>
+                  <div>
+                    <span className="section-kicker">
+                      {tr("Elite Rewards identity", "Identidad de Elite Rewards")}
+                    </span>
+                    <h2 id="elite-dashboard-title">
+                      {tr("Customize the Elite Dashboard", "Personaliza el Panel Elite")}
+                    </h2>
+                    <p>
+                      {tr(
+                        "Control the administrative dashboard’s colors, background treatment, and interface look. These settings are separate from every client’s rewards-page customization.",
+                        "Controla los colores, el tratamiento del fondo y el aspecto de la interfaz administrativa. Estos ajustes están separados de la personalización de las páginas de recompensas de cada cliente.",
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <span className="dashboard-scope-badge">
+                  <ShieldCheck size={16} />
+                  {tr("Elite Admin only", "Solo Admin Elite")}
+                </span>
+              </div>
+
+              <div className="dashboard-appearance-layout">
+                <div className="dashboard-appearance-controls">
+                  <section className="panel dashboard-design-section">
+                    <div className="dashboard-design-heading">
+                      <span className="section-kicker">
+                        {tr("Ready-made looks", "Diseños listos")}
+                      </span>
+                      <h3>{tr("Choose a starting design", "Elige un diseño inicial")}</h3>
+                      <p>
+                        {tr(
+                          "Choose a complete look, then fine-tune any color below.",
+                          "Elige un aspecto completo y luego ajusta cualquier color abajo.",
+                        )}
+                      </p>
+                    </div>
+                    <div className="dashboard-preset-grid" role="radiogroup">
+                      {dashboardPresets.map((preset) => {
+                        const selected = dashboardAppearanceMatches(
+                          dashboardAppearanceDraft,
+                          preset.settings,
+                        );
+                        return (
+                          <button
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            className={selected ? "selected" : ""}
+                            key={preset.id}
+                            onClick={() => setDashboardAppearanceDraft({ ...preset.settings })}
+                            style={dashboardAppearanceStyle(preset.settings)}
+                          >
+                            <span className="dashboard-preset-swatch" aria-hidden="true">
+                              <i />
+                              <i />
+                              <i />
+                            </span>
+                            <strong>{tr(preset.en, preset.es)}</strong>
+                            <small>{tr(preset.descriptionEn, preset.descriptionEs)}</small>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+
+                  <section className="panel dashboard-design-section">
+                    <div className="dashboard-design-heading">
+                      <span className="section-kicker">
+                        {tr("Color system", "Sistema de color")}
+                      </span>
+                      <h3>{tr("Dashboard palette", "Paleta del panel")}</h3>
+                      <p>
+                        {tr(
+                          "The preview updates immediately. Publishing applies the design to authenticated dashboards only.",
+                          "La vista previa se actualiza al instante. Publicar aplica el diseño solo a paneles autenticados.",
+                        )}
+                      </p>
+                    </div>
+                    <div className="dashboard-color-grid">
+                      {(
+                        [
+                          ["primaryColor", tr("Primary", "Principal")],
+                          ["accentColor", tr("Accent", "Acento")],
+                          ["backgroundColor", tr("Background", "Fondo")],
+                          ["surfaceColor", tr("Cards and surfaces", "Tarjetas y superficies")],
+                          ["textColor", tr("Main text", "Texto principal")],
+                          ["mutedColor", tr("Secondary text", "Texto secundario")],
+                        ] as const
+                      ).map(([key, label]) => (
+                        <label className="dashboard-color-field" key={key}>
+                          {label}
+                          <span>
+                            <input
+                              type="color"
+                              value={dashboardAppearanceDraft[key]}
+                              onChange={(event) =>
+                                setDashboardAppearanceDraft({
+                                  ...dashboardAppearanceDraft,
+                                  [key]: event.target.value.toUpperCase(),
+                                })
+                              }
+                            />
+                            <code>{dashboardAppearanceDraft[key]}</code>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="panel dashboard-design-section dashboard-look-section">
+                    <div className="dashboard-design-heading">
+                      <span className="section-kicker">
+                        {tr("Look and feel", "Aspecto visual")}
+                      </span>
+                      <h3>{tr("Background and interface", "Fondo e interfaz")}</h3>
+                    </div>
+                    <label>
+                      {tr("Background treatment", "Tratamiento del fondo")}
+                      <select
+                        value={dashboardAppearanceDraft.backgroundStyle}
+                        onChange={(event) =>
+                          setDashboardAppearanceDraft({
+                            ...dashboardAppearanceDraft,
+                            backgroundStyle: event.target
+                              .value as DashboardAppearanceUpdate["backgroundStyle"],
+                          })
+                        }
+                      >
+                        <option value="orbital">
+                          {tr("Orbital motion", "Movimiento orbital")}
+                        </option>
+                        <option value="grid">{tr("Technical grid", "Cuadrícula técnica")}</option>
+                        <option value="aurora">{tr("Aurora glow", "Brillo aurora")}</option>
+                      </select>
+                    </label>
+                    <label>
+                      {tr("Interface design", "Diseño de interfaz")}
+                      <select
+                        value={dashboardAppearanceDraft.interfaceStyle}
+                        onChange={(event) =>
+                          setDashboardAppearanceDraft({
+                            ...dashboardAppearanceDraft,
+                            interfaceStyle: event.target
+                              .value as DashboardAppearanceUpdate["interfaceStyle"],
+                          })
+                        }
+                      >
+                        <option value="command">{tr("Command center", "Centro de mando")}</option>
+                        <option value="executive">{tr("Executive", "Ejecutivo")}</option>
+                        <option value="minimal">{tr("Minimal", "Minimalista")}</option>
+                      </select>
+                    </label>
+                  </section>
+
+                  <div className="dashboard-appearance-actions">
+                    <button
+                      type="button"
+                      className="customization-default-button"
+                      onClick={() => void resetDashboardAppearance()}
+                      disabled={dashboardAppearanceBusy}
+                    >
+                      <RotateCcw size={17} /> {tr("Back to default", "Volver al predeterminado")}
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-primary"
+                      onClick={() => void saveDashboardAppearance()}
+                      disabled={
+                        dashboardAppearanceBusy ||
+                        dashboardAppearanceMatches(
+                          dashboardAppearanceDraft,
+                          dashboardAppearance ?? defaultDashboardAppearance,
+                        )
+                      }
+                    >
+                      <Check size={17} />
+                      {dashboardAppearanceBusy
+                        ? tr("Publishing…", "Publicando…")
+                        : tr("Publish dashboard design", "Publicar diseño del panel")}
+                    </button>
+                  </div>
+                </div>
+
+                <aside className="dashboard-design-preview panel" aria-live="polite">
+                  <span className="section-kicker">
+                    {tr("Live preview", "Vista previa en vivo")}
+                  </span>
+                  <h3>{tr("Elite Dashboard", "Panel Elite")}</h3>
+                  <div className="dashboard-preview-frame">
+                    <div className="dashboard-preview-rail">
+                      <BrandMark compact />
+                      <i className="active" />
+                      <i />
+                      <i />
+                    </div>
+                    <div className="dashboard-preview-content">
+                      <div className="dashboard-preview-header" />
+                      <div className="dashboard-preview-cards">
+                        <i />
+                        <i />
+                        <i />
+                      </div>
+                      <div className="dashboard-preview-chart">
+                        <i />
+                        <i />
+                        <i />
+                        <i />
+                      </div>
+                    </div>
+                  </div>
+                  <p>
+                    {tr(
+                      "Preview changes are temporary until you publish.",
+                      "Los cambios de vista previa son temporales hasta que publiques.",
+                    )}
+                  </p>
+                </aside>
               </div>
             </section>
           )}
@@ -4222,6 +4606,41 @@ function clientBrandStyle(branding: ClientBrandingDraft) {
   return {
     "--client-primary": branding.primaryColor,
     "--client-secondary": branding.secondaryColor,
+  } as CSSProperties;
+}
+function dashboardAppearanceFromSettings(settings: DashboardAppearance): DashboardAppearanceUpdate {
+  const { updatedAt: _updatedAt, ...appearance } = settings;
+  return appearance;
+}
+function dashboardAppearanceMatches(
+  first: DashboardAppearanceUpdate,
+  second: DashboardAppearanceUpdate | DashboardAppearance,
+) {
+  return (
+    first.primaryColor === second.primaryColor &&
+    first.accentColor === second.accentColor &&
+    first.backgroundColor === second.backgroundColor &&
+    first.surfaceColor === second.surfaceColor &&
+    first.textColor === second.textColor &&
+    first.mutedColor === second.mutedColor &&
+    first.backgroundStyle === second.backgroundStyle &&
+    first.interfaceStyle === second.interfaceStyle
+  );
+}
+function dashboardAppearanceStyle(settings: DashboardAppearanceUpdate) {
+  return {
+    "--dashboard-primary": settings.primaryColor,
+    "--dashboard-accent": settings.accentColor,
+    "--dashboard-background": settings.backgroundColor,
+    "--dashboard-surface": settings.surfaceColor,
+    "--dashboard-text": settings.textColor,
+    "--dashboard-muted": settings.mutedColor,
+    "--experience-primary": settings.primaryColor,
+    "--experience-accent": settings.accentColor,
+    "--experience-background": settings.backgroundColor,
+    "--experience-surface": settings.surfaceColor,
+    "--experience-text": settings.textColor,
+    "--experience-muted": settings.mutedColor,
   } as CSSProperties;
 }
 function Loading({

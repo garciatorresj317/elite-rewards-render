@@ -92,6 +92,13 @@ import {
   parsePointsPerDollar,
   updateClientLoyaltySettings,
 } from "./loyalty-settings-service.ts";
+import {
+  dashboardBackgroundStyles,
+  dashboardInterfaceStyles,
+  getDashboardAppearance,
+  resetDashboardAppearance,
+  updateDashboardAppearance,
+} from "./dashboard-appearance-service.ts";
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -560,6 +567,42 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
     if (url.pathname === "/api/admin/dashboard" && request.method === "GET") {
       requireRole(user, ["owner", "staff"]);
       return json(await getDashboard(user));
+    }
+    if (url.pathname === "/api/admin/dashboard-appearance" && request.method === "GET") {
+      requireRole(user, ["owner", "staff"]);
+      return json(await getDashboardAppearance());
+    }
+    if (url.pathname === "/api/admin/dashboard-appearance" && request.method === "PUT") {
+      requirePlatformAdmin(user);
+      const payload = await body(request);
+      const palette = accessiblePalette({
+        ...payload,
+        businessNameColor: payload["accentColor"],
+      });
+      return json(
+        await updateDashboardAppearance(user, {
+          primaryColor: palette.primaryColor,
+          accentColor: palette.accentColor,
+          backgroundColor: palette.backgroundColor,
+          surfaceColor: palette.surfaceColor,
+          textColor: palette.textColor,
+          mutedColor: palette.mutedColor,
+          backgroundStyle: enumValue(
+            payload["backgroundStyle"],
+            "Dashboard background",
+            dashboardBackgroundStyles,
+          ),
+          interfaceStyle: enumValue(
+            payload["interfaceStyle"],
+            "Dashboard design",
+            dashboardInterfaceStyles,
+          ),
+        }),
+      );
+    }
+    if (url.pathname === "/api/admin/dashboard-appearance" && request.method === "DELETE") {
+      requirePlatformAdmin(user);
+      return json(await resetDashboardAppearance(user));
     }
     if (url.pathname === "/api/visual-settings" && request.method === "GET") {
       requireRole(user, ["owner", "staff", "member"]);
