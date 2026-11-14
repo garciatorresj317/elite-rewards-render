@@ -6,7 +6,7 @@ import {
   CircleDollarSign,
   Copy,
   ExternalLink,
-  FileSignature,
+  FolderArchive,
   Gift,
   LayoutDashboard,
   LogOut,
@@ -33,8 +33,8 @@ import {
 import { CSSProperties, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
 import { BusinessBrand } from "@/components/BusinessBrand";
+import { DocumentsWorkspace } from "@/components/DocumentsWorkspace";
 import { ExperienceBackdrop } from "@/components/ExperienceTheme";
-import { ContractWorkspace } from "@/components/ContractWorkspace";
 import { useI18n } from "@/i18n";
 import { experienceStyle } from "@/lib/experience-style";
 import { themeCatalog } from "@/lib/theme-catalog";
@@ -86,10 +86,10 @@ const sections = [
     platformOnly: true,
   },
   {
-    id: "Contracts",
-    en: "Contracts",
-    es: "Contratos",
-    icon: FileSignature,
+    id: "Documents",
+    en: "Documents",
+    es: "Documentos",
+    icon: FolderArchive,
     platformOnly: true,
   },
   {
@@ -1965,14 +1965,14 @@ function Admin() {
                   </button>
                 )}
                 {user.platformAdmin && (
-                  <button type="button" onClick={() => setActive("Contracts")}>
-                    <FileSignature />
+                  <button type="button" onClick={() => setActive("Documents")}>
+                    <FolderArchive />
                     <span>
-                      <strong>{tr("Create client contracts", "Crear contratos")}</strong>
+                      <strong>{tr("Manage business documents", "Administrar documentos")}</strong>
                       <small>
                         {tr(
-                          "Adjust plans, issue agreements, and track acceptance",
-                          "Ajusta planes, emite acuerdos y registra aceptación",
+                          "Contracts, audits, payments, and future client files",
+                          "Contratos, auditorías, pagos y futuros archivos de clientes",
                         )}
                       </small>
                     </span>
@@ -2024,8 +2024,8 @@ function Admin() {
               </section>
             </>
           )}
-          {active === "Contracts" && user.platformAdmin && (
-            <ContractWorkspace clients={clients} tr={tr} />
+          {active === "Documents" && user.platformAdmin && (
+            <DocumentsWorkspace clients={clients} tr={tr} />
           )}
           {active === "Clients" && user.platformAdmin && (
             <section className="panel client-panel">

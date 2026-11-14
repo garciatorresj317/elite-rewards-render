@@ -115,6 +115,14 @@ import {
   voidContract,
   type ContractInput,
 } from "./contracts-service.ts";
+import {
+  createContractPayment,
+  listContractPayments,
+  listDocumentAudits,
+  paymentStatuses,
+  updateContractPaymentStatus,
+  type ContractPaymentInput,
+} from "./documents-service.ts";
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -360,6 +368,21 @@ function contractInput(payload: Record<string, unknown>): ContractInput {
     governingLaw: optionalText(payload["governingLaw"], "Governing law", 100),
     venue: optionalText(payload["venue"], "Venue", 200),
     effectiveDate: nullableText(payload["effectiveDate"], "Effective date", 10, 10),
+  };
+}
+
+function contractPaymentInput(payload: Record<string, unknown>): ContractPaymentInput {
+  return {
+    serviceContractId: nullableText(payload["serviceContractId"], "Contract", 8, 120),
+    linkedBusinessId: nullableText(payload["linkedBusinessId"], "Client", 8, 120),
+    clientName: text(payload["clientName"], "Client name", 2, 160),
+    description: text(payload["description"], "Payment description", 2, 240),
+    amountCents: integer(payload["amountCents"], "Payment amount", 0, 100_000_000),
+    dueDate: text(payload["dueDate"], "Due date", 10, 10),
+    status: enumValue(payload["status"] ?? "scheduled", "Payment status", paymentStatuses),
+    paymentMethod: optionalText(payload["paymentMethod"], "Payment method", 80),
+    reference: optionalText(payload["reference"], "Payment reference", 160),
+    notes: optionalText(payload["notes"], "Payment notes", 2_000),
   };
 }
 
@@ -711,6 +734,45 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
     if (url.pathname === "/api/admin/contracts" && request.method === "GET") {
       requirePlatformAdmin(user);
       return json({ contracts: await listContracts(user) });
+    }
+    if (url.pathname === "/api/admin/documents/audits" && request.method === "GET") {
+      requirePlatformAdmin(user);
+      const limitText = url.searchParams.get("limit");
+      const limit = limitText === null ? 250 : Number(limitText);
+      if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500)
+        throw Object.assign(new Error("Audit limit is invalid"), { status: 400 });
+      return json({ events: await listDocumentAudits(user, limit) });
+    }
+    if (url.pathname === "/api/admin/documents/payments" && request.method === "GET") {
+      requirePlatformAdmin(user);
+      return json({ payments: await listContractPayments(user) });
+    }
+    if (url.pathname === "/api/admin/documents/payments" && request.method === "POST") {
+      requirePlatformAdmin(user);
+      return json(
+        { payment: await createContractPayment(user, contractPaymentInput(await body(request))) },
+        201,
+      );
+    }
+    const paymentStatusMatch = url.pathname.match(
+      /^\/api\/admin\/documents\/payments\/([^/]+)\/status$/,
+    );
+    if (paymentStatusMatch && request.method === "PUT") {
+      requirePlatformAdmin(user);
+      const paymentId = text(
+        decodeURIComponent(paymentStatusMatch[1] ?? ""),
+        "Payment record",
+        8,
+        120,
+      );
+      const payload = await body(request);
+      return json({
+        payment: await updateContractPaymentStatus(
+          user,
+          paymentId,
+          enumValue(payload["status"], "Payment status", paymentStatuses),
+        ),
+      });
     }
     if (url.pathname === "/api/admin/contract-plans" && request.method === "GET") {
       requirePlatformAdmin(user);

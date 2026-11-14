@@ -2355,3 +2355,48 @@ td { border-color: rgba(0, 184, 255, .12); }
 .contract-admin-preview code { font-size: 10px; overflow-wrap: anywhere; color: #596476; }
 .contract-admin-preview pre { max-height: 520px; margin: 0; padding: 22px; overflow: auto; white-space: pre-wrap; font: 400 13px/1.6 Georgia, "Times New Roman", serif; }
 .contract-credential-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+
+/* Platform document center: contracts, audit history, payments, and expandable files. */
+.documents-workspace, .document-section-workspace { display: grid; gap: 16px; }
+.document-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 12px; }
+.document-tabs > button { min-width: 0; display: grid; grid-template-columns: 38px minmax(0, 1fr); align-items: center; gap: 10px; min-height: 78px; padding: 12px; border: 1px solid color-mix(in srgb, var(--dashboard-muted) 20%, transparent); border-radius: 11px; color: var(--dashboard-text); background: color-mix(in srgb, var(--dashboard-surface) 88%, transparent); text-align: left; cursor: pointer; }
+.document-tabs > button > svg { width: 24px; height: 24px; color: var(--dashboard-muted); }
+.document-tabs > button > span { min-width: 0; display: grid; gap: 4px; }
+.document-tabs strong { color: var(--dashboard-text); }
+.document-tabs small { color: var(--dashboard-muted); font-size: 10px; line-height: 1.35; }
+.document-tabs > button.active { border-color: var(--dashboard-accent); background: color-mix(in srgb, var(--dashboard-accent) 9%, var(--dashboard-surface)); box-shadow: inset 0 -3px var(--dashboard-primary), 0 0 20px color-mix(in srgb, var(--dashboard-accent) 13%, transparent); }
+.document-tabs > button.active > svg { color: var(--dashboard-primary); }
+.document-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 20px; }
+.document-section-heading > div { min-width: 0; display: flex; align-items: center; gap: 14px; }
+.document-section-heading h3, .document-empty-state h3 { margin: 4px 0; color: var(--dashboard-text); font: 800 clamp(22px, 3vw, 31px) var(--serif); }
+.document-section-heading p, .document-empty-state p { max-width: 850px; margin: 0; color: var(--dashboard-muted); line-height: 1.5; }
+.document-section-heading .modal-icon { flex: 0 0 auto; margin: 0; }
+.admin-secondary { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 13px; border: 1px solid color-mix(in srgb, var(--dashboard-accent) 55%, transparent); border-radius: 9px; color: var(--dashboard-accent); background: transparent; cursor: pointer; font-weight: 800; }
+.admin-secondary:disabled { opacity: .55; cursor: not-allowed; }
+.document-search { min-height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 15px; }
+.document-search svg { flex: 0 0 auto; color: var(--dashboard-accent); }
+.document-search input { width: 100%; border: 0; outline: 0; color: var(--dashboard-text); background: transparent; }
+.document-table-wrap { overflow: auto; }
+.document-table { width: 100%; border-collapse: collapse; min-width: 760px; }
+.document-table th, .document-table td { padding: 13px 15px; border-bottom: 1px solid color-mix(in srgb, var(--dashboard-muted) 16%, transparent); text-align: left; vertical-align: top; }
+.document-table th { color: var(--dashboard-accent); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.document-table td { color: var(--dashboard-muted); font-size: 12px; line-height: 1.45; }
+.document-table td strong { color: var(--dashboard-text); }
+.document-table td small { display: block; max-width: 300px; margin-top: 3px; color: var(--dashboard-muted); overflow: hidden; text-overflow: ellipsis; }
+.document-table select { min-width: 112px; border: 1px solid color-mix(in srgb, var(--dashboard-accent) 30%, transparent); border-radius: 8px; padding: 8px 9px; color: var(--dashboard-text); background: var(--dashboard-background); }
+.document-summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.document-summary-grid article { display: grid; gap: 6px; padding: 18px; }
+.document-summary-grid small { color: var(--dashboard-muted); text-transform: uppercase; letter-spacing: .08em; font-size: 10px; font-weight: 850; }
+.document-summary-grid strong { color: var(--dashboard-text); font: 800 26px var(--serif); }
+.payment-form { display: grid; gap: 16px; padding: 20px; }
+.document-form-heading h4 { margin: 4px 0 0; color: var(--dashboard-text); font: 800 22px var(--serif); }
+.payment-form label { display: grid; gap: 6px; color: var(--dashboard-muted); font-size: 12px; font-weight: 750; }
+.payment-form input, .payment-form select, .payment-form textarea { width: 100%; min-width: 0; border: 1px solid color-mix(in srgb, var(--dashboard-muted) 30%, transparent); border-radius: 9px; padding: 10px 11px; color: var(--dashboard-text); background: color-mix(in srgb, var(--dashboard-background) 84%, transparent); }
+.payment-form textarea { resize: vertical; }
+.document-empty-state { justify-items: center; padding: clamp(28px, 5vw, 64px); text-align: center; }
+.document-empty-state .modal-icon { margin: 0 0 8px; }
+.document-future-grid { width: min(100%, 720px); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+.document-future-grid span { padding: 14px 10px; border: 1px dashed color-mix(in srgb, var(--dashboard-accent) 38%, transparent); border-radius: 10px; color: var(--dashboard-muted); background: color-mix(in srgb, var(--dashboard-accent) 5%, transparent); }
+@media (max-width: 1000px) { .document-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .document-tabs, .document-summary-grid, .document-future-grid { grid-template-columns: 1fr; } .document-section-heading, .document-section-heading > div { align-items: flex-start; flex-direction: column; } .document-section-heading > button { width: 100%; } }

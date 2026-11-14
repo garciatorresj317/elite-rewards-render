@@ -91,6 +91,19 @@ export const api = {
       body: "{}",
     }),
   contracts: () => request<{ contracts: ServiceContract[] }>("/api/admin/contracts"),
+  documentAudits: (limit = 250) =>
+    request<{ events: DocumentAuditEvent[] }>(`/api/admin/documents/audits?limit=${limit}`),
+  contractPayments: () => request<{ payments: ContractPayment[] }>("/api/admin/documents/payments"),
+  createContractPayment: (payload: ContractPaymentDraft) =>
+    request<{ payment: ContractPayment }>("/api/admin/documents/payments", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateContractPaymentStatus: (paymentId: string, status: ContractPaymentStatus) =>
+    request<{ payment: ContractPayment }>(
+      `/api/admin/documents/payments/${encodeURIComponent(paymentId)}/status`,
+      { method: "PUT", body: JSON.stringify({ status }) },
+    ),
   contractPlans: () => request<{ plans: ServicePlanTemplate[] }>("/api/admin/contract-plans"),
   createContractPlan: (payload: ContractDraft) =>
     request<{ plan: ServicePlanTemplate }>("/api/admin/contract-plans", {
@@ -605,6 +618,40 @@ export type ClientSummary = {
 
 export type ContractBillingInterval = "monthly" | "yearly";
 export type ContractStatus = "draft" | "sent" | "accepted" | "void";
+export type ContractPaymentStatus = "scheduled" | "due" | "paid" | "void";
+
+export type DocumentAuditEvent = {
+  id: string;
+  businessId: string;
+  businessName: string;
+  actorName: string | null;
+  action: string;
+  targetType: string;
+  targetId: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type ContractPaymentDraft = {
+  serviceContractId: string | null;
+  linkedBusinessId: string | null;
+  clientName: string;
+  description: string;
+  amountCents: number;
+  dueDate: string;
+  status: ContractPaymentStatus;
+  paymentMethod: string;
+  reference: string;
+  notes: string;
+};
+
+export type ContractPayment = ContractPaymentDraft & {
+  id: string;
+  contractNumber: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export type ContractDraft = {
   linkedBusinessId: string | null;
