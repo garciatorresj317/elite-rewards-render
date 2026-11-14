@@ -18,7 +18,10 @@
     "format": "prettier --write ."
   },
   "overrides": {
-    "rolldown": "1.2.1"
+    "rolldown": "1.2.1",
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "11.0.8"
+    }
   },
   "dependencies": {
     "@lovable.dev/vite-tanstack-config": "^2.24.0",
