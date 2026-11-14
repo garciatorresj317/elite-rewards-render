@@ -90,6 +90,49 @@ export const api = {
       method: "DELETE",
       body: "{}",
     }),
+  contracts: () => request<{ contracts: ServiceContract[] }>("/api/admin/contracts"),
+  contractPlans: () => request<{ plans: ServicePlanTemplate[] }>("/api/admin/contract-plans"),
+  createContractPlan: (payload: ContractDraft) =>
+    request<{ plan: ServicePlanTemplate }>("/api/admin/contract-plans", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  createContract: (payload: ContractDraft) =>
+    request<{ contract: ServiceContract }>("/api/admin/contracts", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateContract: (contractId: string, payload: ContractDraft) =>
+    request<{ contract: ServiceContract }>(
+      `/api/admin/contracts/${encodeURIComponent(contractId)}`,
+      { method: "PUT", body: JSON.stringify(payload) },
+    ),
+  issueContract: (contractId: string, providerConsent: boolean) =>
+    request<{ contract: ServiceContract }>(
+      `/api/admin/contracts/${encodeURIComponent(contractId)}/issue`,
+      { method: "POST", body: JSON.stringify({ providerConsent }) },
+    ),
+  previewContract: (contractId: string) =>
+    request<ContractPreview>(`/api/admin/contracts/${encodeURIComponent(contractId)}/preview`),
+  createContractAmendment: (contractId: string) =>
+    request<{ contract: ServiceContract }>(
+      `/api/admin/contracts/${encodeURIComponent(contractId)}/amendments`,
+      { method: "POST", body: "{}" },
+    ),
+  voidContract: (contractId: string) =>
+    request<{ contract: ServiceContract }>(
+      `/api/admin/contracts/${encodeURIComponent(contractId)}/void`,
+      { method: "POST", body: "{}" },
+    ),
+  publicContract: (token: string, accessCode: string) =>
+    request<PublicContract>(
+      `/api/contracts/status?token=${encodeURIComponent(token)}&code=${encodeURIComponent(accessCode)}`,
+    ),
+  acceptContract: (payload: ContractAcceptance) =>
+    request<PublicContract>("/api/contracts/accept", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
   clients: () => request<{ clients: ClientSummary[] }>("/api/admin/clients"),
   passwordResetRequests: () =>
     request<{ requests: PasswordResetRequest[] }>("/api/admin/password-resets"),
@@ -558,6 +601,105 @@ export type ClientSummary = {
   joinPath: string;
   loyaltyMode: LoyaltyMode;
   pointsPerDollar: number;
+};
+
+export type ContractBillingInterval = "monthly" | "yearly";
+export type ContractStatus = "draft" | "sent" | "accepted" | "void";
+
+export type ContractDraft = {
+  linkedBusinessId: string | null;
+  planTemplateId: string | null;
+  providerLegalName: string;
+  providerAddress: string;
+  providerEmail: string;
+  providerSignerName: string;
+  providerSignerTitle: string;
+  clientLegalName: string;
+  clientAddress: string;
+  clientSignerName: string;
+  clientSignerTitle: string;
+  clientEmail: string;
+  planName: string;
+  billingInterval: ContractBillingInterval;
+  billingAmountCents: number;
+  termMonths: number;
+  nfcCardQuantity: number;
+  includedServices: string;
+  paymentTerms: string;
+  upgradeTerms: string;
+  terminationTerms: string;
+  additionalTerms: string;
+  autoRenews: boolean;
+  governingLaw: string;
+  venue: string;
+  effectiveDate: string | null;
+};
+
+export type ServiceContract = ContractDraft & {
+  id: string;
+  contractNumber: string;
+  agreementType: "initial" | "amendment" | "renewal";
+  parentContractId: string | null;
+  planTemplateVersion: number | null;
+  status: ContractStatus;
+  providerSignedAt: string | null;
+  agreementText: string | null;
+  agreementSha256: string | null;
+  acceptancePath: string | null;
+  accessCode: string | null;
+  acceptanceExpiresAt: string | null;
+  sentAt: string | null;
+  acceptedAt: string | null;
+  acceptedSignatureName: string | null;
+  acceptedSignatureTitle: string | null;
+  acceptedEmail: string | null;
+  electronicConsent: boolean;
+  voidedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ServicePlanTemplate = Pick<
+  ContractDraft,
+  | "planName"
+  | "billingInterval"
+  | "billingAmountCents"
+  | "termMonths"
+  | "nfcCardQuantity"
+  | "includedServices"
+  | "paymentTerms"
+  | "upgradeTerms"
+  | "terminationTerms"
+  | "autoRenews"
+> & { id: string; version: number; active: boolean; createdAt: string; updatedAt: string };
+
+export type PublicContract = {
+  contractNumber: string;
+  providerLegalName: string;
+  providerSignerName: string;
+  providerSignerTitle: string;
+  providerSignedAt: string;
+  clientLegalName: string;
+  agreementText: string;
+  agreementSha256: string;
+  acceptanceExpiresAt: string;
+  status: "sent" | "accepted";
+  acceptedSignatureName: string | null;
+  acceptedSignatureTitle: string | null;
+  acceptedAt: string | null;
+};
+
+export type ContractPreview = Pick<
+  PublicContract,
+  "contractNumber" | "providerLegalName" | "clientLegalName" | "agreementText" | "agreementSha256"
+>;
+
+export type ContractAcceptance = {
+  token: string;
+  accessCode: string;
+  signatureName: string;
+  signatureTitle: string;
+  electronicConsent: boolean;
 };
 
 export type PasswordResetRequest = {

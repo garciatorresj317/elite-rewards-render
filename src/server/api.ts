@@ -99,6 +99,22 @@ import {
   resetDashboardAppearance,
   updateDashboardAppearance,
 } from "./dashboard-appearance-service.ts";
+import {
+  acceptContract,
+  contractBillingIntervals,
+  createAmendment,
+  createContract,
+  createPlanTemplate,
+  defaultContractInput,
+  getPublicContract,
+  issueContract,
+  listContracts,
+  listPlanTemplates,
+  previewContract,
+  updateContract,
+  voidContract,
+  type ContractInput,
+} from "./contracts-service.ts";
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -282,6 +298,71 @@ function optionalHttpsUrl(value: unknown, name: string): string | null {
   return parsed.toString();
 }
 
+function optionalText(value: unknown, name: string, max: number): string {
+  return text(value ?? "", name, 0, max);
+}
+
+function nullableText(value: unknown, name: string, min: number, max: number): string | null {
+  if (value === null || value === undefined || value === "") return null;
+  return text(value, name, min, max);
+}
+
+function contractInput(payload: Record<string, unknown>): ContractInput {
+  const defaults = defaultContractInput();
+  return {
+    linkedBusinessId: nullableText(payload["linkedBusinessId"], "Linked client", 8, 120),
+    planTemplateId: nullableText(payload["planTemplateId"], "Plan template", 8, 120),
+    providerLegalName: optionalText(payload["providerLegalName"], "Provider legal name", 160),
+    providerAddress: optionalText(payload["providerAddress"], "Provider address", 500),
+    providerEmail: optionalText(payload["providerEmail"], "Provider email", 254).toLowerCase(),
+    providerSignerName: optionalText(payload["providerSignerName"], "Provider signer name", 120),
+    providerSignerTitle: optionalText(payload["providerSignerTitle"], "Provider signer title", 120),
+    clientLegalName: optionalText(payload["clientLegalName"], "Client legal name", 160),
+    clientAddress: optionalText(payload["clientAddress"], "Client address", 500),
+    clientSignerName: optionalText(payload["clientSignerName"], "Client signer name", 120),
+    clientSignerTitle: optionalText(payload["clientSignerTitle"], "Client signer title", 120),
+    clientEmail: optionalText(payload["clientEmail"], "Client email", 254).toLowerCase(),
+    planName: text(payload["planName"] ?? defaults.planName, "Plan name", 2, 120),
+    billingInterval: enumValue(
+      payload["billingInterval"] ?? defaults.billingInterval,
+      "Billing interval",
+      contractBillingIntervals,
+    ),
+    billingAmountCents: integer(
+      payload["billingAmountCents"] ?? defaults.billingAmountCents,
+      "Billing amount",
+      0,
+      100_000_000,
+    ),
+    termMonths: integer(payload["termMonths"] ?? defaults.termMonths, "Term", 1, 120),
+    nfcCardQuantity: integer(
+      payload["nfcCardQuantity"] ?? defaults.nfcCardQuantity,
+      "NFC card quantity",
+      0,
+      10_000,
+    ),
+    includedServices: text(
+      payload["includedServices"] ?? defaults.includedServices,
+      "Included services",
+      1,
+      5_000,
+    ),
+    paymentTerms: text(payload["paymentTerms"] ?? defaults.paymentTerms, "Payment terms", 1, 3_000),
+    upgradeTerms: text(payload["upgradeTerms"] ?? defaults.upgradeTerms, "Upgrade terms", 1, 3_000),
+    terminationTerms: text(
+      payload["terminationTerms"] ?? defaults.terminationTerms,
+      "Termination terms",
+      1,
+      5_000,
+    ),
+    additionalTerms: optionalText(payload["additionalTerms"], "Additional terms", 8_000),
+    autoRenews: booleanValue(payload["autoRenews"], "Automatic renewal", defaults.autoRenews),
+    governingLaw: optionalText(payload["governingLaw"], "Governing law", 100),
+    venue: optionalText(payload["venue"], "Venue", 200),
+    effectiveDate: nullableText(payload["effectiveDate"], "Effective date", 10, 10),
+  };
+}
+
 export function productInput(payload: Record<string, unknown>) {
   if (typeof payload["active"] !== "boolean")
     throw Object.assign(new Error("Active status is required"), { status: 400 });
@@ -458,6 +539,29 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
       await destroySession(request);
       return json({ ok: true }, 200, { "set-cookie": clearSessionCookie() });
     }
+    if (url.pathname === "/api/contracts/status" && request.method === "GET") {
+      const token = text(url.searchParams.get("token"), "Contract token", 32, 200);
+      const accessCode = text(url.searchParams.get("code"), "Access code", 8, 8);
+      return json(await getPublicContract(token, accessCode));
+    }
+    if (url.pathname === "/api/contracts/accept" && request.method === "POST") {
+      const payload = await body(request);
+      return json(
+        await acceptContract(
+          text(payload["token"], "Contract token", 32, 200),
+          text(payload["accessCode"], "Access code", 8, 8),
+          {
+            signatureName: text(payload["signatureName"], "Signature name", 2, 120),
+            signatureTitle: text(payload["signatureTitle"], "Signature title", 2, 120),
+            electronicConsent: payload["electronicConsent"] === true,
+          },
+          {
+            ip: requestSubject(request).slice(0, 100),
+            userAgent: (request.headers.get("user-agent") ?? "unavailable").slice(0, 1000),
+          },
+        ),
+      );
+    }
     if (url.pathname === "/api/client-invitations/status" && request.method === "GET") {
       const token = text(url.searchParams.get("token"), "Invitation token", 32, 200);
       return json(await getClientInvitation(token));
@@ -603,6 +707,75 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
     if (url.pathname === "/api/admin/dashboard-appearance" && request.method === "DELETE") {
       requirePlatformAdmin(user);
       return json(await resetDashboardAppearance(user));
+    }
+    if (url.pathname === "/api/admin/contracts" && request.method === "GET") {
+      requirePlatformAdmin(user);
+      return json({ contracts: await listContracts(user) });
+    }
+    if (url.pathname === "/api/admin/contract-plans" && request.method === "GET") {
+      requirePlatformAdmin(user);
+      return json({ plans: await listPlanTemplates(user) });
+    }
+    if (url.pathname === "/api/admin/contract-plans" && request.method === "POST") {
+      requirePlatformAdmin(user);
+      return json(
+        { plan: await createPlanTemplate(user, contractInput(await body(request))) },
+        201,
+      );
+    }
+    if (url.pathname === "/api/admin/contracts" && request.method === "POST") {
+      requirePlatformAdmin(user);
+      return json(
+        { contract: await createContract(user, contractInput(await body(request))) },
+        201,
+      );
+    }
+    const contractMatch = url.pathname.match(/^\/api\/admin\/contracts\/([^/]+)$/);
+    if (contractMatch && request.method === "PUT") {
+      requirePlatformAdmin(user);
+      const contractId = text(decodeURIComponent(contractMatch[1] ?? ""), "Contract", 8, 120);
+      return json({
+        contract: await updateContract(user, contractId, contractInput(await body(request))),
+      });
+    }
+    const contractIssueMatch = url.pathname.match(/^\/api\/admin\/contracts\/([^/]+)\/issue$/);
+    if (contractIssueMatch && request.method === "POST") {
+      requirePlatformAdmin(user);
+      const contractId = text(decodeURIComponent(contractIssueMatch[1] ?? ""), "Contract", 8, 120);
+      const payload = await body(request);
+      return json({
+        contract: await issueContract(user, contractId, payload["providerConsent"] === true),
+      });
+    }
+    const contractPreviewMatch = url.pathname.match(/^\/api\/admin\/contracts\/([^/]+)\/preview$/);
+    if (contractPreviewMatch && request.method === "GET") {
+      requirePlatformAdmin(user);
+      const contractId = text(
+        decodeURIComponent(contractPreviewMatch[1] ?? ""),
+        "Contract",
+        8,
+        120,
+      );
+      return json(await previewContract(user, contractId));
+    }
+    const contractAmendmentMatch = url.pathname.match(
+      /^\/api\/admin\/contracts\/([^/]+)\/amendments$/,
+    );
+    if (contractAmendmentMatch && request.method === "POST") {
+      requirePlatformAdmin(user);
+      const contractId = text(
+        decodeURIComponent(contractAmendmentMatch[1] ?? ""),
+        "Contract",
+        8,
+        120,
+      );
+      return json({ contract: await createAmendment(user, contractId) }, 201);
+    }
+    const contractVoidMatch = url.pathname.match(/^\/api\/admin\/contracts\/([^/]+)\/void$/);
+    if (contractVoidMatch && request.method === "POST") {
+      requirePlatformAdmin(user);
+      const contractId = text(decodeURIComponent(contractVoidMatch[1] ?? ""), "Contract", 8, 120);
+      return json({ contract: await voidContract(user, contractId) });
     }
     if (url.pathname === "/api/visual-settings" && request.method === "GET") {
       requireRole(user, ["owner", "staff", "member"]);

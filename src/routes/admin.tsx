@@ -6,6 +6,7 @@ import {
   CircleDollarSign,
   Copy,
   ExternalLink,
+  FileSignature,
   Gift,
   LayoutDashboard,
   LogOut,
@@ -33,6 +34,7 @@ import { CSSProperties, FormEvent, useCallback, useEffect, useMemo, useRef, useS
 import { BrandMark } from "@/components/BrandMark";
 import { BusinessBrand } from "@/components/BusinessBrand";
 import { ExperienceBackdrop } from "@/components/ExperienceTheme";
+import { ContractWorkspace } from "@/components/ContractWorkspace";
 import { useI18n } from "@/i18n";
 import { experienceStyle } from "@/lib/experience-style";
 import { themeCatalog } from "@/lib/theme-catalog";
@@ -81,6 +83,13 @@ const sections = [
     en: "Elite Dashboard",
     es: "Panel Elite",
     icon: Sparkles,
+    platformOnly: true,
+  },
+  {
+    id: "Contracts",
+    en: "Contracts",
+    es: "Contratos",
+    icon: FileSignature,
     platformOnly: true,
   },
   {
@@ -1956,6 +1965,20 @@ function Admin() {
                   </button>
                 )}
                 {user.platformAdmin && (
+                  <button type="button" onClick={() => setActive("Contracts")}>
+                    <FileSignature />
+                    <span>
+                      <strong>{tr("Create client contracts", "Crear contratos")}</strong>
+                      <small>
+                        {tr(
+                          "Adjust plans, issue agreements, and track acceptance",
+                          "Ajusta planes, emite acuerdos y registra aceptación",
+                        )}
+                      </small>
+                    </span>
+                  </button>
+                )}
+                {user.platformAdmin && (
                   <button type="button" onClick={() => setActive("Customization")}>
                     <Palette />
                     <span>
@@ -2000,6 +2023,9 @@ function Admin() {
                 </span>
               </section>
             </>
+          )}
+          {active === "Contracts" && user.platformAdmin && (
+            <ContractWorkspace clients={clients} tr={tr} />
           )}
           {active === "Clients" && user.platformAdmin && (
             <section className="panel client-panel">

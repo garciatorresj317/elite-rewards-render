@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ActivateClientRouteImport } from './routes/activate-client'
 import { Route as ActivateMemberRouteImport } from './routes/activate-member'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as ContractRouteImport } from './routes/contract'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as LoginRouteImport } from './routes/login'
@@ -39,6 +40,11 @@ const ActivateMemberRoute = ActivateMemberRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContractRoute = ContractRouteImport.update({
+  id: '/contract',
+  path: '/contract',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/activate-client': typeof ActivateClientRoute
   '/activate-member': typeof ActivateMemberRoute
   '/admin': typeof AdminRoute
+  '/contract': typeof ContractRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
@@ -95,6 +102,7 @@ export interface FileRoutesByTo {
   '/activate-client': typeof ActivateClientRoute
   '/activate-member': typeof ActivateMemberRoute
   '/admin': typeof AdminRoute
+  '/contract': typeof ContractRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
@@ -109,6 +117,7 @@ export interface FileRoutesById {
   '/activate-client': typeof ActivateClientRoute
   '/activate-member': typeof ActivateMemberRoute
   '/admin': typeof AdminRoute
+  '/contract': typeof ContractRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
@@ -124,6 +133,7 @@ export interface FileRouteTypes {
     | '/activate-client'
     | '/activate-member'
     | '/admin'
+    | '/contract'
     | '/forgot-password'
     | '/join'
     | '/login'
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/activate-client'
     | '/activate-member'
     | '/admin'
+    | '/contract'
     | '/forgot-password'
     | '/join'
     | '/login'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/activate-client'
     | '/activate-member'
     | '/admin'
+    | '/contract'
     | '/forgot-password'
     | '/join'
     | '/login'
@@ -164,6 +176,7 @@ export interface RootRouteChildren {
   ActivateClientRoute: typeof ActivateClientRoute
   ActivateMemberRoute: typeof ActivateMemberRoute
   AdminRoute: typeof AdminRoute
+  ContractRoute: typeof ContractRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   JoinRoute: typeof JoinRoute
   LoginRoute: typeof LoginRoute
@@ -201,6 +214,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contract': {
+      id: '/contract'
+      path: '/contract'
+      fullPath: '/contract'
+      preLoaderRoute: typeof ContractRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -260,6 +280,7 @@ const rootRouteChildren: RootRouteChildren = {
   ActivateClientRoute: ActivateClientRoute,
   ActivateMemberRoute: ActivateMemberRoute,
   AdminRoute: AdminRoute,
+  ContractRoute: ContractRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   JoinRoute: JoinRoute,
   LoginRoute: LoginRoute,
