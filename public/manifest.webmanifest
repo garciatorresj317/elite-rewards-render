@@ -3,7 +3,7 @@
   "name": "Elite Rewards",
   "short_name": "Elite Rewards",
   "description": "A modern rewards program for growing businesses.",
-  "start_url": "/",
+  "start_url": "/admin",
   "scope": "/",
   "display": "standalone",
   "background_color": "#020713",

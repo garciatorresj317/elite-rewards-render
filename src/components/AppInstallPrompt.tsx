@@ -2,21 +2,13 @@ import { Download, MoreVertical, Share, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useI18n } from "@/i18n";
+import { isStandaloneDisplay } from "@/lib/pwa";
 
 type InstallChoice = { outcome: "accepted" | "dismissed"; platform: string };
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<InstallChoice>;
-}
-
-function isStandalone() {
-  if (typeof window === "undefined") return false;
-  const navigatorWithStandalone = window.navigator as Navigator & { standalone?: boolean };
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    navigatorWithStandalone.standalone === true
-  );
 }
 
 function isAppleMobileDevice() {
@@ -40,7 +32,7 @@ export function AppInstallPrompt() {
   const [appleMobile, setAppleMobile] = useState(false);
 
   useEffect(() => {
-    setInstalled(isStandalone());
+    setInstalled(isStandaloneDisplay());
     setAppleMobile(isAppleMobileDevice());
     setReady(true);
 
@@ -152,7 +144,7 @@ export function AppInstallPrompt() {
               <h2 id={titleId}>{t("Add Elite Rewards to your home screen")}</h2>
               <p>
                 {t(
-                  "Open Elite Rewards like an app with the official Elite Rewards logo on your phone or tablet.",
+                  "Open the Elite Rewards Dashboard like an app with the official Elite Rewards logo on your phone or tablet.",
                 )}
               </p>
               <ol className="app-install-steps">

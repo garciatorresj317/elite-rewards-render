@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight,
   BarChart3,
@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
 import { useI18n } from "@/i18n";
+import { isStandaloneDisplay } from "@/lib/pwa";
+import { useEffect } from "react";
 
 const title = "Elite Rewards | Loyalty that feels personal";
 const description =
@@ -33,7 +35,13 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
+  const navigate = useNavigate();
   const { t, formatNumber, formatDateTime } = useI18n();
+  useEffect(() => {
+    if (isStandaloneDisplay()) {
+      void navigate({ to: "/admin", replace: true });
+    }
+  }, [navigate]);
   const howItWorks = [
     {
       icon: QrCode,

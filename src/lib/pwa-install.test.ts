@@ -16,7 +16,7 @@ describe("Elite Rewards home-screen installation", () => {
     const manifest = JSON.parse(await read("public", "manifest.webmanifest"));
     assert.equal(manifest.name, "Elite Rewards");
     assert.equal(manifest.short_name, "Elite Rewards");
-    assert.equal(manifest.start_url, "/");
+    assert.equal(manifest.start_url, "/admin");
     assert.equal(manifest.scope, "/");
     assert.equal(manifest.display, "standalone");
     assert.equal(manifest.theme_color, "#020713");
@@ -55,9 +55,11 @@ describe("Elite Rewards home-screen installation", () => {
   });
 
   it("links install metadata and exposes an accessible localized install experience", async () => {
-    const [rootRoute, component, translations, styles, worker] = await Promise.all([
+    const [rootRoute, homeRoute, component, pwa, translations, styles, worker] = await Promise.all([
       read("src", "routes", "__root.tsx"),
+      read("src", "routes", "index.tsx"),
       read("src", "components", "AppInstallPrompt.tsx"),
+      read("src", "lib", "pwa.ts"),
       read("src", "i18n", "index.tsx"),
       read("src", "styles.css"),
       read("public", "sw.js"),
@@ -69,13 +71,19 @@ describe("Elite Rewards home-screen installation", () => {
     assert.match(rootRoute, /<AppInstallPrompt\s*\/>/);
     assert.match(component, /beforeinstallprompt/);
     assert.match(component, /appinstalled/);
+    assert.match(component, /isStandaloneDisplay\(\)/);
     assert.match(component, /navigator\.serviceWorker\.register\("\/sw\.js"/);
     assert.match(component, /role="dialog"/);
     assert.match(component, /aria-modal="true"/);
     assert.match(component, /event\.key === "Escape"/);
     assert.match(component, /Choose Add to Home Screen, then tap Add/);
+    assert.match(component, /Open the Elite Rewards Dashboard like an app/);
     assert.match(component, /navigator\.platform === "MacIntel"/);
     assert.match(component, /navigator\.maxTouchPoints > 1/);
+    assert.match(pwa, /display-mode: standalone/);
+    assert.match(pwa, /navigatorWithStandalone\.standalone === true/);
+    assert.match(homeRoute, /isStandaloneDisplay\(\)/);
+    assert.match(homeRoute, /navigate\(\{ to: "\/admin", replace: true \}\)/);
     assert.match(translations, /Agregar Elite Rewards a la pantalla de inicio/);
     assert.match(styles, /\.app-install-button/);
     assert.match(styles, /\.app-install-dialog/);

@@ -56,8 +56,8 @@ const es: Record<string, Translation> = {
   "Add Elite Rewards to home screen": "Agregar Elite Rewards a la pantalla de inicio",
   "Elite Rewards app": "Aplicación Elite Rewards",
   "Add Elite Rewards to your home screen": "Agrega Elite Rewards a tu pantalla de inicio",
-  "Open Elite Rewards like an app with the official Elite Rewards logo on your phone or tablet.":
-    "Abre Elite Rewards como una aplicación con el logotipo oficial de Elite Rewards en tu teléfono o tableta.",
+  "Open the Elite Rewards Dashboard like an app with the official Elite Rewards logo on your phone or tablet.":
+    "Abre el Panel de Elite Rewards como una aplicación con el logotipo oficial de Elite Rewards en tu teléfono o tableta.",
   "In Safari, tap the Share button.": "En Safari, toca el botón Compartir.",
   "Choose Add to Home Screen, then tap Add.":
     "Elige Agregar a la pantalla de inicio y luego toca Agregar.",
