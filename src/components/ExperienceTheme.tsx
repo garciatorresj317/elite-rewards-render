@@ -12,14 +12,11 @@ export function ExperienceBackdrop({
   const { t } = useI18n();
   if (!settings) return null;
   const theme = themeCatalog.find((item) => item.key === settings.themeKey) ?? themeCatalog[0]!;
-  const backgroundImage =
-    settings.automaticThemeActive && theme.liveImage ? theme.liveImage : theme.image;
-  const live = settings.automaticThemeActive || theme.live === true;
   return (
     <>
       <div
-        className={`experience-wallpaper experience-${audience} ${live ? "is-live-theme" : ""} ${settings.automaticThemeActive ? "is-automatic-live-theme" : ""}`}
-        style={{ backgroundImage: `url(${backgroundImage})` }}
+        className={`experience-wallpaper experience-${audience} is-live-theme ${settings.automaticThemeActive ? "is-automatic-live-theme" : ""}`}
+        style={{ backgroundImage: `url(${theme.image})` }}
         aria-hidden="true"
       >
         <span className="experience-light-sweep" />

@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { createSession, hashPassword, newUserId, type SessionUser } from "./auth.ts";
 import { getPool, id } from "./database.ts";
-import { HIGH_RES_IMAGE_VERSION, normalizeUploadedImage } from "./image-processing.ts";
+import { HIGH_RES_IMAGE_VERSION, normalizeUploadedLogo } from "./image-processing.ts";
 import { CLIENT_LOGO_MAX_BYTES, CLIENT_LOGO_MAX_MEGABYTES } from "../lib/upload-limits.ts";
 import {
   clientLogoPath,
@@ -551,7 +551,7 @@ export async function updateClientLogo(
     throw Object.assign(new Error("Logo file content does not match its image type"), {
       status: 400,
     });
-  const processed = await normalizeUploadedImage(input, CLIENT_LOGO_MAX_BYTES, "Logo");
+  const processed = await normalizeUploadedLogo(input, CLIENT_LOGO_MAX_BYTES);
   const palette = await deriveLogoPalette(processed.data);
   const client = await getPool().connect();
   try {

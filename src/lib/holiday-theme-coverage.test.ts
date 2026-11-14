@@ -25,11 +25,16 @@ describe("Holiday live-theme surface coverage", () => {
     assert.match(join, /businessContext\?\.visualSettings/);
   });
 
-  it("uses separate high-resolution live artwork for every automatic holiday", async () => {
-    const catalog = await read("src/lib/theme-catalog.ts");
+  it("uses the same optimized 4K live artwork for manual and automatic holidays", async () => {
+    const [catalog, backdrop] = await Promise.all([
+      read("src/lib/theme-catalog.ts"),
+      read("src/components/ExperienceTheme.tsx"),
+    ]);
     for (const key of ["mlk-day", "remembrance-911", "winter-holiday", "spring-celebration"]) {
-      assert.match(catalog, new RegExp(`${key}-live\\.jpg`));
+      assert.match(catalog, new RegExp(`${key}-live\\.webp`));
     }
+    assert.match(backdrop, /backgroundImage: `url\(\$\{theme\.image\}\)`/);
+    assert.doesNotMatch(backdrop, /liveImage/);
   });
 
   it("keeps automatic controls exclusively in authenticated Elite client management", async () => {

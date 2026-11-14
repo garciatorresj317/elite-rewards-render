@@ -809,6 +809,14 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
   background: linear-gradient(110deg, rgba(0,0,0,.84), rgba(0,0,0,.48) 48%, rgba(0,0,0,.78));
 }
 .experience-wallpaper.is-live-theme { opacity: .5; filter: saturate(1.08) contrast(1.08); }
+.experience-wallpaper.is-live-theme::before {
+  content: ""; position: absolute; inset: -18%; z-index: 1;
+  background:
+    radial-gradient(circle at 24% 34%, rgba(20,230,255,.15), transparent 24%),
+    radial-gradient(circle at 76% 62%, rgba(246,185,0,.14), transparent 28%);
+  mix-blend-mode: screen; filter: blur(18px);
+  animation: live-color-drift 19s ease-in-out infinite alternate;
+}
 .experience-wallpaper.is-automatic-live-theme { opacity: .56; filter: saturate(1.08) contrast(1.08); }
 .experience-wallpaper.is-automatic-live-theme::before {
   content: ""; position: absolute; inset: 0; z-index: 1;
@@ -839,6 +847,7 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
   0% { transform: scale(1.015) translate3d(-.35%, -.2%, 0); }
   100% { transform: scale(1.065) translate3d(.35%, .35%, 0); }
 }
+@keyframes live-color-drift { from { transform: translate3d(-3%,2%,0) rotate(-2deg) scale(.98); opacity: .52; } to { transform: translate3d(3%,-2%,0) rotate(2deg) scale(1.06); opacity: .9; } }
 @keyframes holiday-light-sweep { 0%,18% { transform: translateX(-30%); opacity: 0; } 48% { opacity: .8; } 82%,100% { transform: translateX(26%); opacity: 0; } }
 @keyframes holiday-atmosphere { from { transform: translate3d(-2%,1%,0) scale(.96); opacity: .42; } to { transform: translate3d(2%,-1%,0) scale(1.08); opacity: .82; } }
 @keyframes holiday-particles { from { transform: translate3d(0,0,0); } to { transform: translate3d(2%,-5%,0); } }
@@ -1068,6 +1077,9 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 .client-appearance-manager > label:not(.automatic-theme-toggle) { display: grid; gap: 7px; color: var(--gold-pale); font-weight: 750; font-size: 11px; }
 .client-appearance-manager select { min-height: 45px; padding: 0 12px; border: 1px solid var(--gold-faint); border-radius: 9px; color: white; background: #030303; }
 .customization-editor-section { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; padding: 20px; border: 1px solid rgba(0,190,255,.25); border-radius: 14px; background: rgba(2,10,22,.72); }
+.customization-logo-section { grid-template-columns: minmax(0,1fr) minmax(260px,.8fr); align-items: center; }
+.customization-logo-section .customization-section-heading { grid-column: auto; }
+.customization-logo-upload { min-height: 118px; align-content: center; }
 .customization-section-heading, .customization-full-field { grid-column: 1 / -1; }
 .customization-section-heading h3 { margin: 5px 0; color: var(--gold-pale); font: 700 20px var(--serif); }
 .customization-section-heading p { margin: 0; color: var(--muted); }
@@ -1159,6 +1171,7 @@ td.redeemed { color: var(--gold-bright); font-weight: 800; }
 
 @media (max-width: 760px) {
   .customization-editor-section, .customization-color-section, .customization-style-section, .customization-live-section { grid-template-columns: 1fr; padding: 16px; }
+  .customization-logo-section .customization-section-heading { grid-column: auto; }
   .customization-section-heading, .customization-full-field { grid-column: auto; }
   .customization-visibility-section { display: grid; }
   .customization-start-guide ol { grid-template-columns: 1fr; }
@@ -2011,6 +2024,8 @@ td { border-color: rgba(0, 184, 255, .12); }
   .client-public-page::before, .hero-visual::before, .points-orb::before {
     animation: none !important;
   }
+  .experience-wallpaper, .experience-wallpaper::before,
+  .experience-light-sweep, .experience-atmosphere, .experience-particles { animation: none !important; }
 }
 
 .client-logo-upload:focus-within {
@@ -2025,6 +2040,8 @@ td { border-color: rgba(0, 184, 255, .12); }
   .client-public-page::before, .hero-visual::before, .points-orb::before {
     animation: none !important;
   }
+  .experience-wallpaper, .experience-wallpaper::before,
+  .experience-light-sweep, .experience-atmosphere, .experience-particles { animation: none !important; }
   .marketing-shell::after, .wallet-page::after, .error-screen::after,
   .auth-page::after, .status-screen::after, .client-public-page::after {
     display: none;

@@ -6,6 +6,20 @@ import { describe, it } from "node:test";
 const source = (...parts: string[]) => readFile(join(process.cwd(), "src", ...parts), "utf8");
 
 describe("user-friendly experience regression coverage", () => {
+  it("makes every customer theme live motion and stops it for reduced-motion users", async () => {
+    const [backdrop, styles] = await Promise.all([
+      source("components", "ExperienceTheme.tsx"),
+      source("styles.css"),
+    ]);
+    assert.match(backdrop, /experience-wallpaper experience-\$\{audience\} is-live-theme/);
+    assert.match(styles, /@keyframes live-wallpaper/);
+    assert.match(styles, /@keyframes live-color-drift/);
+    assert.match(
+      styles,
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.experience-wallpaper[\s\S]*animation: none !important/,
+    );
+  });
+
   it("keeps member routing intent and adds recoverable wallet states", async () => {
     const wallet = await source("routes", "wallet.tsx");
     assert.match(wallet, /navigate\(\{ to: "\/login", search: \{ access: "member" \} \}\)/);

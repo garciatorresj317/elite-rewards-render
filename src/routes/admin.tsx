@@ -847,7 +847,8 @@ function Admin() {
     }
   };
   const uploadClientLogo = async (file: File) => {
-    if (!clientEditor) return;
+    const logoClient = clientEditor ?? appearanceClient;
+    if (!logoClient) return;
     setError("");
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
       setError(tr("Choose a PNG, JPEG, or WebP logo.", "Elige un logotipo PNG, JPEG o WebP."));
@@ -864,7 +865,7 @@ function Admin() {
     }
     try {
       setLogoUploading(true);
-      const result = await api.uploadClientLogo(clientEditor.id, file);
+      const result = await api.uploadClientLogo(logoClient.id, file);
       setClientBranding((current) => ({
         ...current,
         logoUrl: result.branding.logoUrl,
@@ -873,7 +874,7 @@ function Admin() {
       }));
       setClients((current) =>
         current.map((client) =>
-          client.id === clientEditor.id
+          client.id === logoClient.id
             ? {
                 ...client,
                 logoUrl: result.branding.logoUrl,
@@ -883,8 +884,8 @@ function Admin() {
             : client,
         ),
       );
-      if (appearanceClient?.id === clientEditor.id) {
-        const saved = await api.clientVisualSettings(clientEditor.id);
+      if (appearanceClient?.id === logoClient.id) {
+        const saved = await api.clientVisualSettings(logoClient.id);
         const draft = visualDraftFromSettings(saved);
         setClientVisualSettings(saved);
         setClientVisualDraft(draft);
@@ -892,8 +893,8 @@ function Admin() {
       }
       setNotice(
         tr(
-          `${clientEditor.name} logo was enhanced and its rewards pages now automatically match the logo colors.`,
-          `El logotipo de ${clientEditor.name} se mejoró y sus páginas de recompensas ahora combinan automáticamente con sus colores.`,
+          `${logoClient.name} logo was enhanced and its rewards pages now automatically match the logo colors.`,
+          `El logotipo de ${logoClient.name} se mejoró y sus páginas de recompensas ahora combinan automáticamente con sus colores.`,
         ),
       );
     } catch (cause) {
@@ -3243,6 +3244,44 @@ function Admin() {
                         </span>
                       </label>
                     ))}
+                  </div>
+                  <div className="customization-editor-section customization-logo-section">
+                    <div className="customization-section-heading">
+                      <span className="section-kicker">
+                        {tr("Business identity", "Identidad del negocio")}
+                      </span>
+                      <h3>{tr("Business logo", "Logotipo del negocio")}</h3>
+                      <p>
+                        {tr(
+                          "Choose a logo file here. Elite Rewards enhances it to high resolution and automatically matches the rewards-page colors to the logo.",
+                          "Elige aquí un archivo de logotipo. Elite Rewards lo mejora a alta resolución y combina automáticamente los colores de las páginas con el logotipo.",
+                        )}
+                      </p>
+                    </div>
+                    <label className="client-logo-upload customization-logo-upload">
+                      <span>
+                        <Upload size={18} />{" "}
+                        {tr("Choose logo from files", "Elegir logotipo de los archivos")}
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        disabled={logoUploading}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) void uploadClientLogo(file);
+                          event.target.value = "";
+                        }}
+                      />
+                      <small>
+                        {logoUploading
+                          ? tr("Uploading logo…", "Cargando logotipo…")
+                          : tr(
+                              `PNG, JPEG, or WebP · maximum ${CLIENT_LOGO_MAX_MEGABYTES} MB · automatically enhanced to high resolution`,
+                              `PNG, JPEG o WebP · máximo ${CLIENT_LOGO_MAX_MEGABYTES} MB · mejorado automáticamente a alta resolución`,
+                            )}
+                      </small>
+                    </label>
                   </div>
                   <div id="customize-voice" className="customization-editor-section">
                     <div className="customization-section-heading">

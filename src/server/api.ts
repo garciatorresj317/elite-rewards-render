@@ -135,10 +135,26 @@ async function imageUpload(
   const contentLength = Number(request.headers.get("content-length") ?? 0);
   if (contentLength > maxBytes)
     throw Object.assign(new Error(`${label} is too large`), { status: 413 });
-  const data = Buffer.from(await request.arrayBuffer());
-  if (!data.length || data.length > maxBytes)
-    throw Object.assign(new Error(`${label} is too large`), { status: 413 });
-  return { mime, data };
+  if (!request.body) throw Object.assign(new Error(`${label} is too large`), { status: 413 });
+  const reader = request.body.getReader();
+  const chunks: Buffer[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        await reader.cancel(`${label} exceeded the upload limit`);
+        throw Object.assign(new Error(`${label} is too large`), { status: 413 });
+      }
+      chunks.push(Buffer.from(value));
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  if (!totalBytes) throw Object.assign(new Error(`${label} is too large`), { status: 413 });
+  return { mime, data: Buffer.concat(chunks, totalBytes) };
 }
 
 function productBackground(url: URL) {

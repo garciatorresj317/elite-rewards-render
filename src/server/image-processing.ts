@@ -27,6 +27,7 @@ export type ProcessedRasterImage = {
 };
 
 const MAX_INPUT_PIXELS = 50_000_000;
+const MAX_LOGO_INPUT_PIXELS = 32_000_000;
 const MAX_BACKGROUND_EDIT_PIXELS = 12_000_000;
 const WEBP_QUALITIES = [92, 86, 80, 74] as const;
 const BACKGROUND_COLOR_DISTANCE = 72;
@@ -149,11 +150,12 @@ export async function normalizeUploadedImage(
   maxOutputBytes: number,
   label: string,
   background: ImageBackgroundOptions = { mode: "original" },
+  maxInputPixels = MAX_INPUT_PIXELS,
 ): Promise<ProcessedRasterImage> {
   try {
     const oriented = sharp(input.data, {
       failOn: "error",
-      limitInputPixels: MAX_INPUT_PIXELS,
+      limitInputPixels: maxInputPixels,
       sequentialRead: true,
     }).rotate();
     const metadata = await oriented.metadata();
@@ -225,4 +227,17 @@ export async function normalizeUploadedImage(
       cause: error,
     });
   }
+}
+
+export async function normalizeUploadedLogo(
+  input: UploadedRasterImage,
+  maxOutputBytes: number,
+): Promise<ProcessedRasterImage> {
+  return normalizeUploadedImage(
+    input,
+    maxOutputBytes,
+    "Logo",
+    { mode: "original" },
+    MAX_LOGO_INPUT_PIXELS,
+  );
 }

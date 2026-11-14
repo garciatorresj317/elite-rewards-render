@@ -131,6 +131,9 @@ describe("platform client management", () => {
       await readFile(join(process.cwd(), "migrations", "012_client_logo_10mb.sql"), "utf8"),
     );
     await pool.query(
+      await readFile(join(process.cwd(), "migrations", "027_client_logo_25mb.sql"), "utf8"),
+    );
+    await pool.query(
       (
         await readFile(
           join(process.cwd(), "migrations", "019_high_resolution_uploaded_images.sql"),
@@ -369,15 +372,15 @@ describe("platform client management", () => {
       logo_processing_version: 1,
     });
 
-    const largerThanTenMegabytes = Buffer.alloc(CLIENT_LOGO_MAX_BYTES + 1, 0x20);
-    Buffer.from("RIFF0000WEBP", "ascii").copy(largerThanTenMegabytes);
+    const largerThanTwentyFiveMegabytes = Buffer.alloc(CLIENT_LOGO_MAX_BYTES + 1, 0x20);
+    Buffer.from("RIFF0000WEBP", "ascii").copy(largerThanTwentyFiveMegabytes);
     await assert.rejects(
       () =>
         updateClientLogo(platformOwner, client.id, {
           mime: "image/webp",
-          data: largerThanTenMegabytes,
+          data: largerThanTwentyFiveMegabytes,
         }),
-      /Logo must be 10 MB or smaller/,
+      /Logo must be 25 MB or smaller/,
     );
   });
 
